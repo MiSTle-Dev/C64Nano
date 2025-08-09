@@ -24,12 +24,14 @@ PCBA production files for [JLCPCB](https://jlcpcb.com) are availble [here](Outpu
 The great PCB Layout work using [KiCad](https://www.kicad.org) had been done by [cantclosevi](https://github.com/cantclosevi). Thx Michal !
 
 **Version history**
-| Version  | Issue|  Change to earlier version|rework|
-|----------|-|--------|-|
-|0|engineering sample|DS2 connector rotated|mount DS2 bottom|
-|1|DS2 rotation fixed|mechanical positioning|-|
-|2|DS2 removed and positioning fixed|MIDI IN pin 4+5 reversed|[Instruction](rework/REWORK_HW2.MD)|
-|3| none known |MIDI IN fix|-|
+|Version| Issue                |Change to earlier version|rework|
+|-------|------------          |--------          |---             |
+|0      |DS2 connector rotated |engineering sample|mount DS2 bottom|
+|1      |mechanical positioning|DS2 rotation fixed|                |
+|2      |MIDI IN pin 4+5 reversed|DS2 removed and positioning fixed|[Instruction](rework/REWORK_HW2.MD)|
+|3      | none known |MIDI IN fix|-|
+
+
 
 ![RRPiPico](pico.png)  
 ![PNG](MiSTeryShield20kRPiPico-1.png)  
