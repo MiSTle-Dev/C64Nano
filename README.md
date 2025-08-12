@@ -12,19 +12,16 @@ The C64Nano is a port of some [MiST](https://github.com/mist-devel/mist-board/wi
 | [Tang Mega 138k Pro](https://wiki.sipeed.com/hardware/en/tang/tang-mega-138k/mega-138k-pro.html)|[GW5AST-138](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |twin Dualshock |
 | [Tang Console 60K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)|[GW5AT-60](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |twin Dualshock, no Retro D9 Joystick|
 
-Be aware that the [VIC20](https://en.wikipedia.org/wiki/VIC-20) ([VIC20Nano](https://github.com/vossstef/VIC20Nano)),
-[Atari 2600 VCS](https://en.wikipedia.org/wiki/Atari_2600) ([A2600Nano](https://github.com/vossstef/A2600Nano)), [Apple IIe](https://en.wikipedia.org/wiki/Apple_IIe) ([NanoApple2](https://github.com/vossstef/NanoApple2)) had been ported too in similar manner.  
-
-This project relies on an external µC being connected to the Tang Nano 20K. You can use a [M0S Dock BL616](https://wiki.sipeed.com/hardware/en/maixzero/m0s/m0s.html), [Raspberry Pi Pico (W)](https://www.raspberrypi.com/documentation/microcontrollers/pico-series.html) or [esp32-s2](https://www.espressif.com/en/products/socs/esp32-s2)/[s3](https://www.espressif.com/en/products/socs/esp32-s3) and use the [FPGA companion firmware](http://github.com/harbaum/FPGA-Companion). Basically a µC acts as USB host for USB devices and as an OSD controller using a [SPI communication protocol](https://github.com/harbaum/MiSTeryNano/blob/main/SPI.md).
+This project relies on a µC being connected to the FPGA. You can use the onboard [BL616](https://en.bouffalolab.com) µC a [M0S Dock BL616](https://wiki.sipeed.com/hardware/en/maixzero/m0s/m0s.html), [Raspberry Pi Pico (W)](https://www.raspberrypi.com/documentation/microcontrollers/pico-series.html) or [esp32-s2](https://www.espressif.com/en/products/socs/esp32-s2)/[s3](https://www.espressif.com/en/products/socs/esp32-s3) and use the [FPGA companion firmware](http://github.com/MiSTle-Dev/FPGA-Companion). Basically a µC acts as USB host for USB devices and as an OSD controller using a [SPI communication protocol](https://github.com/MiSTle-Dev/FPGA-Companion/blob/main/SPI.md).
 
 Onboard BL616 µC  
-* If you don't need the WIFI modem on a TN20K then even the onboard BL616 µC (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 µC is presently supported for TN20K and Console 60K boards. WIFI modem is supported on Console 60K too. There is a usb hub with power delivery (see ->) [USB Hub](https://github.com/harbaum/FPGA-Companion/blob/main/console_usbhub_and_power_over_usb-a.png) + USB-A to USB-A cable + USB-A Power Supply Plug needed to supply the board and at the same time provide USB ports for USB Keyboard and e.g. USB Joystick or Mouse.
+* If you don't need the WIFI modem on a TN20K then even the onboard BL616 µC (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 µC is presently supported for TN20K and Console 60K boards. WIFI modem is supported on Console 60K too. There is a usb hub with power delivery (see ->) [USB Hub](https://github.com/MiSTle-Dev/FPGA-Companion/blob/main/console_usbhub_and_power_over_usb-a.png) + USB-A to USB-A cable + USB-A Power Supply Plug needed to supply the board and at the same time provide USB ports for USB Keyboard and e.g. USB Joystick or Mouse.
 
 For the [M0S Dock](https://wiki.sipeed.com/hardware/en/maixzero/m0s/m0s.html) BL616 [µC](https://en.bouffalolab.com) there is a:
 
-* [Optional custom carrier board MiSTeryShield20k](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k/README.md)
-* [M0S PMOD Adapter](https://github.com/harbaum/MiSTeryNano/blob/main/board/m0s_pmod) for Primer / Mega / Console Boards
-* [Optional case](https://github.com/harbaum/MiSTeryNano/blob/main/board/misteryshield20k/housing3D)
+* [Optional custom carrier board MiSTeryShield20k](https://github.com/MiSTle-Dev/Boards/tree/main/misteryshield20k/README.md)
+* [M0S PMOD Adapter](https://github.com/MiSTle-Dev/Boards/tree/main/m0s_pmod)) for Primer / Mega / Console Boards
+* [Optional case](https://github.com/MiSTle-Dev/Boards/tree/main/misteryshield20k/housing3D)
 * [Dualshock Adapter / Cable](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md)
 
 and for the Raspberry PiPico (RP2040 µC) there is a:
@@ -250,7 +247,7 @@ OSD: **DS #1 Joy** or **DS #2 Joy**
 At the moment Dpad only for original Pad. Some clone devices support at the same time Dpad and left stick simultaniously. ```circle and cross``` Buttons as Trigger:
 
 > [!IMPORTANT]
-> In a [MiSTeryShield20k](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k) configuration Dualshock is supported via the internal ``spare J8`` pinheader.
+> In a MiSTeryShield20k configuration Dualshock is supported via the internal ``spare J8`` pinheader.
 > See [MiSTeryShield20k DS2 Adapter / Cable](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md) for further information. Thx [venice1200](https://github.com/venice1200) !
 
 > [!NOTE]
