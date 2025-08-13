@@ -1,4 +1,0 @@
-(sym_lib_table
-  (version 7)
-  (lib (name "MiSTeryShield20kRPiPico")(type "KiCad")(uri "${KIPRJMOD}/Library/symbol_library/MiSTeryShield20kRPiPico.kicad_sym")(options "")(descr ""))
-)

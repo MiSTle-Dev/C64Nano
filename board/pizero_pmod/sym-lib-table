@@ -1,4 +1,0 @@
-(sym_lib_table
-  (version 7)
-  (lib (name "pizero_pmod")(type "KiCad")(uri "${KIPRJMOD}/Library/symbol_library/pizero_pmod.kicad_sym")(options "")(descr ""))
-)

@@ -1,4 +1,0 @@
-(fp_lib_table
-  (version 7)
-  (lib (name "pizero_pmod")(type "KiCad")(uri "${KIPRJMOD}/Library/footprint_library/pizero_pmod.pretty")(options "")(descr ""))
-)
