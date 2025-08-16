@@ -24,13 +24,16 @@ entity tang_nano_20k_c64_top_console60k is
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(1 downto 0);
-    -- USB-C BL616 UART
---    uart_rx     : in std_logic;
---    uart_tx     : out std_logic;
+    -- onboard USB-C Tang BL616 UART
+    uart_rx     : in std_logic;
+    uart_tx     : out std_logic;
+    -- monitor port
+    bl616_mon_tx : out std_logic;
+    bl616_mon_rx : in std_logic;
    -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
-    -- SPI interface Sipeed M0S Dock external BL616 uC
+    -- SPI interface external uC
     m0s         : inout std_logic_vector(4 downto 0);
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
@@ -498,8 +501,6 @@ signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
-signal uart_rx          : std_logic :='0';
-signal uart_tx          : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -537,7 +538,11 @@ component DCS
 
 begin
 
-pwr_sav <= '1';
+  -- BL616 console to hw pins for external USB-UART adapter
+  uart_tx <= bl616_mon_rx;
+  bl616_mon_tx <= uart_rx;
+
+  pwr_sav <= '1';
 
 -- ----------------- SPI input parser ----------------------
 
@@ -1902,7 +1907,7 @@ begin
   pb_i <= (others => '1');
   drive_par_i <= (others => '1');
   drive_stb_i <= '1';
-  uart_tx <= '1';
+  -- uart_tx <= '1'; -- onboard BL616 blocked
   flag2_n_i <= '1';
   uart_cs <= '0';
   if ext_en = '1' and disk_access = '1' then
@@ -1924,7 +1929,7 @@ begin
     -- PB6 CTS in
     -- PB7 DSR in
     -- PA2 TXD out
-    uart_tx <= pa2_o;
+    --uart_tx <= pa2_o;  -- onboard BL616 blocked
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     -- Zeromodem
@@ -1942,18 +1947,18 @@ begin
     -- PB7 to CNT2 
     pb_i(7) <= cnt2_o;
     cnt2_i <= pb_o(7);
-    uart_tx <= pa2_o and sp1_o;
+    --uart_tx <= pa2_o and sp1_o; -- onboard BL616 blocked
     sp2_i <= uart_rx_filtered;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     elsif system_up9600 = 2 then
-      uart_tx <= tx_6551;
+      --uart_tx <= tx_6551; -- onboard BL616 blocked
       uart_cs <= IOE;
     elsif system_up9600 = 3 then
-      uart_tx <= tx_6551;
+      --uart_tx <= tx_6551; -- onboard BL616 blocked
       uart_cs <= IOF;
     elsif system_up9600 = 4 then
-      uart_tx <= tx_6551;
+      --uart_tx <= tx_6551; -- onboard BL616 blocked
       uart_cs <= IO7;
   end if;
 end process;
