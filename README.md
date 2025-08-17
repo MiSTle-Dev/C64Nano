@@ -170,7 +170,7 @@ invoke by F12 keypress<br>
 * SID Filter selection
 * geoRAM activation
 * Loader (CRT/PRG/BIN/TAP/FLT) file selection<br>
-
+ 
 ## Gamecontrol support
 legacy single D9 Digital Joystick. OSD: **Retro D9**<br>
 or<br>
