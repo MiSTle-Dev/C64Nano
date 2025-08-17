@@ -29,11 +29,20 @@ entity tang_nano_20k_c64_top is
     -- USB-C BL616 UART
     uart_rx     : in std_logic;
     uart_tx     : out std_logic;
+    -- monitor port
+    --bl616_mon_tx : out std_logic;
+    --bl616_mon_rx : in std_logic;
    -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
-    -- SPI interface Sipeed M0S Dock external BL616 uC
-    m0s         : inout std_logic_vector(4 downto 0);
+    -- SPI interface external  uC
+    m0s        : inout std_logic_vector(4 downto 0);
+    -- SPI connection to onboard BL616
+    --spi_sclk    : in std_logic;
+    --spi_csn     : in std_logic;
+    --spi_dir     : out std_logic;
+    --spi_dat     : in std_logic;
+    --spi_irqn    : out std_logic;
     --
     tmds_clk_n  : out std_logic;
     tmds_clk_p  : out std_logic;
@@ -232,6 +241,7 @@ signal spi_io_din     : std_logic;
 signal spi_io_ss      : std_logic;
 signal spi_io_clk     : std_logic;
 signal spi_io_dout    : std_logic;
+signal spi_ext        : std_logic;
 signal disk_g64       : std_logic;
 signal disk_g64_d     : std_logic;
 signal c1541_reset    : std_logic;
@@ -239,7 +249,6 @@ signal c1541_osd_reset : std_logic;
 signal system_wide_screen : std_logic;
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
-signal system_leds    : std_logic_vector(1 downto 0);
 signal led1541        : std_logic;
 signal reu_cfg        : std_logic; 
 signal dma_req        : std_logic;
@@ -497,6 +506,7 @@ signal shift_mod        : std_logic_vector(1 downto 0);
 signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
+signal int_out_n        : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -563,10 +573,36 @@ component rPLL
 end component;
 
 begin
-  spi_io_din  <= m0s(1);
-  spi_io_ss   <= m0s(2);
-  spi_io_clk  <= m0s(3);
+
+  -- BL616 console to hw pins for external USB-UART adapter
+--  uart_tx <= bl616_mon_rx;
+--  bl616_mon_tx <= uart_rx;
+
+-- by default the internal SPI is being used. Once there is
+-- a select from the external spi (M0S Dock) , then the connection is being switched
+process (clk32, pll_locked)
+begin
+  if pll_locked = '0' then
+    spi_ext <= '0';
+  elsif rising_edge(clk32) then
+    spi_ext <= spi_ext;
+    if m0s(2) = '0' then
+        spi_ext <= '1';
+    end if;
+  end if;
+end process;
+
+  -- map output data onto both spi outputs
+  spi_io_din  <= m0s(1) when spi_ext = '1' else '0'; -- spi_dat;
+  spi_io_ss   <= m0s(2) when spi_ext = '1' else '0'; -- spi_csn;
+  spi_io_clk  <= m0s(3) when spi_ext = '1' else '0'; -- spi_sclk;
+
+  -- onboard BL616
+  --spi_dir     <= spi_io_dout;
+  --spi_irqn    <= int_out_n;
+  -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
+  m0s(4)      <= int_out_n;
 
 -- mux overlapping DS2 and MIDI signals to IO pin
 ds_cs     <= ds_cs_i when st_midi = "000" else 'Z';
@@ -1378,13 +1414,13 @@ hid_inst: entity work.hid
   port_in_strobe    => serial_rx_strobe,
   port_in_data      => serial_rx_data,
 
-  int_out_n           => m0s(4),
+  int_out_n           => int_out_n,
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(reset & user), -- S0 and S1 buttons on Tang Nano 20k
-  leds                => system_leds,         -- two leds can be controlled from the MCU
-  color               => ws2812_color -- a 24bit color to e.g. be used to drive the ws2812
+  buttons             => unsigned'(user & reset), -- S2 and S1 buttons
+  leds                => open,
+  color               => ws2812_color
 );
 
 process(clk32)

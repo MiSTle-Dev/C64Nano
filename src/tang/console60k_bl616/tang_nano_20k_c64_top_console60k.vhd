@@ -1303,7 +1303,7 @@ hid_inst: entity work.hid
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not reset & not user), -- S0 and S1 buttons on Tang
+  buttons             => unsigned'(not user & not reset), -- S2 and S1 buttons
   leds                => open,
   color               => open
 );
