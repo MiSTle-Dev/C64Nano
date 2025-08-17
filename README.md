@@ -185,9 +185,10 @@ Enable REU, select c1541 CBM DOS ROM and load the PRG.
 
 ## Push Button / DIP Switch utilization
 
-* S1 swap the Joystick Ports if OSD **Swap Joys** is set to Off mode.
+* S1 open OSD **and** Swap the Joystick Ports if OSD **Swap Joys** is set to Off mode.  
+(you might to press twice to return to original Joystick port setting)
 
-* S2 open OSD
+* S2 Reset
 
 > [!CAUTION]
 > A FLASH programm attempt without keeping the board in reset may lead to corruption of the C1541 DOS images stored in FLASH requiring re-programming.
