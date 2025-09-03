@@ -15,7 +15,7 @@ The C64Nano is a port of some [MiST](https://github.com/mist-devel/mist-board/wi
 This project relies on a µC being connected to the FPGA. --> [MiSTle-Dev wiki](https://github.com/MiSTle-Dev/.github/wiki) <--  
 
 > [!NOTE]
-> If you don't need the WIFI modem on a TN20K then even the onboard BL616 µC (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 µC is presently supported for TN20K and Console 60K board. WIFI modem is supported on Console 60K too (requires I-PEX MHF4 connector antenna)
+> If you don't need the WIFI modem on a TN20K then even the onboard BL616 µC (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 µC is presently supported for TN20K, Console 60K and Primer 25k board. WIFI modem is supported on Console 60K too (requires I-PEX MHF4 connector antenna)
 
 Original C64 core by Peter Wendrich and c1541 by [darfpga](https://github.com/darfpga).  
 All HID components and µC firmware by Till Harbaum
