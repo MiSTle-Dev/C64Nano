@@ -25,14 +25,23 @@ entity tang_nano_20k_c64_top_25k is
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(1 downto 0);
-    -- USB-C BL616 UART
+    -- onboard USB-C Tang BL616 UART
     uart_rx     : in std_logic;
-    uart_tx     : out std_logic;
+    --uart_tx     : out std_logic;
+    -- monitor port
+    bl616_mon_tx : out std_logic;
+    --bl616_mon_rx : in std_logic;
    -- external hw pin UART
-    uart_ext_rx : in std_logic;
-    uart_ext_tx : out std_logic;
+  --  uart_ext_rx : in std_logic;
+  --  uart_ext_tx : out std_logic;
     -- SPI interface Sipeed M0S Dock external BL616 uC
     m0s         : inout std_logic_vector(4 downto 0);
+    -- SPI connection to onboard BL616
+    spi_sclk    : in std_logic;
+    spi_csn     : in std_logic;
+    spi_dir     : out std_logic;
+    spi_dat     : in std_logic;
+    spi_irqn    : out std_logic;
     --
     tmds_clk_n  : out std_logic;
     tmds_clk_p  : out std_logic;
@@ -219,6 +228,7 @@ signal spi_io_din     : std_logic;
 signal spi_io_ss      : std_logic;
 signal spi_io_clk     : std_logic;
 signal spi_io_dout    : std_logic;
+signal spi_ext        : std_logic;
 signal disk_g64       : std_logic;
 signal disk_g64_d     : std_logic;
 signal c1541_reset    : std_logic;
@@ -476,6 +486,7 @@ signal shift_mod        : std_logic_vector(1 downto 0);
 signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
+signal int_out_n        : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -512,10 +523,39 @@ component DCS
  end component;
 
 begin
-  spi_io_din  <= m0s(1);
-  spi_io_ss   <= m0s(2);
-  spi_io_clk  <= m0s(3);
+
+  -- BL616 console to hw pins for external USB-UART adapter
+  --uart_tx <= bl616_mon_rx;
+  bl616_mon_tx <= uart_rx;
+
+-- ----------------- SPI input parser ----------------------
+
+-- by default the internal SPI is being used. Once there is
+-- a select from the external spi (M0S Dock) , then the connection is being switched
+process (clk32, pll_locked)
+begin
+  if pll_locked = '0' then
+    spi_ext <= '0';
+    m0s(3 downto 1 ) <= (others => 'Z');
+  elsif rising_edge(clk32) then
+    spi_ext <= spi_ext;
+    if m0s(2) = '0' then
+        spi_ext <= '1';
+    end if;
+  end if;
+end process;
+
+  -- map output data onto both spi outputs
+  spi_io_din  <= m0s(1) when spi_ext = '1' else spi_dat;
+  spi_io_ss   <= m0s(2) when spi_ext = '1' else spi_csn;
+  spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
+
+  -- onboard BL616
+  spi_dir     <= spi_io_dout;
+  spi_irqn    <= int_out_n;
+  -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
+  m0s(4)      <= int_out_n;
 
 process(clk32, disk_reset)
 variable reset_cnt : integer range 0 to 2147483647;
@@ -1151,13 +1191,13 @@ hid_inst: entity work.hid
   port_in_strobe    => serial_rx_strobe,
   port_in_data      => serial_rx_data,
 
-  int_out_n           => m0s(4),
+  int_out_n           => int_out_n,
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(reset & user), -- S0 and S1 buttons on Tang Nano 20k
-  leds                => system_leds,         -- two leds can be controlled from the MCU
-  color               => ws2812_color -- a 24bit color to e.g. be used to drive the ws2812
+  buttons             => unsigned'(user & reset), -- S2 and S1 buttons
+  leds                => open,
+  color               => open
 );
 
 process(clk32)
@@ -1759,8 +1799,8 @@ port map (
 );
 
 -- external HW pin UART interface
-uart_rx_muxed <= uart_rx when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
-uart_ext_tx <= uart_tx;
+uart_rx_muxed <= uart_rx when system_uart = "00" else '1';
+--uart_ext_tx <= uart_tx;
 
 -- UART_RX synchronizer
 process(clk32)
@@ -1783,7 +1823,7 @@ begin
   pb_i <= (others => '1');
   drive_par_i <= (others => '1');
   drive_stb_i <= '1';
-  uart_tx <= '1';
+  -- uart_tx <= '1'; -- onboard BL616 blocked
   flag2_n_i <= '1';
   uart_cs <= '0';
   if ext_en = '1' and disk_access = '1' then
@@ -1805,7 +1845,7 @@ begin
     -- PB6 CTS in
     -- PB7 DSR in
     -- PA2 TXD out
-    uart_tx <= pa2_o;
+    --uart_tx <= pa2_o;  -- onboard BL616 blocked
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     -- Zeromodem
@@ -1823,18 +1863,18 @@ begin
     -- PB7 to CNT2 
     pb_i(7) <= cnt2_o;
     cnt2_i <= pb_o(7);
-    uart_tx <= pa2_o and sp1_o;
+    --uart_tx <= pa2_o and sp1_o; -- onboard BL616 blocked
     sp2_i <= uart_rx_filtered;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     elsif system_up9600 = 2 then
-      uart_tx <= tx_6551;
+      --uart_tx <= tx_6551; -- onboard BL616 blocked
       uart_cs <= IOE;
     elsif system_up9600 = 3 then
-      uart_tx <= tx_6551;
+      --uart_tx <= tx_6551; -- onboard BL616 blocked
       uart_cs <= IOF;
     elsif system_up9600 = 4 then
-      uart_tx <= tx_6551;
+      --uart_tx <= tx_6551; -- onboard BL616 blocked
       uart_cs <= IO7;
   end if;
 end process;
