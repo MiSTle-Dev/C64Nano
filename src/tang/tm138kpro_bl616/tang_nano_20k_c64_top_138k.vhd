@@ -498,6 +498,7 @@ signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
+signal pause            : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -535,17 +536,22 @@ component DCS
 
 begin
 
-  process(clk_pixel_x5_pal, pll_locked_pal)
+  process(clk32, pll_locked)
+    variable pause_cnt : integer range 0 to 2147483647;
     begin
-    if pll_locked_pal = '0' then
-      jtagseln <= '0';
-    elsif rising_edge(clk_pixel_x5_pal) then
-      if pll_locked_pal = '1' then
-        jtagseln <= '1';
+    if pll_locked = '0' then
+      pause <= '1';
+      pause_cnt := 34000000;
+    elsif rising_edge(clk32) then
+      if pause_cnt /= 0 then
+        pause_cnt := pause_cnt - 1;
+      elsif pause_cnt = 0 then 
+        pause <= '0';
       end if;
     end if;
   end process;
 
+  jtagseln <= pll_locked;
   midi_tx <= '1';
   reconfign <= 'Z';
   twimux <= "100"; -- connect BL616 TWI4 PLL1
@@ -931,7 +937,7 @@ generic map(
 port map(
     CLKOUT => clk32,
     HCLKIN => clk64,
-    RESETN => '1',
+    RESETN => pll_locked,
     CALIB  => '0'
 );
 
@@ -1764,7 +1770,7 @@ begin
     end if;
 end process;
 
-por <= system_reset(0) or not pll_locked or not ram_ready;
+por <= pause or system_reset(0) or not pll_locked or not ram_ready;
 
 process(clk32, por)
 variable reset_counter : integer;
