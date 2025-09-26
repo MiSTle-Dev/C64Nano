@@ -1,8 +1,3 @@
-//Copyright (C)2014-2025 GOWIN Semiconductor Corporation.
-//All rights reserved.
-//File Title: Timing Constraints file
-//Tool Version: V1.9.12 (64-bit) 
-//Created Time: 2025-09-23 20:48:25
 create_clock -name ds_clk -period 500 -waveform {0 250} [get_nets {gamepad_p1/clk_spi}] -add
 create_clock -name ds2_clk -period 500 -waveform {0 250} [get_nets {gamepad_p2/clk_spi}] -add
 create_clock -name flash_clk -period 15.833 -waveform {0 7.5} [get_nets {flash_clk}] -add

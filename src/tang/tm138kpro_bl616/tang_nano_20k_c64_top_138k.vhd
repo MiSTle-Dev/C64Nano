@@ -498,7 +498,6 @@ signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
-signal pause            : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -535,21 +534,6 @@ component DCS
  end component;
 
 begin
-
-  process(clk32, pll_locked)
-    variable pause_cnt : integer range 0 to 2147483647;
-    begin
-    if pll_locked = '0' then
-      pause <= '1';
-      pause_cnt := 34000000;
-    elsif rising_edge(clk32) then
-      if pause_cnt /= 0 then
-        pause_cnt := pause_cnt - 1;
-      elsif pause_cnt = 0 then 
-        pause <= '0';
-      end if;
-    end if;
-  end process;
 
   jtagseln <= pll_locked;
   midi_tx <= '1';
@@ -913,7 +897,7 @@ clk_switch_2: DCS
 		CLKOUT   => clk64 -- switched clock
 	);
   
-pll_locked <= pll_locked_pal and pll_locked_ntsc and flash_lock;
+pll_locked <= pll_locked_pal and pll_locked_ntsc;
 dcsclksel <= "0001" when ntscMode = '0' else "0010";
 
 clk_switch_1: DCS
@@ -937,7 +921,7 @@ generic map(
 port map(
     CLKOUT => clk32,
     HCLKIN => clk64,
-    RESETN => pll_locked,
+    RESETN => pll_locked, -- _pal
     CALIB  => '0'
 );
 
@@ -948,8 +932,7 @@ port map (
     clkout1 => clk_pixel_x5_pal,
     clkout2 => clk64_pal,
     clkout3 => open,
-    clkin => clk,
-    init_clk => clk
+    clkin => clk
 );
 
 mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc
@@ -959,8 +942,7 @@ port map (
     clkout1 => clk_pixel_x5_ntsc,
     clkout2 => clk64_ntsc,
     clkout3 => open,
-    clkin => clk,
-    init_clk => clk
+    clkin => clk
 );
 
 -- 64.0Mhz for flash controller c1541 ROM
@@ -969,8 +951,7 @@ flashclock: entity work.Gowin_PLL_138k_flash
         lock => flash_lock,
         clkout0 => flash_clk,
         clkout1 => mspi_clk,
-        clkin => clk,
-        init_clk => clk
+        clkin => clk
     );
 
 leds_n <=  not leds;
@@ -1770,7 +1751,7 @@ begin
     end if;
 end process;
 
-por <= pause or system_reset(0) or not pll_locked or not ram_ready;
+por <= system_reset(0) or not pll_locked or not ram_ready;
 
 process(clk32, por)
 variable reset_counter : integer;
