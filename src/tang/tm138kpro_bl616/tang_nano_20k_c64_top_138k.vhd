@@ -535,7 +535,7 @@ component DCS
 
 begin
 
-  jtagseln <= pll_locked;
+  jtagseln <= pll_locked_pal; --pll_locked;
   midi_tx <= '1';
   reconfign <= 'Z';
   twimux <= "100"; -- connect BL616 TWI4 PLL1
@@ -892,7 +892,7 @@ clk_switch_2: DCS
 		CLKIN1   => clk64_ntsc, -- main pll 2
 		CLKIN2   => '0',
 		CLKIN3   => '0',
-		CLKSEL   => dcsclksel,
+		CLKSEL   => "0001",  -- dcsclksel,
 		SELFORCE => '0', -- glitch less mode
 		CLKOUT   => clk64 -- switched clock
 	);
@@ -906,7 +906,7 @@ generic map (
 )
 port map (
     CLKOUT => clk_pixel_x5,
-    CLKSEL => dcsclksel,
+	CLKSEL   => "0001",  -- dcsclksel,
     CLKIN0 => clk_pixel_x5_pal,
     CLKIN1 => clk_pixel_x5_ntsc,
     CLKIN2 => '0',
@@ -921,7 +921,7 @@ generic map(
 port map(
     CLKOUT => clk32,
     HCLKIN => clk64,
-    RESETN => pll_locked, -- _pal
+    RESETN => pll_locked_pal, --pll_locked,
     CALIB  => '0'
 );
 
