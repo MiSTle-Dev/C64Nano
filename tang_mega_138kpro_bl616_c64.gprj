@@ -1,0 +1,80 @@
+<?xml version="1" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW5AST-138B" pn="GW5AST-LV138FPG676AC1/I0">gw5ast138b-007</Device>
+    <FileList>
+        <File path="src/acia.v" type="file.verilog" enable="1"/>
+        <File path="src/c1541/mist_sd_card.sv" type="file.verilog" enable="1"/>
+        <File path="src/cartridge.v" type="file.verilog" enable="1"/>
+        <File path="src/dualshock2.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_dpb/gowin_dpb_track_buffer_b.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_dpb/gowin_dpb_trkbuf.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_dpb/sector_dpram.v" type="file.verilog" enable="1"/>
+        <File path="src/hdmi/audio_clock_regeneration_packet.sv" type="file.verilog" enable="1"/>
+        <File path="src/hdmi/audio_info_frame.sv" type="file.verilog" enable="1"/>
+        <File path="src/hdmi/audio_sample_packet.sv" type="file.verilog" enable="1"/>
+        <File path="src/hdmi/auxiliary_video_information_info_frame.sv" type="file.verilog" enable="1"/>
+        <File path="src/hdmi/hdmi.sv" type="file.verilog" enable="1"/>
+        <File path="src/hdmi/packet_assembler.sv" type="file.verilog" enable="1"/>
+        <File path="src/hdmi/packet_picker.sv" type="file.verilog" enable="1"/>
+        <File path="src/hdmi/serializer.sv" type="file.verilog" enable="1"/>
+        <File path="src/hdmi/source_product_description_info_frame.sv" type="file.verilog" enable="1"/>
+        <File path="src/hdmi/tmds_channel.sv" type="file.verilog" enable="1"/>
+        <File path="src/loader_sd_card.sv" type="file.verilog" enable="1"/>
+        <File path="src/misc/flash_dspi_gw5a.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/hid.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/mcu_spi.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/osd_u8g2.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/scandoubler.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/sd_card.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/sd_rw.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/sdcmd_ctrl.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/sysctrl.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/video.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/video_analyzer.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/ws2812.v" type="file.verilog" enable="1"/>
+        <File path="src/mos6526.v" type="file.verilog" enable="1"/>
+        <File path="src/reu.v" type="file.verilog" enable="1"/>
+        <File path="src/sdram.v" type="file.verilog" enable="1"/>
+        <File path="src/sid/sid_dac.sv" type="file.verilog" enable="1"/>
+        <File path="src/sid/sid_envelope.sv" type="file.verilog" enable="1"/>
+        <File path="src/sid/sid_filter.sv" type="file.verilog" enable="1"/>
+        <File path="src/sid/sid_tables.sv" type="file.verilog" enable="1"/>
+        <File path="src/sid/sid_top.sv" type="file.verilog" enable="1"/>
+        <File path="src/sid/sid_voice.sv" type="file.verilog" enable="1"/>
+        <File path="src/uart6551/io_fifo.v" type="file.verilog" enable="1"/>
+        <File path="src/uart6551/uart_6551.v" type="file.verilog" enable="1"/>
+        <File path="src/c1530.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/c1541/c1541_logic.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/c1541/c1541_sd.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/c1541/gcr_floppy.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/c1541/via6522.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/c64_midi.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/cpu_6510.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/fifo_sc_hs/FIFO_SC_HS_Top_gw5a.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/fpga64_buslogic_gw5a.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/fpga64_keyboard.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/fpga64_rgbcolor.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/fpga64_sid_iec.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_pll/gowin_pll_138k_flash.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_pll/gowin_pll_138k_ntsc.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_pll/gowin_pll_138k_pal.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_prom/gowin_prom_basic.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_prom/gowin_prom_chargen.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_sdpb/gowin_sdpb_kernal_8k_gw5a.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_sp/gowin_sp_2k.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_sp/gowin_sp_8k.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_sp/gowin_sp_cram.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/t65/T65.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/t65/T65_ALU.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/t65/T65_MCode.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/t65/T65_Pack.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/tang/tm138kpro_bl616/tang_nano_20k_c64_top_138k.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/uart6551/BaudRate.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/video_vicII_656x.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/tang/tm138kpro_bl616/tang_nano_20k_c64_top_138kpro.cst" type="file.cst" enable="1"/>
+        <File path="src/tang/tm138kpro_bl616/tang_nano_20k_c64_top_138k.sdc" type="file.sdc" enable="1"/>
+    </FileList>
+</Project>

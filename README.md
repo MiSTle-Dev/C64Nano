@@ -12,13 +12,13 @@ The C64Nano is a port of some [MiST](https://github.com/mist-devel/mist-board/wi
 | [Tang Mega 138k Pro](https://wiki.sipeed.com/hardware/en/tang/tang-mega-138k/mega-138k-pro.html)|[GW5AST-138](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |twin Dualshock |
 | [Tang Console 60K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)|[GW5AT-60](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |twin Dualshock, no Retro D9 Joystick|
 
-This project relies on a µC being connected to the FPGA. --> [MiSTle-Dev wiki](https://github.com/MiSTle-Dev/.github/wiki) <--  
+This project relies on a MPU being connected to the FPGA. --> [MiSTle-Dev wiki](https://github.com/MiSTle-Dev/.github/wiki) <--  
 
 > [!NOTE]
-> If you don't need the WIFI modem on a TN20K then even the onboard BL616 µC (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 µC is presently supported for TN20K, Console 60K and Primer 25k board. WIFI modem is supported on Console 60K too (requires I-PEX MHF4 connector antenna)
+> If you don't need the WIFI modem on a TN20K then even the onboard BL616 MPU (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 MPU is presently supported for TN20K, Console 60K, Primer 25k and Mega 138kPro. WIFI modem is supported on Console 60K too (requires I-PEX MHF4 connector antenna)
 
 Original C64 core by Peter Wendrich and c1541 by [darfpga](https://github.com/darfpga).  
-All HID components and µC firmware by Till Harbaum
+All HID components and MPU firmware by Till Harbaum
 
 Features:
 
@@ -305,7 +305,7 @@ Solid **<font color="red">red</font>** of the c1541 led after power-up indicates
 
 * **<font color="green">green</font>**&ensp;&thinsp;&ensp;&thinsp;&ensp;&thinsp;all fine and ready to go
 * **<font color="red">red</font>**&ensp;&thinsp;&ensp;&thinsp;&ensp;&thinsp;&ensp;&thinsp;&ensp;&thinsp;something wrong with SDcard / default boot image
-* **<font color="blue">blue</font>**&ensp;&thinsp;&ensp;&thinsp;&ensp;&thinsp;&ensp;&thinsp;µC firmware detected valid FPGA core
+* **<font color="blue">blue</font>**&ensp;&thinsp;&ensp;&thinsp;&ensp;&thinsp;&ensp;&thinsp;MPU firmware detected valid FPGA core
 * **<font color="yellow">yellow</font>**&ensp;&thinsp;&ensp;&thinsp;&ensp;&thinsp;FPGA core can't detect valid firmware
 * **white**&ensp;&thinsp;&ensp;&thinsp;&ensp;&thinsp;-
 
