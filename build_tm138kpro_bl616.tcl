@@ -54,13 +54,16 @@ add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
 add_file src/tang/tm138kpro_bl616/tang_nano_20k_c64_top_138k.vhd
 add_file src/video_vicII_656x.vhd
-add_file src/tang/tm138kpro_bl616/pll_init.v
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_pal.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_ntsc.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_flash.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_flash_mod.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_ntsc_mod.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_pal_mod.vhd
+#add_file src/tang/tm138kpro_bl616/pll_init.v
+#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_pal.vhd
+#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_ntsc.vhd
+#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_flash.vhd
+#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_flash_mod.vhd
+#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_ntsc_mod.vhd
+#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_pal_mod.vhd
+add_file src/gowin_pll/gowin_pll_138k_flash.vhd
+add_file src/gowin_pll/gowin_pll_138k_ntsc.vhd
+add_file src/gowin_pll/gowin_pll_138k_pal.vhd
 add_file src/tang/tm138kpro_bl616/tang_nano_20k_c64_top_138kpro.cst
 add_file src/tang/tm138kpro_bl616/tang_nano_20k_c64_top_138k.sdc
 add_file src/loader_sd_card.sv
@@ -84,9 +87,9 @@ set_option -vhdl_std vhd2008
 set_option -top_module tang_nano_20k_c64_top_138k
 set_option -use_mspi_as_gpio 1
 set_option -use_sspi_as_gpio 1
-set_option -use_done_as_gpio 0
+set_option -use_done_as_gpio 1
 set_option -use_cpu_as_gpio 1
-set_option -use_ready_as_gpio 0
+set_option -use_ready_as_gpio 1
 set_option -use_jtag_as_gpio 1
 set_option -use_mode_as_gpio 0
 set_option -use_i2c_as_gpio 0
@@ -104,6 +107,11 @@ set_option -rpt_auto_place_io_info 1
 set_option -convert_sdp32_36_to_sdp16_18 1
 set_option -correct_hold_violation 1
 set_option -loading_rate 70.000
+set_option -place_option 0
+set_option -route_option 0
+set_option -ireg_in_iob 1
+set_option -oreg_in_iob 1
+set_option -ioreg_in_iob 1
 
 #set_option -multiboot_mode quad
 #set_option -multiboot_address_width 24
