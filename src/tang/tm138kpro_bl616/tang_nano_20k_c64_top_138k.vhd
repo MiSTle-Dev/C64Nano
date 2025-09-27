@@ -251,7 +251,6 @@ signal c1541_osd_reset : std_logic;
 signal system_wide_screen : std_logic;
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
-signal system_leds    : std_logic_vector(1 downto 0);
 signal led1541        : std_logic;
 signal reu_cfg        : std_logic; 
 signal dma_req        : std_logic;
@@ -535,7 +534,7 @@ component DCS
 
 begin
 
-  jtagseln <= pll_locked_pal; --pll_locked;
+  jtagseln <= pll_locked;
   midi_tx <= '1';
   reconfign <= 'Z';
   twimux <= "100"; -- connect BL616 TWI4 PLL1
@@ -892,7 +891,7 @@ clk_switch_2: DCS
 		CLKIN1   => clk64_ntsc, -- main pll 2
 		CLKIN2   => '0',
 		CLKIN3   => '0',
-		CLKSEL   => "0001",  -- dcsclksel,
+		CLKSEL   => dcsclksel,
 		SELFORCE => '0', -- glitch less mode
 		CLKOUT   => clk64 -- switched clock
 	);
@@ -906,7 +905,7 @@ generic map (
 )
 port map (
     CLKOUT => clk_pixel_x5,
-	CLKSEL   => "0001",  -- dcsclksel,
+    CLKSEL => dcsclksel,
     CLKIN0 => clk_pixel_x5_pal,
     CLKIN1 => clk_pixel_x5_ntsc,
     CLKIN2 => '0',
@@ -921,7 +920,7 @@ generic map(
 port map(
     CLKOUT => clk32,
     HCLKIN => clk64,
-    RESETN => pll_locked_pal, --pll_locked,
+    RESETN => pll_locked,
     CALIB  => '0'
 );
 
@@ -1072,7 +1071,7 @@ begin
     if vsync = '1' then
       user_d <= user;
       numpad_d <= numpad;
-      if (user = '0' and user_d = '1') or
+      if (user = '1' and user_d = '0') or
          (numpad(7) = '1' and numpad_d(7) = '0') then
         joyswap <= not joyswap; -- toggle mode
         elsif system_joyswap = '1' then -- OSD fixed setting mode
@@ -1560,7 +1559,7 @@ end generate;
 crt_inst : entity work.loader_sd_card
 port map (
   clk               => clk32,
-  system_reset      => unsigned'(por & por),
+  system_reset      => unsigned'('0' & por),
 
   sd_lba            => loader_lba,
   sd_rd             => sd_rd(5 downto 1),
