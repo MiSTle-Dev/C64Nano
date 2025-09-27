@@ -88,7 +88,7 @@ reg	  buttons_irq_enable;
 assign int_out_n = (int_in != 8'h00 || sys_int)?1'b0:1'b1;
 
 // by default system is in reset
-reg main_reset = 2'b11; 
+reg [1:0] main_reset = 2'b11; 
 reg disk_reset = 1'b1;   
 assign system_reset = main_reset;  
 assign system_1541_reset = disk_reset;
