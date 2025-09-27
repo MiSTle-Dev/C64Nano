@@ -5,6 +5,7 @@
 --Part Number: GW5AST-LV138FPG676AC1/I0
 --Device: GW5AST-138
 --Device Version: B
+--Created Time: Sat Sep 27 23:10:39 2025
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -230,14 +231,14 @@ begin
             FCLKIN => "50",
             IDIV_SEL => 1,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 19,
-            ODIV1_SEL => 19,
+            ODIV0_SEL => 18,
+            ODIV1_SEL => 18,
             ODIV2_SEL => 8,
             ODIV3_SEL => 8,
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
-            MDIV_SEL => 24,
+            MDIV_SEL => 23,
             MDIV_FRAC_SEL => 0,
             ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
@@ -273,8 +274,8 @@ begin
             DYN_DPA_EN => "FALSE",
             CLKOUT0_PE_COARSE => 0,
             CLKOUT0_PE_FINE => 0,
-            CLKOUT1_PE_COARSE => 14,
-            CLKOUT1_PE_FINE => 2,
+            CLKOUT1_PE_COARSE => 13,
+            CLKOUT1_PE_FINE => 4,
             CLKOUT2_PE_COARSE => 0,
             CLKOUT2_PE_FINE => 0,
             CLKOUT3_PE_COARSE => 0,
