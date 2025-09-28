@@ -93,7 +93,6 @@ signal clk64          : std_logic;
 signal clk32          : std_logic;
 signal pll_locked     : std_logic;
 signal clk_pixel_x5   : std_logic;
-signal mspi_clk_x5    : std_logic;
 signal clk64_ntsc     : std_logic;
 signal clk32_ntsc     : std_logic;
 signal pll_locked_ntsc: std_logic;
@@ -110,7 +109,6 @@ attribute syn_keep of clk64_pal         : signal is 1;
 attribute syn_keep of clk32_ntsc        : signal is 1;
 attribute syn_keep of clk32_pal         : signal is 1;
 attribute syn_keep of clk_pixel_x5_pal  : signal is 1;
-attribute syn_keep of mspi_clk_x5       : signal is 1;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
 signal audio_data_r  : std_logic_vector(17 downto 0);
@@ -354,8 +352,6 @@ signal key_right2      : std_logic;
 signal key_start2      : std_logic;
 signal key_select2     : std_logic;
 signal audio_div       : unsigned(8 downto 0);
-signal flash_clk       : std_logic;
-signal flash_lock      : std_logic;
 signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(22 downto 0);
@@ -927,10 +923,9 @@ port map(
 mainclock_pal: entity work.Gowin_PLL_138k_pal
 port map (
     lock => pll_locked_pal,
-    clkout0 => open,
-    clkout1 => clk_pixel_x5_pal,
-    clkout2 => clk64_pal,
-    clkout3 => open,
+    clkout0 => clk_pixel_x5_pal,
+    clkout1 => clk64_pal,
+    clkout2 => mspi_clk,
     clkin => clk
 );
 
@@ -943,15 +938,6 @@ port map (
     clkout3 => open,
     clkin => clk
 );
-
--- 64.0Mhz for flash controller c1541 ROM
-flashclock: entity work.Gowin_PLL_138k_flash
-    port map (
-        lock => flash_lock,
-        clkout0 => flash_clk,
-        clkout1 => mspi_clk,
-        clkin => clk
-    );
 
 leds_n <=  not leds;
 leds(0) <= led1541;
@@ -1475,8 +1461,8 @@ port map(
 -- offset in spi flash TN20K, TP25K $200000, TM138K $A00000, TM60k $700000
 flash_inst: entity work.flash 
 port map(
-    clk       => flash_clk,
-    resetn    => flash_lock,
+    clk       => clk64_pal,
+    resetn    => pll_locked_pal,
     ready     => flash_ready,
     busy      => open,
     address   => (X"A" & "000" & dos_sel & c1541rom_addr),

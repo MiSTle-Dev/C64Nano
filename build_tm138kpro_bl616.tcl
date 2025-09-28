@@ -54,14 +54,6 @@ add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
 add_file src/tang/tm138kpro_bl616/tang_nano_20k_c64_top_138k.vhd
 add_file src/video_vicII_656x.vhd
-#add_file src/tang/tm138kpro_bl616/pll_init.v
-#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_pal.vhd
-#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_ntsc.vhd
-#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_flash.vhd
-#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_flash_mod.vhd
-#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_ntsc_mod.vhd
-#add_file src/tang/tm138kpro_bl616/gowin_pll_138k_pal_mod.vhd
-add_file src/gowin_pll/gowin_pll_138k_flash.vhd
 add_file src/gowin_pll/gowin_pll_138k_ntsc.vhd
 add_file src/gowin_pll/gowin_pll_138k_pal.vhd
 add_file src/tang/tm138kpro_bl616/tang_nano_20k_c64_top_138kpro.cst
@@ -94,10 +86,12 @@ set_option -use_jtag_as_gpio 1
 set_option -use_mode_as_gpio 0
 set_option -use_i2c_as_gpio 0
 set_option -rw_check_on_ram 0
-set_option -user_code 00000001
+#set_option -user_code 00000001
 set_option -bit_compress 1
 set_option -multi_boot 0
 set_option -mspi_jump 0
+set_option -turn_off_bg 0
+set_option -vccaux 3.3
 set_option -vccx 1.8
 set_option -vcc 0.9
 set_option -power_on_reset_monitor 1
@@ -107,11 +101,22 @@ set_option -rpt_auto_place_io_info 1
 set_option -convert_sdp32_36_to_sdp16_18 1
 set_option -correct_hold_violation 1
 set_option -loading_rate 70.000
-set_option -place_option 0
-set_option -route_option 0
+set_option -place_option 2
+set_option -route_option 2
 set_option -ireg_in_iob 1
 set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1
+set_option -bit_crc_check 1
+set_option -bit_security 1
+set_option -bit_incl_bsram_init 1
+set_option -bg_programming off
+set_option -hotboot 0
+set_option -program_done_bypass 0
+set_option -wakeup_mode 0
+set_option -serdesRetiming 0
+set_option -enable_dsrm 0
+set_option -disable_io_insertion 0
+set_option -looplimit 2000
 
 #set_option -multiboot_mode quad
 #set_option -multiboot_address_width 24
