@@ -92,13 +92,10 @@ signal clk64          : std_logic;
 signal clk32          : std_logic;
 signal pll_locked     : std_logic;
 signal clk_pixel_x5   : std_logic;
-signal mspi_clk_x5    : std_logic;
 signal clk64_ntsc     : std_logic;
-signal clk32_ntsc     : std_logic;
 signal pll_locked_ntsc: std_logic;
 signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
-signal clk32_pal      : std_logic;
 signal pll_locked_pal : std_logic;
 signal clk_pixel_x5_pal   : std_logic;
 attribute syn_keep : integer;
@@ -106,11 +103,9 @@ attribute syn_keep of clk64             : signal is 1;
 attribute syn_keep of clk32             : signal is 1;
 attribute syn_keep of clk_pixel_x5      : signal is 1;
 attribute syn_keep of clk64_pal         : signal is 1;
-attribute syn_keep of clk32_ntsc        : signal is 1;
-attribute syn_keep of clk32_pal         : signal is 1;
+attribute syn_keep of clk64_ntsc        : signal is 1;
 attribute syn_keep of clk_pixel_x5_pal  : signal is 1;
-attribute syn_keep of mspi_clk_x5       : signal is 1;
-attribute syn_keep of m0s               : signal is 1;
+attribute syn_keep of clk_pixel_x5_ntsc : signal is 1;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
 signal audio_data_r  : std_logic_vector(17 downto 0);
@@ -243,6 +238,7 @@ signal spi_io_din     : std_logic;
 signal spi_io_ss      : std_logic;
 signal spi_io_clk     : std_logic;
 signal spi_io_dout    : std_logic;
+signal spi_ext        : std_logic;
 signal disk_g64       : std_logic;
 signal disk_g64_d     : std_logic;
 signal c1541_reset    : std_logic;
@@ -250,7 +246,6 @@ signal c1541_osd_reset : std_logic;
 signal system_wide_screen : std_logic;
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
-signal system_leds    : std_logic_vector(1 downto 0);
 signal led1541        : std_logic;
 signal reu_cfg        : std_logic; 
 signal dma_req        : std_logic;
@@ -354,8 +349,6 @@ signal key_right2      : std_logic;
 signal key_start2      : std_logic;
 signal key_select2     : std_logic;
 signal audio_div       : unsigned(8 downto 0);
-signal flash_clk       : std_logic;
-signal flash_lock      : std_logic;
 signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(22 downto 0);
@@ -496,6 +489,7 @@ signal shift_mod        : std_logic_vector(1 downto 0);
 signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
+signal int_out_n        : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -536,6 +530,7 @@ begin
   spi_io_ss   <= m0s(2);
   spi_io_clk  <= m0s(3);
   m0s(0)      <= spi_io_dout;
+  m0s(4)      <= int_out_n;
 
 -- https://store.curiousinventor.com/guides/PS2/
 -- https://hackaday.io/project/170365-blueretro/log/186471-playstation-playstation-2-spi-interface
@@ -895,8 +890,22 @@ clk_switch_2: DCS
 		CLKOUT   => clk64 -- switched clock
 	);
   
-pll_locked <= pll_locked_pal and pll_locked_ntsc and flash_lock;
+pll_locked <= pll_locked_pal and pll_locked_ntsc;
 dcsclksel <= "0001" when ntscMode = '0' else "0010";
+
+clk_switch_1: DCS
+generic map (
+    DCS_MODE => "RISING"
+)
+port map (
+    CLKOUT => clk_pixel_x5,
+    CLKSEL => dcsclksel,
+    CLKIN0 => clk_pixel_x5_pal,
+    CLKIN1 => clk_pixel_x5_ntsc,
+    CLKIN2 => '0',
+    CLKIN3 => '0',
+    SELFORCE => '1'
+);
 
 div_inst: CLKDIV
 generic map(
@@ -905,17 +914,16 @@ generic map(
 port map(
     CLKOUT => clk32,
     HCLKIN => clk64,
-    RESETN => '1',
+    RESETN => pll_locked,
     CALIB  => '0'
 );
 
 mainclock_pal: entity work.Gowin_PLL_138k_pal
 port map (
     lock => pll_locked_pal,
-    clkout0 => open,
-    clkout1 => clk_pixel_x5_pal,
-    clkout2 => clk64_pal,
-    clkout3 => open,
+    clkout0 => clk_pixel_x5_pal,
+    clkout1 => clk64_pal,
+    clkout2 => mspi_clk,
     clkin => clk
 );
 
@@ -928,15 +936,6 @@ port map (
     clkout3 => open,
     clkin => clk
 );
-
--- 64.0Mhz for flash controller c1541 ROM
-flashclock: entity work.Gowin_PLL_138k_flash
-    port map (
-        lock => flash_lock,
-        clkout0 => flash_clk,
-        clkout1 => mspi_clk,
-        clkin => clk
-    );
 
 leds_n <=  not leds;
 leds(0) <= led1541;
@@ -1047,17 +1046,14 @@ begin
   end if;
 end process;
 
--- process to toggle joy A/B port with USER button or Keyboard page-up (STRG + CSR UP)
--- TN20k,TP25k user button is high active
--- TM138k pro low active
+-- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
+
 process(clk32)
 begin
   if rising_edge(clk32) then
     if vsync = '1' then
-      user_d <= user;
       numpad_d <= numpad;
-      if (user = '0' and user_d = '1') or
-         (numpad(7) = '1' and numpad_d(7) = '0') then
+      if (numpad(7) = '1' and numpad_d(7) = '0') then
         joyswap <= not joyswap; -- toggle mode
         elsif system_joyswap = '1' then -- OSD fixed setting mode
           joyswap <= '1'; -- OSD fixed setting mode
@@ -1221,7 +1217,7 @@ hid_inst: entity work.hid
   system_turbo_mode   => turbo_mode,
   system_turbo_speed  => turbo_speed,
   system_video_std    => ntscMode,
-  system_midi         => st_midi,
+  system_midi         => open,
   system_pause        => system_pause,
   system_vic_variant  => vic_variant, 
   system_cia_mode     => cia_mode,
@@ -1246,13 +1242,13 @@ hid_inst: entity work.hid
   port_in_strobe    => serial_rx_strobe,
   port_in_data      => serial_rx_data,
 
-  int_out_n           => m0s(4),
+  int_out_n           => int_out_n,
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not reset & not user), -- S0 and S1 buttons on Tang Nano 20k
-  leds                => system_leds,         -- two leds can be controlled from the MCU
-  color               => ws2812_color -- a 24bit color to e.g. be used to drive the ws2812
+  buttons             => unsigned'(not user & not reset), -- S0 and S1 buttons on Tang Nano 20k
+  leds                => open,
+  color               => ws2812_color
 );
 
 process(clk32)
@@ -1460,8 +1456,8 @@ port map(
 -- offset in spi flash TN20K, TP25K $200000, TM138K $A00000
 flash_inst: entity work.flash 
 port map(
-    clk       => flash_clk,
-    resetn    => pll_locked,
+    clk       => clk64_pal,
+    resetn    => pll_locked_pal,
     ready     => flash_ready,
     busy      => open,
     address   => (X"A" & "000" & dos_sel & c1541rom_addr),
@@ -1544,7 +1540,7 @@ end generate;
 crt_inst : entity work.loader_sd_card
 port map (
   clk               => clk32,
-  system_reset      => unsigned'(por & por),
+  system_reset      => unsigned'('0' & por),
 
   sd_lba            => loader_lba,
   sd_rd             => sd_rd(5 downto 1),

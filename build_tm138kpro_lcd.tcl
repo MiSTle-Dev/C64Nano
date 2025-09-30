@@ -55,7 +55,6 @@ add_file src/tang/tm138kpro_lcd/tang_nano_20k_c64_top_138kpro_lcd.vhd
 add_file src/video_vicII_656x.vhd
 add_file src/gowin_pll/gowin_pll_138k_pal.vhd
 add_file src/gowin_pll/gowin_pll_138k_ntsc.vhd
-add_file src/gowin_pll/gowin_pll_138k_flash.vhd
 add_file src/tang/tm138kpro_lcd/tang_nano_20k_c64_top_138kpro_lcd.cst
 add_file src/tang/tm138kpro_lcd/tang_nano_20k_c64_top_138kpro_lcd.sdc
 add_file src/loader_sd_card.sv

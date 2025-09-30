@@ -40,10 +40,10 @@ reg [6:0] spi_sr_in;
 reg spi_data_in_ready;
 
 // read data on falling edge of spi clock
-always @(negedge spi_io_clk or posedge spi_io_ss) begin
-    if(spi_io_ss) begin
+always @(negedge spi_io_clk, posedge spi_io_ss) begin
+    if(spi_io_ss)
         spi_cnt <= 4'd0;
-    end else begin
+    else begin
         // lower 3 bits cound bits, upper 8 bits count bytes
         spi_cnt <= spi_cnt + 4'd1;
 
@@ -114,12 +114,11 @@ wire [7:0] in_byte =
 	   8'h00;   
    
 // setup data on rising edge of spi clock
-always @(posedge spi_io_clk or posedge spi_io_ss) begin
-    if(spi_io_ss) begin
+always @(posedge spi_io_clk, posedge spi_io_ss) begin
+    if(spi_io_ss)
        spi_io_dout <= 1'b0; // bl616 EN_CHIP fix
-    end else begin
+     else
        spi_io_dout <= in_byte[~spi_cnt[2:0]];
-    end
 end
 
 endmodule // osd_u8g2

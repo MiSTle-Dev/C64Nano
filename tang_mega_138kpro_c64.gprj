@@ -58,7 +58,6 @@
         <File path="src/fpga64_keyboard.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fpga64_rgbcolor.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fpga64_sid_iec.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/gowin_pll/gowin_pll_138k_flash.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_pll/gowin_pll_138k_ntsc.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_pll/gowin_pll_138k_pal.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_prom/gowin_prom_basic.vhd" type="file.vhdl" enable="1"/>
