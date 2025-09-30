@@ -94,11 +94,9 @@ signal clk32          : std_logic;
 signal pll_locked     : std_logic;
 signal clk_pixel_x5   : std_logic;
 signal clk64_ntsc     : std_logic;
-signal clk32_ntsc     : std_logic;
 signal pll_locked_ntsc: std_logic;
 signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
-signal clk32_pal      : std_logic;
 signal pll_locked_pal : std_logic;
 signal clk_pixel_x5_pal   : std_logic;
 attribute syn_keep : integer;
@@ -106,9 +104,9 @@ attribute syn_keep of clk64             : signal is 1;
 attribute syn_keep of clk32             : signal is 1;
 attribute syn_keep of clk_pixel_x5      : signal is 1;
 attribute syn_keep of clk64_pal         : signal is 1;
-attribute syn_keep of clk32_ntsc        : signal is 1;
-attribute syn_keep of clk32_pal         : signal is 1;
+attribute syn_keep of clk64_ntsc        : signal is 1;
 attribute syn_keep of clk_pixel_x5_pal  : signal is 1;
+attribute syn_keep of clk_pixel_x5_ntsc : signal is 1;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
 signal audio_data_r  : std_logic_vector(17 downto 0);
@@ -1048,17 +1046,14 @@ begin
   end if;
 end process;
 
--- process to toggle joy A/B port with USER button or Keyboard page-up (STRG + CSR UP)
--- TN20k,TP25k user button is high active
--- TM138k pro low active
+-- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
+
 process(clk32)
 begin
   if rising_edge(clk32) then
     if vsync = '1' then
-      user_d <= user;
       numpad_d <= numpad;
-      if (user = '1' and user_d = '0') or
-         (numpad(7) = '1' and numpad_d(7) = '0') then
+      if (numpad(7) = '1' and numpad_d(7) = '0') then
         joyswap <= not joyswap; -- toggle mode
         elsif system_joyswap = '1' then -- OSD fixed setting mode
           joyswap <= '1'; -- OSD fixed setting mode

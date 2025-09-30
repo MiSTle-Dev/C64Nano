@@ -1,3 +1,5 @@
+CLOCK_LOC "spi_sclk_d" BUFG = CE|CLK;
+
 // connections to the internal BL616 controller
 IO_LOC "spi_csn" H11; // TMS
 IO_PORT "spi_csn" IO_TYPE=LVCMOS33 PULL_MODE=UP PULL_STRENGTH=WEAK BANK_VCCIO=3.3;
