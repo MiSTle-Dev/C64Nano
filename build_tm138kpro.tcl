@@ -26,7 +26,7 @@ add_file src/misc/sd_card.v
 add_file src/misc/sd_rw.v
 add_file src/misc/sdcmd_ctrl.v
 add_file src/misc/sysctrl.v
-add_file src/misc/video.v
+add_file src/tang/console60k/video.v
 add_file src/misc/video_analyzer.v
 add_file src/misc/ws2812.v
 add_file src/mos6526.v
@@ -73,7 +73,7 @@ add_file src/uart6551/uart_6551.v
 add_file src/misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
-set_option -output_base_name tang_nano_20k_c64_138k
+set_option -output_base_name C64Nano_138kpro
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
 set_option -top_module tang_nano_20k_c64_top_138k
@@ -82,11 +82,15 @@ set_option -use_sspi_as_gpio 1
 set_option -use_done_as_gpio 1
 set_option -use_cpu_as_gpio 1
 set_option -use_ready_as_gpio 1
+set_option -use_jtag_as_gpio 0
+set_option -use_mode_as_gpio 0
+set_option -use_i2c_as_gpio 0
 set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -bit_compress 1
 set_option -multi_boot 0
 set_option -mspi_jump 0
+set_option -loading_rate 70.000
 
 #run syn
 run all
