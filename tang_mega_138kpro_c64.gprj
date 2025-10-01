@@ -32,7 +32,6 @@
         <File path="src/misc/sd_rw.v" type="file.verilog" enable="1"/>
         <File path="src/misc/sdcmd_ctrl.v" type="file.verilog" enable="1"/>
         <File path="src/misc/sysctrl.v" type="file.verilog" enable="1"/>
-        <File path="src/misc/video.v" type="file.verilog" enable="1"/>
         <File path="src/misc/video_analyzer.v" type="file.verilog" enable="1"/>
         <File path="src/misc/ws2812.v" type="file.verilog" enable="1"/>
         <File path="src/mos6526.v" type="file.verilog" enable="1"/>
@@ -44,6 +43,7 @@
         <File path="src/sid/sid_tables.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_top.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_voice.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/video.v" type="file.verilog" enable="1"/>
         <File path="src/uart6551/io_fifo.v" type="file.verilog" enable="1"/>
         <File path="src/uart6551/uart_6551.v" type="file.verilog" enable="1"/>
         <File path="src/c1530.vhd" type="file.vhdl" enable="1"/>

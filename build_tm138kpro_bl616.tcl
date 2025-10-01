@@ -26,7 +26,7 @@ add_file src/misc/sd_card.v
 add_file src/misc/sd_rw.v
 add_file src/misc/sdcmd_ctrl.v
 add_file src/misc/sysctrl.v
-add_file src/misc/video.v
+add_file src/tang/console60k/video.v
 add_file src/misc/video_analyzer.v
 add_file src/misc/ws2812.v
 add_file src/mos6526.v
@@ -86,12 +86,11 @@ set_option -use_jtag_as_gpio 1
 set_option -use_mode_as_gpio 0
 set_option -use_i2c_as_gpio 0
 set_option -rw_check_on_ram 0
-#set_option -user_code 00000001
+set_option -user_code 00000001
 set_option -bit_compress 1
 set_option -multi_boot 0
 set_option -mspi_jump 0
 set_option -turn_off_bg 0
-set_option -vccaux 3.3
 set_option -vccx 1.8
 set_option -vcc 0.9
 set_option -power_on_reset_monitor 1
