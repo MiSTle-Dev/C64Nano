@@ -11,11 +11,12 @@ The C64Nano is a port of some [MiST](https://github.com/mist-devel/mist-board/wi
 | [Tang Mega 60k NEO](https://wiki.sipeed.com/hardware/en/tang/tang-mega-60k/mega-60k.html) | [GW5AT-60](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD | twin Dualshock |
 | [Tang Mega 138k Pro](https://wiki.sipeed.com/hardware/en/tang/tang-mega-138k/mega-138k-pro.html)|[GW5AST-138](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |twin Dualshock |
 | [Tang Console 60K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)|[GW5AT-60](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |twin Dualshock, no Retro D9 Joystick|
+| [Tang Console 138K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)|[GW5AST-138](https://www.gowinsemi.com/en/product/detail/60/)|HDMI / LCD |twin Dualshock, no Retro D9 Joystick|
 
 This project relies on a MPU being connected to the FPGA. --> [MiSTle-Dev wiki](https://github.com/MiSTle-Dev/.github/wiki) <--  
 
 > [!NOTE]
-> If you don't need the WIFI modem on a TN20K then even the onboard BL616 MPU (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 MPU is presently supported for TN20K, Console 60K, Primer 25k and Mega 138kPro. WIFI modem is supported on Console 60K too (requires I-PEX MHF4 connector antenna)
+> If you don't need the WIFI modem on a TN20K then even the onboard BL616 MPU (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 MPU is presently supported for Nano 20k, Console 60k / 138k, Primer 25k and Mega 138k Pro. WIFI modem is supported on Console 60K too (requires I-PEX MHF4 connector antenna)
 
 Original C64 core by Peter Wendrich and c1541 by [darfpga](https://github.com/darfpga).  
 All HID components and MPU firmware by Till Harbaum
@@ -70,9 +71,9 @@ See [Tang Mega 60K NEO](TANG_MEGA_60K.md)
 
 See [Tang Mega 138K Pro](TANG_MEGA_138Kpro.md)
 
-## c64 Nano on Tang Console 60k NEO
+## c64 Nano on Tang Console 60k / 138k NEO
 
-See [Tang Console 60K NEO](TANG_CONSOLE_60K.md)
+See [Tang Console 60K / 138k NEO](TANG_CONSOLE_60K.md)
 
 ## c64 Nano with LCD and Speaker
 
