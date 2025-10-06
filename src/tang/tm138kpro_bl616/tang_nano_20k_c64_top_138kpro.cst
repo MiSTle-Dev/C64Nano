@@ -1,4 +1,5 @@
-CLOCK_LOC "spi_sclk_d" BUFG = CE|CLK;
+CLOCK_LOC "spi_sclk_d" BUFG = CLK;
+//CLOCK_LOC "spi_sclk_d" LOCAL_CLOCK;
 
 // connections to the internal BL616 controller
 IO_LOC "spi_csn" H11; // TMS

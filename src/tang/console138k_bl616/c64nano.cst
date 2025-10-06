@@ -1,4 +1,5 @@
-CLOCK_LOC "spi_sclk_d" BUFG = CE|CLK;
+CLOCK_LOC "spi_sclk_d" BUFG = CLK;
+//CLOCK_LOC "spi_sclk_d" LOCAL_CLOCK;
 
 IO_PORT "reconfign" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 IO_LOC  "reconfign" N12;
