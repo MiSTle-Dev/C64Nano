@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------
---  C64 Top level for Tang Nano Mega 138k Pro
+--  C64 Top level for Tang Console 138k NEO
 --  2025 Stefan Voss
 --  based on the work of many others
 --
@@ -12,7 +12,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.numeric_std.ALL;
 
-entity tang_nano_20k_c64_top_138k is
+entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
@@ -26,13 +26,11 @@ entity tang_nano_20k_c64_top_138k is
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
-    leds_n      : out std_logic_vector(5 downto 0);
-    io          : in std_logic_vector(5 downto 0); -- TR2 TR1 RI LE DN UP
-    -- USB-C BL616 UART
+    leds_n      : out std_logic_vector(1 downto 0);
+    -- onboard USB-C Tang BL616 UART
     uart_rx     : in std_logic;
     uart_tx     : out std_logic;
     -- monitor port
-    twimux       : out std_logic_vector(2 downto 0);
     bl616_mon_tx : out std_logic;
     bl616_mon_rx : in std_logic;
    -- external hw pin UART
@@ -44,30 +42,30 @@ entity tang_nano_20k_c64_top_138k is
     spi_dir     : out std_logic;
     spi_dat     : in std_logic;
     spi_irqn    : out std_logic;
-    --
-    tmds_clk_n  : out std_logic;
-    tmds_clk_p  : out std_logic;
-    tmds_d_n    : out std_logic_vector( 2 downto 0);
-    tmds_d_p    : out std_logic_vector( 2 downto 0);
     -- internal lcd
-    lcd_clk     : out std_logic; -- lcd is RGB 565
+    lcd_clk     : out std_logic; -- lcd clk
     lcd_hs      : out std_logic; -- lcd horizontal synchronization
     lcd_vs      : out std_logic; -- lcd vertical synchronization        
     lcd_de      : out std_logic; -- lcd data enable     
     lcd_bl      : out std_logic; -- lcd backlight control
-    lcd_r       : out std_logic_vector(5 downto 0);  -- lcd red
-    lcd_g       : out std_logic_vector(5 downto 0);  -- lcd green
-    lcd_b       : out std_logic_vector(5 downto 0);  -- lcd blue
+    lcd_r       : out std_logic_vector(7 downto 0);  -- lcd red
+    lcd_g       : out std_logic_vector(7 downto 0);  -- lcd green
+    lcd_b       : out std_logic_vector(7 downto 0);  -- lcd blue
     -- audio
     hp_bck      : out std_logic;
     hp_ws       : out std_logic;
     hp_din      : out std_logic;
     pa_en       : out std_logic;
+    --
+    tmds_clk_n  : out std_logic;
+    tmds_clk_p  : out std_logic;
+    tmds_d_n    : out std_logic_vector( 2 downto 0);
+    tmds_d_p    : out std_logic_vector( 2 downto 0);
+    pwr_sav     : out std_logic;
     -- sd interface
     sd_clk      : out std_logic;
     sd_cmd      : inout std_logic;
     sd_dat      : inout std_logic_vector(3 downto 0);
-    ws2812      : out std_logic;
     -- MiSTer SDRAM module
     O_sdram_clk     : out std_logic;
     O_sdram_cs_n    : out std_logic; -- chip select
@@ -88,9 +86,7 @@ entity tang_nano_20k_c64_top_138k is
     ds2_mosi      : out std_logic;
     ds2_miso      : in std_logic;
     ds2_cs        : out std_logic;
-    -- MIDI
-    midi_rx       : in std_logic;
-    midi_tx       : out std_logic;
+
     -- spi flash interface
     mspi_cs       : out std_logic;
     mspi_clk      : out std_logic;
@@ -101,7 +97,7 @@ entity tang_nano_20k_c64_top_138k is
     );
 end;
 
-architecture Behavioral_top of tang_nano_20k_c64_top_138k is
+architecture Behavioral_top of c64nano_top is
 
 signal clk64          : std_logic;
 signal clk32          : std_logic;
@@ -543,12 +539,11 @@ component DCS
 begin
 
   jtagseln <= pll_locked;
-  midi_tx <= '1';
   reconfign <= 'Z';
-  twimux <= "100"; -- connect BL616 TWI4 PLL1
   -- BL616 console to hw pins for external USB-UART adapter
   uart_tx <= bl616_mon_rx;
   bl616_mon_tx <= uart_rx;
+  pwr_sav <= '1';
 
   -- internal BL616 controller
   spi_io_din  <= spi_dat;
@@ -625,14 +620,6 @@ gamepad_p2: entity work.dualshock2
     key_rstick    => open,
     debug1        => open,
     debug2        => open
-    );
-
-    led_ws2812: entity work.ws2812
-    port map
-    (
-     clk    => clk32,
-     color  => ws2812_color,
-     data   => ws2812
     );
 
 process(clk32, disk_reset)
@@ -813,7 +800,7 @@ audio_r <= audio_data_r or (5x"00" & cass_snd & 12x"00000");
 video_inst: entity work.video
 generic map
 (
-  STEREO  => true
+  STEREO  => false
 )
 port map(
       pll_lock     => pll_locked, 
@@ -851,9 +838,9 @@ port map(
       lcd_hs_n => lcd_hs,
       lcd_vs_n => lcd_vs,
       lcd_de   => lcd_de,
-      lcd_r(7 downto 2) => lcd_r,
-      lcd_g(7 downto 2) => lcd_g,
-      lcd_b(7 downto 2) => lcd_b,
+      lcd_r    => lcd_r,
+      lcd_g    => lcd_g,
+      lcd_b    => lcd_b,
       lcd_bl   => lcd_bl,
 
       hp_bck   => hp_bck,
@@ -970,14 +957,15 @@ port map (
     clkin => clk
 );
 
-leds_n <=  not leds;
+leds_n(1 downto 0) <= not leds(1 downto 0);
+leds(1) <= '0';
 leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
 joyDS2_p1  <= key_circle  & key_cross  & key_square  & key_right  & key_left  & key_down  & key_up;
 joyDS2_p2  <= key_circle2 & key_cross2 & key_square2 & key_right2 & key_left2 & key_down2 & key_up2;
-joyDigital <= not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
+joyDigital <= 7x"00";
 joyUsb1    <= joystick1(6 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
 joyUsb2    <= joystick2(6 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
 joyNumpad  <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);
@@ -988,7 +976,7 @@ joyUsb1A   <= "00" & '0' & joystick1(5) & joystick1(4) & "00"; -- Y,X button
 joyUsb2A   <= "00" & '0' & joystick2(5) & joystick2(4) & "00"; -- Y,X button
 
 -- send external DB9 joystick port to µC
-db9_joy <= not(io(5) & io(0), io(2), io(1), io(4), io(3));
+db9_joy <= 6x"00";
 
 process(clk32)
 begin
@@ -1279,9 +1267,9 @@ hid_inst: entity work.hid
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not user & not reset), -- S0 and S1 buttons on Tang Nano 20k
+  buttons             => unsigned'(not user & not reset), -- S2 and S1 buttons
   leds                => open,
-  color               => ws2812_color
+  color               => open
 );
 
 process(clk32)
@@ -1309,7 +1297,6 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
-      --    unsigned(midi_data) when (midi_oe and midi_en) = '1' else
             uart_data when uart_oe = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
@@ -1363,10 +1350,10 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   game         => game,
   exrom        => exrom,
   io_rom       => io_rom,
-  io_ext       => reu_oe or cart_oe or uart_oe, --or (midi_oe and midi_en)
+  io_ext       => reu_oe or cart_oe or uart_oe,
   io_data      => io_data,
-  irq_n        => '1', -- midi_irq_n,
-  nmi_n        => not nmi and uart_irq, -- and midi_nmi_n 
+  irq_n        => '1',
+  nmi_n        => not nmi and uart_irq,
   nmi_ack      => nmi_ack,
   romL         => romL,
   romH         => romH,
@@ -1493,7 +1480,7 @@ port map(
     resetn    => pll_locked_pal,
     ready     => flash_ready,
     busy      => open,
-    address   => (X"A" & "000" & dos_sel & c1541rom_addr),
+    address   => (X"7" & "000" & dos_sel & c1541rom_addr),
     cs        => c1541rom_cs,
     dout      => c1541rom_data,
     mspi_cs   => mspi_cs,
@@ -1547,29 +1534,6 @@ port map
     nmi_ack     => nmi_ack
   );
 
-midi_en <= st_midi(2) or st_midi(1) or st_midi(0);
-
-yes_midi: if MIDI /= 0 generate
-  midi_inst : entity work.c64_midi
-  port map (
-    clk32   => clk32,
-    reset   => not reset_n or not midi_en,
-    Mode    => st_midi,
-    E       => phi,
-    IOE     => IOE,
-    A       => std_logic_vector(c64_addr),
-    Din     => std_logic_vector(c64_data_out),
-    Dout    => midi_data,
-    OE      => midi_oe,
-    RnW     => not (ram_we and IOE),
-    nIRQ    => midi_irq_n,
-    nNMI    => midi_nmi_n,
- 
-    RX      => midi_rx,
-    TX      => midi_tx
-  );
-end generate;
-
 crt_inst : entity work.loader_sd_card
 port map (
   clk               => clk32,
@@ -1593,7 +1557,7 @@ port map (
   load_tap          => load_tap,
   load_flt          => load_flt,
   sd_img_size       => sd_img_size,
-  leds              => leds(5 downto 1),
+  leds              => open,
   img_select        => open,
 
   ioctl_download    => ioctl_download,
@@ -1907,7 +1871,7 @@ begin
   pb_i <= (others => '1');
   drive_par_i <= (others => '1');
   drive_stb_i <= '1';
-  --uart_tx <= '1';
+  -- uart_tx <= '1'; -- onboard BL616 blocked
   flag2_n_i <= '1';
   uart_cs <= '0';
   if ext_en = '1' and disk_access = '1' then
@@ -1929,7 +1893,7 @@ begin
     -- PB6 CTS in
     -- PB7 DSR in
     -- PA2 TXD out
-    --uart_tx <= pa2_o;
+    --uart_tx <= pa2_o;  -- onboard BL616 blocked
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     -- Zeromodem
@@ -1947,18 +1911,18 @@ begin
     -- PB7 to CNT2 
     pb_i(7) <= cnt2_o;
     cnt2_i <= pb_o(7);
-    --uart_tx <= pa2_o and sp1_o;
+    --uart_tx <= pa2_o and sp1_o; -- onboard BL616 blocked
     sp2_i <= uart_rx_filtered;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     elsif system_up9600 = 2 then
-      --uart_tx <= tx_6551;
+      --uart_tx <= tx_6551; -- onboard BL616 blocked
       uart_cs <= IOE;
     elsif system_up9600 = 3 then
-      --uart_tx <= tx_6551;
+      --uart_tx <= tx_6551; -- onboard BL616 blocked
       uart_cs <= IOF;
     elsif system_up9600 = 4 then
-      --uart_tx <= tx_6551;
+      --uart_tx <= tx_6551; -- onboard BL616 blocked
       uart_cs <= IO7;
   end if;
 end process;
