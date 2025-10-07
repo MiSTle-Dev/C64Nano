@@ -51,8 +51,10 @@ add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
 add_file src/video_vicII_656x.vhd
 add_file src/tang/console138k_bl616/c64nano.vhd
+add_file src/tang/console138k_bl616/pll_init.v
 add_file src/tang/console138k_bl616/gowin_pll_138k_ntsc.vhd
 add_file src/tang/console138k_bl616/gowin_pll_138k_pal.vhd
+add_file src/tang/console138k_bl616/gowin_pll_138k_pal_mod.vhd
 add_file src/tang/console138k_bl616/c64nano.cst
 add_file src/tang/console138k_bl616/c64nano.sdc
 add_file src/loader_sd_card.sv

@@ -1,4 +1,3 @@
-create_clock -name clk -period 20 -waveform {0 10} [get_ports {clk}]
 create_clock -name clk_pixel_x5_pal -period 6.349 -waveform {0 3.174} [get_nets {clk_pixel_x5_pal}]
 create_clock -name clk_pixel_x5_ntsc -period 6.115 -waveform {0 3.05} [get_nets {clk_pixel_x5_ntsc}]
 create_clock -name clk_pixel_x5 -period 6.349 -waveform {0 3.174} [get_nets {clk_pixel_x5}]

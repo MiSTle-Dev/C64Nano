@@ -1,4 +1,3 @@
-create_clock -name clk -period 20 -waveform {0 10} [get_ports {clk}]
 create_clock -name clk_pixel_x5_pal -period 6.349 -waveform {0 3.174} [get_nets {clk_pixel_x5_pal}]
 create_clock -name clk_pixel_x5_ntsc -period 6.115 -waveform {0 3.05} [get_nets {clk_pixel_x5_ntsc}]
 create_clock -name clk_pixel_x5 -period 6.349 -waveform {0 3.174} [get_nets {clk_pixel_x5}]
@@ -9,7 +8,7 @@ create_clock -name ds2_clk -period 500 -waveform {0 250} [get_nets {gamepad_p2/c
 create_clock -name i2sclk -period 500 -waveform {0 250} [get_nets {video_inst/i2s_clk}]
 create_clock -name clk -period 20 -waveform {0 10} [get_ports {clk}] -add
 create_generated_clock -name clk64_pal -source [get_nets {clk_pixel_x5_pal}] -master_clock clk_pixel_x5_pal -divide_by 5 -multiply_by 2 [get_nets {clk64_pal}]
-create_generated_clock -name mspi_clk -source [get_nets {clk_pixel_x5_pal}] -master_clock clk_pixel_x5_pal -divide_by 5 -multiply_by 2 -phase 270 [get_nets {mspi_clk}]
+create_generated_clock -name mspi_clk -source [get_nets {clk_pixel_x5_pal}] -master_clock clk_pixel_x5_pal -divide_by 5 -multiply_by 2 -phase 135 [get_nets {mspi_clk}]
 create_generated_clock -name clk64_ntsc -source [get_nets {clk_pixel_x5_ntsc}] -master_clock clk_pixel_x5_ntsc -divide_by 5 -multiply_by 2 [get_nets {clk64_ntsc}]
 create_generated_clock -name clk64 -source [get_nets {clk_pixel_x5}] -master_clock clk_pixel_x5 -divide_by 5 -multiply_by 2 [get_nets {clk64}]
 create_generated_clock -name clk32 -source [get_nets {clk64}] -master_clock clk64 -divide_by 2 -multiply_by 1 [get_nets {clk32}]

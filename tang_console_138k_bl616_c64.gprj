@@ -43,6 +43,7 @@
         <File path="src/sid/sid_tables.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_top.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_voice.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console138k_bl616/pll_init.v" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/video.v" type="file.verilog" enable="1"/>
         <File path="src/uart6551/io_fifo.v" type="file.verilog" enable="1"/>
         <File path="src/uart6551/uart_6551.v" type="file.verilog" enable="1"/>
@@ -70,6 +71,7 @@
         <File path="src/tang/console138k_bl616/c64nano.vhd" type="file.vhdl" enable="1"/>
         <File path="src/tang/console138k_bl616/gowin_pll_138k_ntsc.vhd" type="file.vhdl" enable="1"/>
         <File path="src/tang/console138k_bl616/gowin_pll_138k_pal.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/tang/console138k_bl616/gowin_pll_138k_pal_mod.vhd" type="file.vhdl" enable="1"/>
         <File path="src/uart6551/BaudRate.vhd" type="file.vhdl" enable="1"/>
         <File path="src/video_vicII_656x.vhd" type="file.vhdl" enable="1"/>
         <File path="src/tang/console138k_bl616/c64nano.cst" type="file.cst" enable="1"/>

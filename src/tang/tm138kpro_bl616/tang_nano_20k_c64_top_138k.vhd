@@ -108,10 +108,10 @@ signal clk32          : std_logic;
 signal pll_locked     : std_logic;
 signal clk_pixel_x5   : std_logic;
 signal clk64_ntsc     : std_logic;
-signal pll_locked_ntsc: std_logic;
+signal pll_locked_ntsc: std_logic :='0';
 signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
-signal pll_locked_pal : std_logic;
+signal pll_locked_pal : std_logic :='0';
 signal clk_pixel_x5_pal   : std_logic;
 attribute syn_keep : integer;
 attribute syn_keep of clk64             : signal is 1;
@@ -956,7 +956,8 @@ port map (
     clkout0 => clk_pixel_x5_pal,
     clkout1 => clk64_pal,
     clkout2 => mspi_clk,
-    clkin => clk
+    clkin => clk,
+    init_clk => clk
 );
 
 mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc
