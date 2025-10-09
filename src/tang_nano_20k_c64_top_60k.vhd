@@ -21,6 +21,8 @@ entity c64_top is
    );
   port
   (
+    jtagseln    : out std_logic := '0';
+    reconfign   : out std_logic;
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
@@ -32,7 +34,7 @@ entity c64_top is
     -- monitor port
     bl616_mon_tx : out std_logic;
     bl616_mon_rx : in std_logic;
-   -- external hw pin UART
+    -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
     -- SPI interface external uC
@@ -43,6 +45,11 @@ entity c64_top is
     spi_dir     : out std_logic;
     spi_dat     : in std_logic;
     spi_irqn    : out std_logic;
+    --
+    tmds_clk_n  : out std_logic;
+    tmds_clk_p  : out std_logic;
+    tmds_d_n    : out std_logic_vector( 2 downto 0);
+    tmds_d_p    : out std_logic_vector( 2 downto 0);
     -- internal lcd
     lcd_clk     : out std_logic; -- lcd clk
     lcd_hs      : out std_logic; -- lcd horizontal synchronization
@@ -57,11 +64,6 @@ entity c64_top is
     hp_ws       : out std_logic;
     hp_din      : out std_logic;
     pa_en       : out std_logic;
-    --
-    tmds_clk_n  : out std_logic;
-    tmds_clk_p  : out std_logic;
-    tmds_d_n    : out std_logic_vector( 2 downto 0);
-    tmds_d_p    : out std_logic_vector( 2 downto 0);
     -- sd interface
     sd_clk      : out std_logic;
     sd_cmd      : inout std_logic;
@@ -112,6 +114,7 @@ signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
 signal pll_locked_pal : std_logic :='0';
 signal clk_pixel_x5_pal   : std_logic;
+signal spi_io_clk     : std_logic;
 attribute syn_keep : integer;
 attribute syn_keep of clk64             : signal is 1;
 attribute syn_keep of clk32             : signal is 1;
@@ -120,6 +123,7 @@ attribute syn_keep of clk64_pal         : signal is 1;
 attribute syn_keep of clk64_ntsc        : signal is 1;
 attribute syn_keep of clk_pixel_x5_pal  : signal is 1;
 attribute syn_keep of clk_pixel_x5_ntsc : signal is 1;
+attribute syn_keep of spi_io_clk        : signal is 1;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
 signal audio_data_r  : std_logic_vector(17 downto 0);
@@ -250,9 +254,8 @@ signal sdc_iack       : std_logic;
 signal int_ack        : std_logic_vector(7 downto 0);
 signal spi_io_din     : std_logic;
 signal spi_io_ss      : std_logic;
-signal spi_io_clk     : std_logic;
 signal spi_io_dout    : std_logic;
-signal spi_ext        : std_logic;
+signal spi_ext        : std_logic := '0';
 signal disk_g64       : std_logic;
 signal disk_g64_d     : std_logic;
 signal c1541_reset    : std_logic;
@@ -541,7 +544,10 @@ component DCS
 
 begin
 
-    -- BL616 console to hw pins for external USB-UART adapter
+  jtagseln <= pll_locked;
+  midi_tx <= '1';
+  reconfign <= 'Z';
+  -- BL616 console to hw pins for external USB-UART adapter
   uart_tx <= bl616_mon_rx;
   bl616_mon_tx <= uart_rx;
 
@@ -554,7 +560,7 @@ begin
     spi_ext <= '0';
   elsif rising_edge(clk32) then
     if m0s(2) = '0' then
-        spi_ext <= '1';
+        spi_ext <= '0'; -- '1'; debug
     end if;
   end if;
 end process;
@@ -827,7 +833,7 @@ audio_r <= audio_data_r or (5x"00" & cass_snd & 12x"00000");
 video_inst: entity work.video
 generic map
 (
-  STEREO  => false
+  STEREO  => true
 )
 port map(
       pll_lock     => pll_locked, 
