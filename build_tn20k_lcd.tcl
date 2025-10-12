@@ -70,7 +70,7 @@ add_file src/uart6551/uart_6551.v
 add_file src/misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
-set_option -output_base_name tang_nano_20k_c64_lcd
+set_option -output_base_name C64Nano_TN20k_lcd
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
 set_option -top_module tang_nano_20k_c64_top

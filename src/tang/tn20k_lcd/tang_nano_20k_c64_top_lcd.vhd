@@ -12,7 +12,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.numeric_std.ALL;
 
-entity tang_nano_20k_c64_top is
+entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
@@ -26,12 +26,17 @@ entity tang_nano_20k_c64_top is
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(5 downto 0);
     -- USB-C BL616 UART
-    uart_rx     : in std_logic;
-    uart_tx     : out std_logic;
-    -- SPI interface Sipeed M0S Dock external BL616 uC
-    m0s         : inout std_logic_vector(4 downto 0);
+    --uart_rx     : in std_logic;
+    --uart_tx     : out std_logic;
+    -- SPI connection to onboard BL616
+    spi_sclk    : in std_logic;
+    spi_csn     : in std_logic;
+    spi_dir     : out std_logic;
+    spi_dat     : in std_logic;
+    spi_irqn    : out std_logic;
+
     -- internal lcd
-    lcd_dclk    : out std_logic; -- lcd is RGB 565
+    lcd_clk     : out std_logic; -- lcd is RGB 565
     lcd_hs      : out std_logic; -- lcd horizontal synchronization
     lcd_vs      : out std_logic; -- lcd vertical synchronization        
     lcd_de      : out std_logic; -- lcd data enable     
@@ -71,7 +76,7 @@ entity tang_nano_20k_c64_top is
     );
 end;
 
-architecture Behavioral_top of tang_nano_20k_c64_top is
+architecture Behavioral_top of c64nano_top is
 
 type states is (
   FSM_RESET,
@@ -83,9 +88,8 @@ type states is (
   FSM_SWITCHED
 );
 
-signal uart_ext_rx     : std_logic := '1';
-signal uart_ext_tx     : std_logic;
-signal io              : std_logic_vector(5 downto 0) := "111111";
+signal uart_rx     : std_logic;
+signal uart_tx     : std_logic;
 
 signal state          : states := FSM_RESET;
 signal clk64          : std_logic;
@@ -94,12 +98,17 @@ signal pll_locked     : std_logic;
 signal pll_locked_hid : std_logic;
 signal clk_pixel_x10  : std_logic;
 signal clk_pixel_x5   : std_logic;
+signal spi_io_clk     : std_logic;
 attribute syn_keep : integer;
 attribute syn_keep of clk64         : signal is 1;
 attribute syn_keep of clk32         : signal is 1;
 attribute syn_keep of clk_pixel_x10 : signal is 1;
 attribute syn_keep of clk_pixel_x5  : signal is 1;
-attribute syn_keep of m0s           : signal is 1;
+attribute syn_keep of spi_io_clk    : signal is 1;
+
+-- custom pins
+signal uart_ext_rx   : std_logic;
+signal uart_ext_tx   : std_logic;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
 signal audio_data_r  : std_logic_vector(17 downto 0);
@@ -230,8 +239,8 @@ signal sdc_iack       : std_logic;
 signal int_ack        : std_logic_vector(7 downto 0);
 signal spi_io_din     : std_logic;
 signal spi_io_ss      : std_logic;
-signal spi_io_clk     : std_logic;
 signal spi_io_dout    : std_logic;
+signal spi_ext        : std_logic := '0';
 signal disk_g64       : std_logic;
 signal disk_g64_d     : std_logic;
 signal c1541_reset    : std_logic;
@@ -239,7 +248,6 @@ signal c1541_osd_reset : std_logic;
 signal system_wide_screen : std_logic;
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
-signal system_leds    : std_logic_vector(1 downto 0);
 signal led1541        : std_logic;
 signal reu_cfg        : std_logic; 
 signal dma_req        : std_logic;
@@ -298,8 +306,6 @@ signal hbl_out         : std_logic;
 signal vbl_out         : std_logic;
 signal st_midi         : std_logic_vector(2 downto 0);
 signal phi             : std_logic;
-signal frz_hbl         : std_logic;
-signal frz_vbl         : std_logic;
 signal system_pause    : std_logic;
 signal paddle_1        : std_logic_vector(7 downto 0);
 signal paddle_2        : std_logic_vector(7 downto 0);
@@ -321,8 +327,6 @@ signal key_up          : std_logic;
 signal key_down        : std_logic;
 signal key_left        : std_logic;
 signal key_right       : std_logic;
-signal key_start       : std_logic;
-signal key_select      : std_logic;
 signal key_r12         : std_logic;
 signal key_r22         : std_logic;
 signal key_l12         : std_logic;
@@ -335,8 +339,6 @@ signal key_up2         : std_logic;
 signal key_down2       : std_logic;
 signal key_left2       : std_logic;
 signal key_right2      : std_logic;
-signal key_start2      : std_logic;
-signal key_select2     : std_logic;
 signal IDSEL           : std_logic_vector(5 downto 0) := "111101";
 signal FBDSEL          : std_logic_vector(5 downto 0) := "011101";
 signal ntscModeD       : std_logic;
@@ -490,6 +492,8 @@ signal shift_mod        : std_logic_vector(1 downto 0);
 signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
+signal int_out_n        : std_logic;
+signal uart_tx_i        : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -556,10 +560,12 @@ component rPLL
 end component;
 
 begin
-  spi_io_din  <= m0s(1);
-  spi_io_ss   <= m0s(2);
-  spi_io_clk  <= m0s(3);
-  m0s(0)      <= spi_io_dout;
+
+  spi_io_din  <= spi_dat;
+  spi_io_ss   <= spi_csn;
+  spi_io_clk  <= spi_sclk;
+  spi_dir     <= spi_io_dout;
+  spi_irqn    <= int_out_n;
 
     led_ws2812: entity work.ws2812
     port map
@@ -775,7 +781,7 @@ port map(
       system_scanlines => system_scanlines,
       system_volume => system_volume,
 
-      lcd_clk  => lcd_dclk,
+      lcd_clk  => lcd_clk,
       lcd_hs_n => lcd_hs,
       lcd_vs_n => lcd_vs,
       lcd_de   => lcd_de,
@@ -1103,17 +1109,13 @@ begin
   end if;
 end process;
 
--- process to toggle joy A/B port with USER button or Keyboard page-up (STRG + CSR UP)
--- TN20k,TP25k user button is high active
--- TM138k pro low active
+-- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
 process(clk32)
 begin
   if rising_edge(clk32) then
     if vsync = '1' then
-      user_d <= user;
       numpad_d <= numpad;
-      if (user = '1' and user_d = '0') or
-         (numpad(7) = '1' and numpad_d(7) = '0') then
+      if numpad(7) = '1' and numpad_d(7) = '0' then
         joyswap <= not joyswap; -- toggle mode
         elsif system_joyswap = '1' then -- OSD fixed setting mode
           joyswap <= '1'; -- OSD fixed setting mode
@@ -1277,7 +1279,7 @@ hid_inst: entity work.hid
   system_turbo_mode   => turbo_mode,
   system_turbo_speed  => turbo_speed,
   system_video_std    => ntscMode,
-  system_midi         => st_midi,
+  system_midi         => open,
   system_pause        => system_pause,
   system_vic_variant  => vic_variant, 
   system_cia_mode     => cia_mode,
@@ -1302,13 +1304,13 @@ hid_inst: entity work.hid
   port_in_strobe    => serial_rx_strobe,
   port_in_data      => serial_rx_data,
 
-  int_out_n           => m0s(4),
+  int_out_n           => int_out_n,
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(reset & user), -- S0 and S1 buttons on Tang Nano 20k
-  leds                => system_leds,         -- two leds can be controlled from the MCU
-  color               => ws2812_color -- a 24bit color to e.g. be used to drive the ws2812
+  buttons             => unsigned'(user & reset), -- S2 and S1 buttons
+  leds                => open,
+  color               => ws2812_color
 );
 
 process(clk32)
@@ -1516,7 +1518,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => flash_clk,
-    resetn    => pll_locked_comb,
+    resetn    => flash_lock,
     ready     => flash_ready,
     busy      => open,
     address   => (X"2" & "000" & dos_sel & c1541rom_addr),
@@ -1576,7 +1578,7 @@ port map
 crt_inst : entity work.loader_sd_card
 port map (
   clk               => clk32,
-  system_reset      => unsigned'(por & por),
+  system_reset      => unsigned'('0' & por),
 
   sd_lba            => loader_lba,
   sd_rd             => sd_rd(5 downto 1),
@@ -1910,7 +1912,7 @@ begin
   pb_i <= (others => '1');
   drive_par_i <= (others => '1');
   drive_stb_i <= '1';
-  uart_tx <= '1';
+  uart_tx_i <= '1';
   flag2_n_i <= '1';
   uart_cs <= '0';
   if ext_en = '1' and disk_access = '1' then
@@ -1932,7 +1934,7 @@ begin
     -- PB6 CTS in
     -- PB7 DSR in
     -- PA2 TXD out
-    uart_tx <= pa2_o;
+    uart_tx_i <= pa2_o;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     -- Zeromodem
@@ -1950,18 +1952,18 @@ begin
     -- PB7 to CNT2 
     pb_i(7) <= cnt2_o;
     cnt2_i <= pb_o(7);
-    uart_tx <= pa2_o and sp1_o;
+    uart_tx_i <= pa2_o and sp1_o;
     sp2_i <= uart_rx_filtered;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     elsif system_up9600 = 2 then
-      uart_tx <= tx_6551;
+      uart_tx_i <= tx_6551;
       uart_cs <= IOE;
     elsif system_up9600 = 3 then
-      uart_tx <= tx_6551;
+      uart_tx_i  <= tx_6551;
       uart_cs <= IOF;
     elsif system_up9600 = 4 then
-      uart_tx <= tx_6551;
+      uart_tx_i <= tx_6551;
       uart_cs <= IO7;
   end if;
 end process;
