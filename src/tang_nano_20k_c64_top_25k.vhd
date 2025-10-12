@@ -35,7 +35,7 @@ entity tang_nano_20k_c64_top_25k is
   --  uart_ext_rx : in std_logic;
   --  uart_ext_tx : out std_logic;
     -- SPI interface Sipeed M0S Dock external BL616 uC
-    m0s         : inout std_logic_vector(4 downto 0);
+    m0s         : inout std_logic_vector(4 downto 0) := (others => 'Z');
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
     spi_csn     : in std_logic;
@@ -236,7 +236,6 @@ signal c1541_osd_reset : std_logic;
 signal system_wide_screen : std_logic;
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
-signal system_leds    : std_logic_vector(1 downto 0);
 signal led1541        : std_logic;
 signal reu_cfg        : std_logic; 
 signal dma_req        : std_logic;
@@ -302,8 +301,6 @@ signal midi_rx         : std_logic;
 signal midi_tx         : std_logic := 'Z';
 signal st_midi         : std_logic_vector(2 downto 0);
 signal phi             : std_logic;
-signal frz_hbl         : std_logic;
-signal frz_vbl         : std_logic;
 signal system_pause    : std_logic;
 signal paddle_1        : std_logic_vector(7 downto 0);
 signal paddle_2        : std_logic_vector(7 downto 0);
@@ -344,8 +341,6 @@ signal key_select2     : std_logic;
 signal ntscModeD       : std_logic;
 signal ntscModeD1      : std_logic;
 signal audio_div       : unsigned(8 downto 0);
-signal flash_clk       : std_logic;
-signal flash_lock      : std_logic;
 signal dcsclksel       : std_logic_vector(3 downto 0) := "0001";
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(22 downto 0);
@@ -487,6 +482,7 @@ signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
+signal uart_tx_i        : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -525,20 +521,18 @@ component DCS
 begin
 
   -- BL616 console to hw pins for external USB-UART adapter
-  --uart_tx <= bl616_mon_rx;
+  --uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
   bl616_mon_tx <= uart_rx;
 
 -- ----------------- SPI input parser ----------------------
-
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi (M0S Dock) , then the connection is being switched
 process (clk32, pll_locked)
 begin
   if pll_locked = '0' then
     spi_ext <= '0';
-    m0s(3 downto 1 ) <= (others => 'Z');
+    m0s(3 downto 1) <= "ZZZ";
   elsif rising_edge(clk32) then
-    spi_ext <= spi_ext;
     if m0s(2) = '0' then
         spi_ext <= '1';
     end if;
@@ -555,7 +549,7 @@ end process;
   spi_irqn    <= int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
-  m0s(4)      <= int_out_n;
+  m0s(4)      <= uart_tx_i when spi_ext = '1' else int_out_n;
 
 process(clk32, disk_reset)
 variable reset_cnt : integer range 0 to 2147483647;
@@ -850,18 +844,18 @@ generic map(
 port map(
     CLKOUT => clk32,
     HCLKIN => clk64,
-    RESETN => '1',
+    RESETN => pll_locked,
     CALIB  => '0'
 );
 
 mainclock_pal: entity work.Gowin_PLL_pal
 port map (
     lock => pll_locked_pal,
-    clkout0 => open,
-    clkout1 => clk_pixel_x5_pal,
-    clkout2 => clk64_pal,
-    clkout3 => open,
-    clkin => clk
+    clkout0 => clk_pixel_x5_pal,
+    clkout1 => clk64_pal,
+    clkout2 => mspi_clk,
+    clkin => clk,
+    mdclk => clk
 );
 
 mainclock_ntsc: entity work.Gowin_PLL_ntsc
@@ -873,15 +867,6 @@ port map (
     clkout3 => open,
     clkin => clk
 );
-
--- 64.0Mhz for flash controller c1541 ROM
-flashclock: entity work.Gowin_PLL_flash
-    port map (
-        lock => flash_lock,
-        clkout0 => flash_clk,
-        clkout1 => mspi_clk,
-        clkin => clk
-    );
 
 leds_n <=  leds(1 downto 0);
 leds(0) <= led1541;
@@ -992,17 +977,14 @@ begin
   end if;
 end process;
 
--- process to toggle joy A/B port with USER button or Keyboard page-up (STRG + CSR UP)
--- TN20k,TP25k user button is high active
--- TM138k pro low active
+-- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
+
 process(clk32)
 begin
   if rising_edge(clk32) then
     if vsync = '1' then
-      user_d <= user;
       numpad_d <= numpad;
-      if (user = '1' and user_d = '0') or
-         (numpad(7) = '1' and numpad_d(7) = '0') then
+      if numpad(7) = '1' and numpad_d(7) = '0' then
         joyswap <= not joyswap; -- toggle mode
         elsif system_joyswap = '1' then -- OSD fixed setting mode
           joyswap <= '1'; -- OSD fixed setting mode
@@ -1405,8 +1387,8 @@ port map(
 -- offset in spi flash TN20K, TP25K $200000, TM138K $A00000
 flash_inst: entity work.flash 
 port map(
-    clk       => flash_clk,
-    resetn    => pll_locked,
+    clk       => clk64_pal,
+    resetn    => pll_locked_pal,
     ready     => flash_ready,
     busy      => open,
     address   => (X"2" & "000" & dos_sel & c1541rom_addr),
@@ -1489,7 +1471,7 @@ end generate;
 crt_inst : entity work.loader_sd_card
 port map (
   clk               => clk32,
-  system_reset      => unsigned'(por & por),
+  system_reset      => unsigned'('0' & por),
 
   sd_lba            => loader_lba,
   sd_rd             => sd_rd(5 downto 1),
@@ -1823,7 +1805,7 @@ begin
   pb_i <= (others => '1');
   drive_par_i <= (others => '1');
   drive_stb_i <= '1';
-  -- uart_tx <= '1'; -- onboard BL616 blocked
+  uart_tx_i <= '1';
   flag2_n_i <= '1';
   uart_cs <= '0';
   if ext_en = '1' and disk_access = '1' then
@@ -1845,7 +1827,7 @@ begin
     -- PB6 CTS in
     -- PB7 DSR in
     -- PA2 TXD out
-    --uart_tx <= pa2_o;  -- onboard BL616 blocked
+    uart_tx_i <= pa2_o;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     -- Zeromodem
@@ -1863,18 +1845,18 @@ begin
     -- PB7 to CNT2 
     pb_i(7) <= cnt2_o;
     cnt2_i <= pb_o(7);
-    --uart_tx <= pa2_o and sp1_o; -- onboard BL616 blocked
+    uart_tx_i <= pa2_o and sp1_o;
     sp2_i <= uart_rx_filtered;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     elsif system_up9600 = 2 then
-      --uart_tx <= tx_6551; -- onboard BL616 blocked
+      uart_tx_i <= tx_6551;
       uart_cs <= IOE;
     elsif system_up9600 = 3 then
-      --uart_tx <= tx_6551; -- onboard BL616 blocked
+      uart_tx_i  <= tx_6551;
       uart_cs <= IOF;
     elsif system_up9600 = 4 then
-      --uart_tx <= tx_6551; -- onboard BL616 blocked
+      uart_tx_i <= tx_6551;
       uart_cs <= IO7;
   end if;
 end process;

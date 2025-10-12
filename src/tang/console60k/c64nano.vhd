@@ -12,14 +12,17 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.numeric_std.ALL;
 
-entity tang_nano_20k_c64_top_console60k is
+entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
+   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
   (
+    jtagseln    : out std_logic := '0';
+    reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
@@ -28,13 +31,13 @@ entity tang_nano_20k_c64_top_console60k is
     uart_rx     : in std_logic;
     uart_tx     : out std_logic;
     -- monitor port
---    bl616_mon_tx : out std_logic;
---    bl616_mon_rx : in std_logic;
-   -- external hw pin UART
+    bl616_mon_tx : out std_logic;
+    bl616_mon_rx : in std_logic;
+    -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
     -- SPI interface external uC
-    m0s         : inout std_logic_vector(4 downto 0);
+    m0s         : inout std_logic_vector(4 downto 0) := (others => 'Z');
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
     spi_csn     : in std_logic;
@@ -60,7 +63,6 @@ entity tang_nano_20k_c64_top_console60k is
     tmds_clk_p  : out std_logic;
     tmds_d_n    : out std_logic_vector( 2 downto 0);
     tmds_d_p    : out std_logic_vector( 2 downto 0);
-    pwr_sav     : out std_logic;
 
     -- sd interface
     sd_clk      : out std_logic;
@@ -86,7 +88,9 @@ entity tang_nano_20k_c64_top_console60k is
     ds2_mosi      : out std_logic;
     ds2_miso      : in std_logic;
     ds2_cs        : out std_logic;
-
+    -- MIDI
+    midi_rx       : in std_logic;
+    midi_tx       : out std_logic;
     -- spi flash interface
     mspi_cs       : out std_logic;
     mspi_clk      : out std_logic;
@@ -97,30 +101,28 @@ entity tang_nano_20k_c64_top_console60k is
     );
 end;
 
-architecture Behavioral_top of tang_nano_20k_c64_top_console60k is
+architecture Behavioral_top of c64nano_top is
 
 signal clk64          : std_logic;
 signal clk32          : std_logic;
 signal pll_locked     : std_logic;
 signal clk_pixel_x5   : std_logic;
-signal mspi_clk_x5    : std_logic;
 signal clk64_ntsc     : std_logic;
-signal clk32_ntsc     : std_logic;
-signal pll_locked_ntsc: std_logic;
+signal pll_locked_ntsc: std_logic :='0';
 signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
-signal clk32_pal      : std_logic;
-signal pll_locked_pal : std_logic;
+signal pll_locked_pal : std_logic :='0';
 signal clk_pixel_x5_pal   : std_logic;
+signal spi_io_clk     : std_logic;
 attribute syn_keep : integer;
 attribute syn_keep of clk64             : signal is 1;
 attribute syn_keep of clk32             : signal is 1;
 attribute syn_keep of clk_pixel_x5      : signal is 1;
 attribute syn_keep of clk64_pal         : signal is 1;
-attribute syn_keep of clk32_ntsc        : signal is 1;
-attribute syn_keep of clk32_pal         : signal is 1;
+attribute syn_keep of clk64_ntsc        : signal is 1;
 attribute syn_keep of clk_pixel_x5_pal  : signal is 1;
-attribute syn_keep of mspi_clk_x5       : signal is 1;
+attribute syn_keep of clk_pixel_x5_ntsc : signal is 1;
+attribute syn_keep of spi_io_clk        : signal is 1;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
 signal audio_data_r  : std_logic_vector(17 downto 0);
@@ -251,9 +253,8 @@ signal sdc_iack       : std_logic;
 signal int_ack        : std_logic_vector(7 downto 0);
 signal spi_io_din     : std_logic;
 signal spi_io_ss      : std_logic;
-signal spi_io_clk     : std_logic;
 signal spi_io_dout    : std_logic;
-signal spi_ext        : std_logic;
+signal spi_ext        : std_logic := '0';
 signal disk_g64       : std_logic;
 signal disk_g64_d     : std_logic;
 signal c1541_reset    : std_logic;
@@ -317,6 +318,12 @@ signal frz_hs          : std_logic;
 signal frz_vs          : std_logic;
 signal hbl_out         : std_logic; 
 signal vbl_out         : std_logic;
+signal midi_data       : std_logic_vector(7 downto 0) := (others =>'0');
+signal midi_oe         : std_logic := '0';
+signal midi_en         : std_logic := '0';
+signal midi_irq_n      : std_logic := '1';
+signal midi_nmi_n      : std_logic := '1';
+signal st_midi         : std_logic_vector(2 downto 0);
 signal phi             : std_logic;
 signal frz_hbl         : std_logic;
 signal frz_vbl         : std_logic;
@@ -358,8 +365,6 @@ signal key_right2      : std_logic;
 signal key_start2      : std_logic;
 signal key_select2     : std_logic;
 signal audio_div       : unsigned(8 downto 0);
-signal flash_clk       : std_logic;
-signal flash_lock      : std_logic;
 signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(22 downto 0);
@@ -501,6 +506,7 @@ signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
+signal uart_tx_i        : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -538,22 +544,22 @@ component DCS
 
 begin
 
+  jtagseln <= pll_locked;
+  midi_tx <= '1';
+  reconfign <= 'Z';
   -- BL616 console to hw pins for external USB-UART adapter
---  uart_tx <= bl616_mon_rx;
---  bl616_mon_tx <= uart_rx;
-
-pwr_sav <= '1';
+  uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
+  bl616_mon_tx <= uart_rx;
 
 -- ----------------- SPI input parser ----------------------
-
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi (M0S Dock) , then the connection is being switched
 process (clk32, pll_locked)
 begin
   if pll_locked = '0' then
     spi_ext <= '0';
+    m0s(3 downto 1) <= "ZZZ";
   elsif rising_edge(clk32) then
-    spi_ext <= spi_ext;
     if m0s(2) = '0' then
         spi_ext <= '1';
     end if;
@@ -570,10 +576,7 @@ end process;
   spi_irqn    <= int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
-  m0s(4)      <= int_out_n;
-
--- https://store.curiousinventor.com/guides/PS2/
--- https://hackaday.io/project/170365-blueretro/log/186471-playstation-playstation-2-spi-interface
+  m0s(4)      <= uart_tx_i when spi_ext = '1' else int_out_n;
 
 gamepad_p1: entity work.dualshock2
     port map (
@@ -932,7 +935,7 @@ clk_switch_2: DCS
 		CLKOUT   => clk64 -- switched clock
 	);
   
-pll_locked <= pll_locked_pal and pll_locked_ntsc and flash_lock;
+pll_locked <= pll_locked_pal and pll_locked_ntsc;
 dcsclksel <= "0001" when ntscMode = '0' else "0010";
 
 clk_switch_1: DCS
@@ -956,18 +959,18 @@ generic map(
 port map(
     CLKOUT => clk32,
     HCLKIN => clk64,
-    RESETN => '1',
+    RESETN => pll_locked,
     CALIB  => '0'
 );
 
 mainclock_pal: entity work.Gowin_PLL_60k_pal
 port map (
     lock => pll_locked_pal,
-    clkout0 => open,
-    clkout1 => clk_pixel_x5_pal,
-    clkout2 => clk64_pal,
-    clkout3 => open,
-    clkin => clk
+    clkout0 => clk_pixel_x5_pal,
+    clkout1 => clk64_pal,
+    clkout2 => mspi_clk,
+    clkin => clk,
+    mdclk => clk
 );
 
 mainclock_ntsc: entity work.Gowin_PLL_60k_ntsc
@@ -979,15 +982,6 @@ port map (
     clkout3 => open,
     clkin => clk
 );
-
--- 64.0Mhz for flash controller c1541 ROM
-flashclock: entity work.Gowin_PLL_60k_flash
-    port map (
-        lock => flash_lock,
-        clkout0 => flash_clk,
-        clkout1 => mspi_clk,
-        clkin => clk
-    );
 
 leds_n(1 downto 0) <= not leds(1 downto 0);
 leds(1) <= '0';
@@ -1099,18 +1093,14 @@ begin
   end if;
 end process;
 
--- process to toggle joy A/B port with USER button or Keyboard page-up (STRG + CSR UP)
--- TN20k,TP25k user button is high active
--- TM138k pro low active
--- console low active
+-- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
+
 process(clk32)
 begin
   if rising_edge(clk32) then
     if vsync = '1' then
-      user_d <= user;
       numpad_d <= numpad;
-      if (user = '1' and user_d = '0') or  -- polarity tm60k
-         (numpad(7) = '1' and numpad_d(7) = '0') then
+      if numpad(7) = '1' and numpad_d(7) = '0' then
         joyswap <= not joyswap; -- toggle mode
         elsif system_joyswap = '1' then -- OSD fixed setting mode
           joyswap <= '1'; -- OSD fixed setting mode
@@ -1274,7 +1264,7 @@ hid_inst: entity work.hid
   system_turbo_mode   => turbo_mode,
   system_turbo_speed  => turbo_speed,
   system_video_std    => ntscMode,
-  system_midi         => open,
+  system_midi         => st_midi,
   system_pause        => system_pause,
   system_vic_variant  => vic_variant, 
   system_cia_mode     => cia_mode,
@@ -1333,6 +1323,7 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
+      --    unsigned(midi_data) when (midi_oe and midi_en) = '1' else
             uart_data when uart_oe = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
@@ -1386,10 +1377,10 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   game         => game,
   exrom        => exrom,
   io_rom       => io_rom,
-  io_ext       => reu_oe or cart_oe or uart_oe,
+  io_ext       => reu_oe or cart_oe or uart_oe, --or (midi_oe and midi_en)
   io_data      => io_data,
-  irq_n        => '1',
-  nmi_n        => not nmi and uart_irq,
+  irq_n        => '1', -- midi_irq_n,
+  nmi_n        => not nmi and uart_irq, -- and midi_nmi_n 
   nmi_ack      => nmi_ack,
   romL         => romL,
   romH         => romH,
@@ -1512,8 +1503,8 @@ port map(
 -- offset in spi flash TN20K, TP25K $200000, TM138K $A00000, TM60k $700000
 flash_inst: entity work.flash 
 port map(
-    clk       => flash_clk,
-    resetn    => pll_locked,
+    clk       => clk64_pal,
+    resetn    => pll_locked_pal,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),
@@ -1570,10 +1561,33 @@ port map
     nmi_ack     => nmi_ack
   );
 
+midi_en <= st_midi(2) or st_midi(1) or st_midi(0);
+
+yes_midi: if MIDI /= 0 generate
+  midi_inst : entity work.c64_midi
+  port map (
+    clk32   => clk32,
+    reset   => not reset_n or not midi_en,
+    Mode    => st_midi,
+    E       => phi,
+    IOE     => IOE,
+    A       => std_logic_vector(c64_addr),
+    Din     => std_logic_vector(c64_data_out),
+    Dout    => midi_data,
+    OE      => midi_oe,
+    RnW     => not (ram_we and IOE),
+    nIRQ    => midi_irq_n,
+    nNMI    => midi_nmi_n,
+ 
+    RX      => midi_rx,
+    TX      => midi_tx
+  );
+end generate;
+
 crt_inst : entity work.loader_sd_card
 port map (
   clk               => clk32,
-  system_reset      => unsigned'(por & por),
+  system_reset      => unsigned'('0' & por),
 
   sd_lba            => loader_lba,
   sd_rd             => sd_rd(5 downto 1),
@@ -1907,7 +1921,7 @@ begin
   pb_i <= (others => '1');
   drive_par_i <= (others => '1');
   drive_stb_i <= '1';
-  uart_tx <= '1';
+  uart_tx_i <= '1';
   flag2_n_i <= '1';
   uart_cs <= '0';
   if ext_en = '1' and disk_access = '1' then
@@ -1929,7 +1943,7 @@ begin
     -- PB6 CTS in
     -- PB7 DSR in
     -- PA2 TXD out
-    uart_tx <= pa2_o;
+    uart_tx_i <= pa2_o;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     -- Zeromodem
@@ -1947,18 +1961,18 @@ begin
     -- PB7 to CNT2 
     pb_i(7) <= cnt2_o;
     cnt2_i <= pb_o(7);
-    uart_tx <= pa2_o and sp1_o;
+    uart_tx_i <= pa2_o and sp1_o;
     sp2_i <= uart_rx_filtered;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     elsif system_up9600 = 2 then
-      uart_tx <= tx_6551;
+      uart_tx_i <= tx_6551;
       uart_cs <= IOE;
     elsif system_up9600 = 3 then
-      uart_tx <= tx_6551;
+      uart_tx_i  <= tx_6551;
       uart_cs <= IOF;
     elsif system_up9600 = 4 then
-      uart_tx <= tx_6551;
+      uart_tx_i <= tx_6551;
       uart_cs <= IO7;
   end if;
 end process;

@@ -88,7 +88,7 @@ These DOS for the c1541 emulation can later be selected from the on-screen-displ
 
 |                           |          |          |          |          |         | |
 |                          -|         -|         -|         -|         -|        -|-|
-| Type                      | TN20k    | TP25k    | TM60k    |TM138k    |Console60k| |
+| Type                      | TN20k    | TP25k    | TM60k    |TM138k    |Console60k/138k| |
 | FPGA bitstream            | 0x000000 | 0x000000 | 0x000000 | 0x000000 |0x000000 |ROM size|
 | reserved for Atari ST ROM | 0x100000 | 0x100000 | 0x500000 | 0x900000 |0x500000 | - |
 | c1541 Dolphin DOS 2       | 0x200000 | 0x200000 | 0x700000 | 0xA00000 |0x700000 |32k|
