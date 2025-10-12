@@ -72,7 +72,7 @@ add_file src/uart6551/uart_6551.v
 add_file src/misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
-set_option -output_base_name c64nano_tp25k
+set_option -output_base_name C64Nano_TP25k
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
 set_option -top_module c64nano_top

@@ -75,7 +75,7 @@ add_file src/tang/tm60k/c64nano.sdc
 add_file src/tang/tm60k/c64nano.vhd
 
 set_option -synthesis_tool gowinsynthesis
-set_option -output_base_name c64nano_tm60k
+set_option -output_base_name C64Nano_TM60k
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
 set_option -top_module c64nano_top
