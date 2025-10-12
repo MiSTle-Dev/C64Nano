@@ -34,6 +34,7 @@
         <File path="src/misc/video.v" type="file.verilog" enable="1"/>
         <File path="src/misc/video_analyzer.v" type="file.verilog" enable="1"/>
         <File path="src/mos6526.v" type="file.verilog" enable="1"/>
+        <File path="src/pll_init.v" type="file.verilog" enable="1"/>
         <File path="src/reu.v" type="file.verilog" enable="1"/>
         <File path="src/sdram.v" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_dac.sv" type="file.verilog" enable="1"/>
@@ -44,7 +45,6 @@
         <File path="src/sid/sid_voice.sv" type="file.verilog" enable="1"/>
         <File path="src/uart6551/io_fifo.v" type="file.verilog" enable="1"/>
         <File path="src/uart6551/uart_6551.v" type="file.verilog" enable="1"/>
-        <File path="src/uart6551/BaudRate.vhd" type="file.vhdl" enable="1"/>
         <File path="src/c1530.vhd" type="file.vhdl" enable="1"/>
         <File path="src/c1541/c1541_logic.vhd" type="file.vhdl" enable="1"/>
         <File path="src/c1541/c1541_sd.vhd" type="file.vhdl" enable="1"/>
@@ -57,9 +57,9 @@
         <File path="src/fpga64_keyboard.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fpga64_rgbcolor.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fpga64_sid_iec.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/gowin_pll/gowin_pll_flash.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_pll/gowin_pll_ntsc.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_pll/gowin_pll_pal.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_pll/gowin_pll_pal_mod.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_prom/gowin_prom_basic.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_prom/gowin_prom_chargen.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_sdpb/gowin_sdpb_kernal_8k_gw5a.vhd" type="file.vhdl" enable="1"/>
@@ -71,6 +71,7 @@
         <File path="src/t65/T65_MCode.vhd" type="file.vhdl" enable="1"/>
         <File path="src/t65/T65_Pack.vhd" type="file.vhdl" enable="1"/>
         <File path="src/tang_nano_20k_c64_top_25k.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/uart6551/BaudRate.vhd" type="file.vhdl" enable="1"/>
         <File path="src/video_vicII_656x.vhd" type="file.vhdl" enable="1"/>
         <File path="src/tang_nano_20k_c64_top_25k.cst" type="file.cst" enable="1"/>
         <File path="src/tang_nano_20k_c64_top_25k.sdc" type="file.sdc" enable="1"/>

@@ -8,7 +8,7 @@ The C64Nano is a port of some [MiST](https://github.com/mist-devel/mist-board/wi
 | ---        |        -   | -     |-|
 | [Tang Nano 20k](https://wiki.sipeed.com/nano20k)     | [GW2AR](https://www.gowinsemi.com/en/product/detail/38/)  | HDMI / LCD |Dualshock via MiSTeryShield20k spare header **or** Joy to DIP |
 | [Tang Primer 25K](https://wiki.sipeed.com/hardware/en/tang/tang-primer-25k/primer-25k.html) | [GW5A-25](https://www.gowinsemi.com/en/product/detail/60/) | HDMI |no Dualshock, no Retro D9 Joystick, no MIDI |
-| [Tang Mega 60k NEO](https://wiki.sipeed.com/hardware/en/tang/tang-mega-60k/mega-60k.html) | [GW5AT-60](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD | twin Dualshock |
+| [Tang Mega NEO 60k Dock](https://wiki.sipeed.com/hardware/en/tang/tang-mega-60k/mega-60k.html) | [GW5AT-60](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD | twin Dualshock |
 | [Tang Mega 138k Pro](https://wiki.sipeed.com/hardware/en/tang/tang-mega-138k/mega-138k-pro.html)|[GW5AST-138](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |twin Dualshock |
 | [Tang Console 60K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)|[GW5AT-60](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |twin Dualshock, no Retro D9 Joystick|
 | [Tang Console 138K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)|[GW5AST-138](https://www.gowinsemi.com/en/product/detail/60/)|HDMI / LCD |twin Dualshock, no Retro D9 Joystick|
@@ -16,7 +16,7 @@ The C64Nano is a port of some [MiST](https://github.com/mist-devel/mist-board/wi
 This project relies on a MPU being connected to the FPGA. --> [MiSTle-Dev wiki](https://github.com/MiSTle-Dev/.github/wiki) <--  
 
 > [!NOTE]
-> If you don't need the WIFI modem on a TN20K then even the onboard BL616 MPU (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 MPU is presently supported for Nano 20k, Console 60k / 138k, Primer 25k and Mega 138k Pro. WIFI modem is supported on Console 60K / 138k too (requires I-PEX MHF4 connector antenna)
+> If you don't need the WIFI modem on a TN20K then even the onboard BL616 MPU (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 MPU is presently supported for Nano 20k, Console 60k / 138k, Primer 25k, Mega 138k Pro and Mega 60k Dock. WIFI modem is supported on Console 60K / 138k and Mega 60k Dock too (requires I-PEX MHF4 connector antenna)
 
 Original C64 core by Peter Wendrich and c1541 by [darfpga](https://github.com/darfpga).  
 All HID components and MPU firmware by Till Harbaum
@@ -63,7 +63,7 @@ The installation of C64 Nano on the Tang Nano 20k board can be done using a Linu
 
 See [Tang Primer 25K](TANG_PRIMER_25K.md). PMOD TF-CARD V2 is required !
 
-## c64 Nano on Tang Mega 60k NEO
+## c64 Nano on Tang Mega NEO 60k Dock
 
 See [Tang Mega 60K NEO](TANG_MEGA_60K.md)
 

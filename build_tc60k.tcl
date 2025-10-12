@@ -1,5 +1,6 @@
 set_device GW5AT-LV60PG484AC1/I0 -device_version B
 
+add_file src/acia.v
 add_file src/c1541/mist_sd_card.sv
 add_file src/cartridge.v
 add_file src/dualshock2.v
@@ -34,6 +35,7 @@ add_file src/c1541/c1541_logic.vhd
 add_file src/c1541/c1541_sd.vhd
 add_file src/c1541/gcr_floppy.vhd
 add_file src/c1541/via6522.vhd
+add_file src/c64_midi.vhd
 add_file src/cpu_6510.vhd
 add_file src/fpga64_buslogic_gw5a.vhd
 add_file src/fpga64_keyboard.vhd
@@ -49,13 +51,14 @@ add_file src/t65/T65.vhd
 add_file src/t65/T65_ALU.vhd
 add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
-add_file src/tang/console60k/tang_nano_20k_c64_top_console60k.vhd
+add_file src/tang/console60k/c64nano.vhd
 add_file src/video_vicII_656x.vhd
 add_file src/gowin_pll/gowin_pll_60k_pal.vhd
+add_file src/gowin_pll/gowin_pll_60k_pal_mod.vhd
+add_file src/pll_init.v
 add_file src/gowin_pll/gowin_pll_60k_ntsc.vhd
-add_file src/gowin_pll/gowin_pll_60k_flash.vhd
-add_file src/tang/console60k/tang_nano_20k_c64_top_console60k.cst
-add_file src/tang/console60k/tang_nano_20k_c64_top_console60k.sdc
+add_file src/tang/console60k/c64nano.cst
+add_file src/tang/console60k/c64nano.sdc
 add_file src/loader_sd_card.sv
 add_file src/fifo_sc_hs/FIFO_SC_HS_Top_gw5a.vhd
 add_file src/c1530.vhd
@@ -65,16 +68,16 @@ add_file src/sid/sid_filter.sv
 add_file src/sid/sid_tables.sv
 add_file src/sid/sid_top.sv
 add_file src/sid/sid_voice.sv
+add_file src/uart6551/BaudRate.vhd
 add_file src/uart6551/io_fifo.v
 add_file src/uart6551/uart_6551.v
-add_file src/uart6551/BaudRate.vhd
 add_file src/misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
-set_option -output_base_name tang_nano_20k_c64_console60k
+set_option -output_base_name C64Nano_console60k
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
-set_option  -top_module tang_nano_20k_c64_top_console60k
+set_option  -top_module c64nano_top
 set_option -use_mspi_as_gpio 1
 set_option -use_sspi_as_gpio 1
 set_option -use_done_as_gpio 1
@@ -83,24 +86,25 @@ set_option -use_ready_as_gpio 1
 set_option -use_sspi_as_gpio 1
 set_option -use_i2c_as_gpio 1
 set_option -use_jtag_as_gpio 1
-set_option -print_all_synthesis_warning 0
-set_option -show_all_warn 1
 set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -bit_compress 1
 set_option -vccx 1.8
 set_option -vcc 0.9
-set_option -power_on_reset_monitor 1
-set_option -timing_driven 1
+set_option -multi_boot 0
+set_option -mspi_jump 0
+set_option -place_option 2
+set_option -route_option 1
 set_option -ireg_in_iob 1
 set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1
-set_option -multi_boot 0
-set_option -mspi_jump 0
+set_option -power_on_reset_monitor 1
+set_option -timing_driven 1
 set_option -cst_warn_to_error 1
 set_option -rpt_auto_place_io_info 1
 set_option -convert_sdp32_36_to_sdp16_18 1
 set_option -correct_hold_violation 1
+set_option -loading_rate 70.000
 
 #run syn
 run all

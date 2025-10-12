@@ -55,7 +55,6 @@ add_file src/tang_nano_20k_c64_top_25k.vhd
 add_file src/video_vicII_656x.vhd
 add_file src/gowin_pll/gowin_pll_pal.vhd
 add_file src/gowin_pll/gowin_pll_ntsc.vhd
-add_file src/gowin_pll/gowin_pll_flash.vhd
 add_file src/tang_nano_20k_c64_top_25k.cst
 add_file src/tang_nano_20k_c64_top_25k.sdc
 add_file src/loader_sd_card.sv
@@ -73,22 +72,33 @@ add_file src/uart6551/uart_6551.v
 add_file src/misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
-set_option -output_base_name tang_nano_20k_c64_25k
+set_option -output_base_name c64nano_tp25k
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
-set_option -top_module tang_nano_20k_c64_top_25k
+set_option -top_module c64nano_top
 set_option -use_mspi_as_gpio 1
 set_option -use_sspi_as_gpio 1
 set_option -use_done_as_gpio 1
 set_option -use_cpu_as_gpio 1
-set_option -use_i2c_as_gpio 1
 set_option -use_ready_as_gpio 1
 set_option -use_jtag_as_gpio 1
 set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -bit_compress 1
-set_option -multi_boot 1
+set_option -multi_boot 0
 set_option -mspi_jump 0
+set_option -place_option 2
+set_option -route_option 1
+set_option -ireg_in_iob 1
+set_option -oreg_in_iob 1
+set_option -ioreg_in_iob 1
+set_option -power_on_reset_monitor 1
+set_option -timing_driven 1
+set_option -cst_warn_to_error 1
+set_option -rpt_auto_place_io_info 1
+set_option -convert_sdp32_36_to_sdp16_18 1
+set_option -correct_hold_violation 1
+set_option -loading_rate 70.000
 
 #run syn
 run all
