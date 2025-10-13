@@ -16,7 +16,7 @@ entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
+   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
@@ -299,23 +299,13 @@ signal c64_iec_clk_old : std_logic;
 signal drive_iec_clk_old : std_logic;
 signal drive_stb_i_old : std_logic;
 signal drive_stb_o_old : std_logic;
-signal hsync_out       : std_logic;
-signal vsync_out       : std_logic;
-signal hblank          : std_logic;
-signal vblank          : std_logic;
-signal frz_hs          : std_logic;
-signal frz_vs          : std_logic;
-signal hbl_out         : std_logic; 
-signal vbl_out         : std_logic;
 signal midi_data       : std_logic_vector(7 downto 0) := (others =>'0');
-signal midi_oe         : std_logic := '0';
-signal midi_en         : std_logic := '0';
+signal midi_oe         : std_logic;
+signal midi_en         : std_logic;
 signal midi_irq_n      : std_logic := '1';
 signal midi_nmi_n      : std_logic := '1';
 signal st_midi         : std_logic_vector(2 downto 0);
 signal phi             : std_logic;
-signal ds_cs_i         : std_logic;
-signal ds_miso_i       : std_logic;
 signal system_pause    : std_logic;
 signal paddle_1        : std_logic_vector(7 downto 0);
 signal paddle_2        : std_logic_vector(7 downto 0);
@@ -1097,13 +1087,13 @@ begin
       when "0011"  => joyA <= joyNumpad;
         paddle_1_analogA <= '0';
         paddle_2_analogA <= '0';
-      when "0100"  => joyA <= joyDS2_p2;
+      when "0100"  => joyA <= joyDS2_p1;
         paddle_1_analogA <= '0';
         paddle_2_analogA <= '0';
       when "0101"  => joyA <= joyMouse;
         paddle_1_analogA <= '0';
         paddle_2_analogA <= '0';
-      when "0110"  => joyA <= joyDS2A_p2;
+      when "0110"  => joyA <= joyDS2A_p1 when port_2_sel = "0110" else joyDS2A_p2;
         paddle_1_analogA <= '1';
         paddle_2_analogA <= '0';
       when "0111"  => joyA <= joyUsb1A;
@@ -1118,7 +1108,7 @@ begin
       when "1010"  => joyA <= joyDS2_p2;
         paddle_1_analogA <= '0';
         paddle_2_analogA <= '0';
-      when "1011"  => joyA <= joyDS2A_p2;
+      when "1011"  => joyA <= joyDS2A_p1 when port_2_sel = "1011" else joyDS2A_p2;
         paddle_1_analogA <= '0';
         paddle_2_analogA <= '1';
       when others  => joyA <= (others => '0');
@@ -1139,13 +1129,13 @@ begin
       when "0011"  => joyB <= joyNumpad;   -- 3
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '0';
-      when "0100"  => joyB <= joyDS2_p2;   -- 4
+      when "0100"  => joyB <= joyDS2_p1;   -- 4
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '0';
       when "0101"  => joyB <= joyMouse;    -- 5
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '0';
-      when "0110"  => joyB <= joyDS2A_p2;  -- 6
+      when "0110"  => joyB <= joyDS2A_p2 when port_1_sel = "0110" else joyDS2A_p1;  -- 6
         paddle_1_analogB <= '1';
         paddle_2_analogB <= '0';
       when "0111"  => joyB <= joyUsb1A;    -- 7
@@ -1160,7 +1150,7 @@ begin
       when "1010"  => joyB <= joyDS2_p2;   -- 10
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '0';
-      when "1011"  => joyB <= joyDS2A_p2;  -- 11
+      when "1011"  => joyB <= joyDS2A_p2 when port_1_sel = "1011" else joyDS2A_p1;  -- 11
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '1';
       when others  => joyB <= (others => '0');
@@ -1240,7 +1230,7 @@ process(clk32, reset_n)
     joystick1_y_pos <= x"ff";
     joystick2_x_pos <= x"ff";
     joystick2_y_pos <= x"ff";
-    elsif rising_edge(clk32) then
+  elsif rising_edge(clk32) then
     if mouse_strobe = '1' then
      -- due to limited resolution on the c64 side, limit the mouse movement speed
      if mouse_x > 40 then mov_x:="0101000"; elsif mouse_x < -40 then mov_x:= "1011000"; else mov_x := mouse_x(6 downto 0); end if;
@@ -1252,8 +1242,8 @@ process(clk32, reset_n)
       joystick1_y_pos <= std_logic_vector(joystick0ay(7 downto 0));
       joystick2_x_pos <= std_logic_vector(joystick1ax(7 downto 0));
       joystick2_y_pos <= std_logic_vector(joystick1ay(7 downto 0));
-     end if;
     end if;
+  end if;
 end process;
 
 mcu_spi_inst: entity work.mcu_spi 
@@ -1340,7 +1330,7 @@ hid_inst: entity work.hid
   system_turbo_mode   => turbo_mode,
   system_turbo_speed  => turbo_speed,
   system_video_std    => ntscMode,
-  system_midi         => open,
+  system_midi         => st_midi,
   system_pause        => system_pause,
   system_vic_variant  => vic_variant, 
   system_cia_mode     => cia_mode,
@@ -1399,6 +1389,7 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
+            unsigned(midi_data) when midi_oe = '1' else
             uart_data when uart_oe = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
@@ -1452,10 +1443,10 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   game         => game,
   exrom        => exrom,
   io_rom       => io_rom,
-  io_ext       => reu_oe or cart_oe or uart_oe, --or (midi_oe and midi_en)
+  io_ext       => reu_oe or cart_oe or uart_oe or (midi_oe and midi_en),
   io_data      => io_data,
-  irq_n        => '1', -- midi_irq_n,
-  nmi_n        => not nmi and uart_irq, -- and midi_nmi_n 
+  irq_n        => midi_irq_n,
+  nmi_n        => not nmi and uart_irq and midi_nmi_n,
   nmi_ack      => nmi_ack,
   romL         => romL,
   romH         => romH,
@@ -1642,7 +1633,7 @@ yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi
   port map (
     clk32   => clk32,
-    reset   => not reset_n or not midi_en,
+    reset   => not reset_n,
     Mode    => st_midi,
     E       => phi,
     IOE     => IOE,

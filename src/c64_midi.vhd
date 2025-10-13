@@ -36,40 +36,54 @@ end c64_midi;
 
 architecture rtl of c64_midi is
 
-component acia is
-port
-(
-	clk   : in  std_logic;
-	E     : in  std_logic;
-	reset : in  std_logic := '0';
-	rxtxclk_sel : in  std_logic := '0';
-	din   : in  std_logic_vector(7 downto 0);
-	sel   : in  std_logic;
-	rs    : in  std_logic;
-	rw    : in  std_logic;
-	dout  : out std_logic_vector(7 downto 0);
-	irq   : out std_logic;
-	tx    : out std_logic;
-	rx    : in  std_logic
-);
-end component;
+--component gen_uart_mc_6850 is
+--port (
+--	reset     : in  std_logic;
+--	clk       : in  std_logic;
+--	rx_clk_en : in  std_logic;
+--	tx_clk_en : in  std_logic;
+--	din       : in  std_logic_vector(7 downto 0);
+--	dout      : out std_logic_vector(7 downto 0);
+--	rnw       : in  std_logic;
+--	cs        : in  std_logic;
+--	rs        : in  std_logic;
+--	irq_n     : out std_logic;
+--	cts_n     : in  std_logic;
+--	dcd_n     : in  std_logic;
+--	rts_n     : out std_logic;
+--	rx        : in  std_logic;
+--	tx        : out std_logic
+--);
+--end component;
 
-signal acia_E   : std_logic;
 signal acia_sel : std_logic;
 signal acia_rs  : std_logic;
 signal acia_rw  : std_logic;
-signal acia_irq : std_logic;
+signal acia_irq_n : std_logic;
 signal acia_rxtxclk_sel : std_logic;
-
+signal acia_clk_en : std_logic;
+signal acia_clk_en_cnt : unsigned(5 downto 0);
+signal acia_din : std_logic_vector(7 downto 0);
 begin
 
 	process(clk32) begin
 		if rising_edge(clk32) then
-			acia_E <= E;
+			acia_din <= Din;
+			if reset = '1' then
+				acia_clk_en <= '0';
+				acia_clk_en_cnt <= (others=>'0');
+			else
+				acia_clk_en <= '0';
+				acia_clk_en_cnt <= acia_clk_en_cnt + 1;
+				-- 2 MHz or 512 kHz
+				if acia_clk_en_cnt = 0 or (acia_rxtxclk_sel = '1' and acia_clk_en_cnt(3 downto 0) = 0) then
+					acia_clk_en <= '1';
+				end if;
+			end if;
 		end if;
 	end process;
 
-	process(Mode, IOE, A, RnW, acia_irq) begin
+	process(Mode, IOE, A, RnW, acia_irq_n) begin
 		acia_rxtxclk_sel <= '0';
 		acia_sel <= '0';
 		acia_rw <= '1';
@@ -79,27 +93,27 @@ begin
 		case Mode is
 			when "001" =>
 				-- Mode 1 : SEQUENTIAL CIRCUITS INC.
-				nIRQ <= not acia_irq;
-				acia_sel <= IOE and not A(4) and not A(5) and not A(6);
+				nIRQ <= acia_irq_n;
+				acia_sel <= IOE and not A(2) and not A(3) and not A(4);
 				acia_rs <= A(0);
 				acia_rw <= A(1);
 			when "010" =>
 				-- Mode 2 : PASSPORT & SENTECH
-				nIRQ <= not acia_irq;
-				acia_sel <= IOE and A(3) and not A(4) and not A(5) and not A(6);
+				nIRQ <= acia_irq_n;
+				acia_sel <= IOE and not A(2) and A(3) and not A(4);
 				acia_rs <= A(0);
 				acia_rw <= RnW;
 			when "011" =>
 				-- Mode 3 : DATEL/SIEL/JMS/C-LAB
 				acia_rxtxclk_sel <= '1'; -- for 2 MHz RX/TX clock
-				nIRQ <= not acia_irq;
-				acia_sel <= IOE and A(2) and not A(4) and not A(5) and not A(6);
+				nIRQ <= acia_irq_n;
+				acia_sel <= IOE and A(2) and not A(3) and not A(4);
 				acia_rs <= A(0);
 				acia_rw <= A(1);
 			when "100" =>
 				-- Mode 4 : NAMESOFT
-				nNMI <= not acia_irq;
-				acia_sel <= IOE and not A(4) and not A(5) and not A(6);
+				nNMI <= acia_irq_n;
+				acia_sel <= IOE and not A(2) and not A(3) and not A(4);
 				acia_rs <= A(0);
 				acia_rw <= A(1);
 			when others => null;
@@ -108,20 +122,23 @@ begin
 
 	OE <= acia_sel and acia_rw;
 
-	acia_inst : acia
+	acia_inst : entity work.gen_uart_mc_6850
 	port map (
-		clk   => clk32,
-		reset => reset,
-		rxtxclk_sel => acia_rxtxclk_sel,
-		E     => acia_E,
-		din   => Din,
-		sel   => acia_sel,
-		rs    => acia_rs,
-		rw    => acia_rw,
-		dout  => Dout,
-		irq   => acia_irq,
-		tx    => TX,
-		rx    => RX
+		reset     => reset,
+		clk       => clk32,
+		rx_clk_en => acia_clk_en,
+		tx_clk_en => acia_clk_en,
+		din       => acia_din,
+		dout      => Dout,
+		rnw       => acia_rw,
+		cs        => acia_sel,
+		rs        => acia_rs,
+		irq_n     => acia_irq_n,
+		cts_n     => '0',
+		dcd_n     => '0',
+		rts_n     => open,
+		rx        => RX,
+		tx        => TX
 	);
 
 end rtl;
