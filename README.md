@@ -6,7 +6,7 @@ The C64Nano is a port of some [MiST](https://github.com/mist-devel/mist-board/wi
 
 | Board      | FPGA       | support |Note|
 | ---        |        -   | -     |-|
-| [Tang Nano 20k](https://wiki.sipeed.com/nano20k)     | [GW2AR](https://www.gowinsemi.com/en/product/detail/38/)  | HDMI / LCD |Dualshock via MiSTeryShield20k spare header **or** Joy to DIP |
+| [Tang Nano 20k](https://wiki.sipeed.com/nano20k)     | [GW2AR](https://www.gowinsemi.com/en/product/detail/38/)  | HDMI / LCD |Dualshock via MiSTeryShield20k spare header|
 | [Tang Primer 25K](https://wiki.sipeed.com/hardware/en/tang/tang-primer-25k/primer-25k.html) | [GW5A-25](https://www.gowinsemi.com/en/product/detail/60/) | HDMI |no Dualshock, no Retro D9 Joystick, no MIDI |
 | [Tang Mega NEO 60k Dock](https://wiki.sipeed.com/hardware/en/tang/tang-mega-60k/mega-60k.html) | [GW5AT-60](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD | twin Dualshock |
 | [Tang Mega 138k Pro](https://wiki.sipeed.com/hardware/en/tang/tang-mega-138k/mega-138k-pro.html)|[GW5AST-138](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |twin Dualshock |
@@ -291,7 +291,7 @@ Button **cross / square** as Trigger
 
 ## LED UI
 
-| LED | function    | TN20K | TP25K |TM60K|TM138K Pro|Console60K|
+| LED | function    | TN20K | TP25K |TM60K|TM138K Pro|Console60K/138k|
 | --- |           - | -     | -     | -    |-  |-|
 | 0 | c1541 activity| x     | x     | x    |x  |x|
 | 1 | D64 selected  | x     | x     | x    |x  |-|
@@ -312,7 +312,7 @@ Solid **<font color="red">red</font>** of the c1541 led after power-up indicates
 
 ## MIDI-IN and OUT
 
-<s>Type of MIDI interface can be selected from OSD. There is support for Sequential Inc., Passport/Sentech, DATEL/SIEL/JMS/C-LAB and Namesoft. You can use a [MiSTeryNano shield](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k/README.md) to interface to a Keyboard.</s>
+Type of MIDI interface can be selected from OSD. There is support for Sequential Inc., Passport/Sentech, DATEL/SIEL/JMS/C-LAB and Namesoft. You can use a [MiSTeryNano shield](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k/README.md) to interface to a Keyboard.
 
 ## RS232 Serial Interface Swiftlink-232 <-> WIFI Modem
 

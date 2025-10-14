@@ -130,10 +130,10 @@ IO_LOC  "uart_ext_tx" C22;
 IO_PORT "uart_ext_tx" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
 
 // MIDI
-IO_LOC "midi_rx" W11; // PCIe_RST (temporary)
-IO_PORT "midi_rx" PULL_MODE=UP IO_TYPE=LVCMOS15 BANK_VCCIO=1.5;
-IO_LOC "midi_tx" T14 // PCIe WAKE (temporary)
-IO_PORT "midi_tx" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_LOC "midi_rx" T14; // FAN Tacho / PCIe WAKE (temporary)
+IO_PORT "midi_rx" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
+IO_LOC "midi_tx" W11; // PCIe_RST (temporary) T14;
+IO_PORT "midi_tx" IO_TYPE=LVCMOS15 PULL_MODE=NONE BANK_VCCIO=1.5;
 
 // SDRAM
 IO_LOC "IO_sdram_dq[0]" E14;

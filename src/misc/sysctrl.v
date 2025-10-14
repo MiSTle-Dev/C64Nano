@@ -142,7 +142,7 @@ always @(posedge clk) begin
       system_turbo_mode <= 2'b00;
       system_turbo_speed <= 2'b00;
       system_video_std <= 1'b0;
-      system_midi <= 3'b000;
+      system_midi <= 3'b001;
       system_pause <= 1'b0;
       system_vic_variant <= 2'b00;
       system_cia_mode <= 1'b0;

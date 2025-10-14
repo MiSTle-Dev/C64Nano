@@ -1,3 +1,9 @@
+// MIDI
+IO_LOC "midi_tx" 71;
+IO_PORT "midi_tx" IO_TYPE=LVCMOS33 DRIVE=8 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_LOC "midi_rx" 72;
+IO_PORT "midi_rx" IO_TYPE=LVCMOS33 PULL_MODE=DOWN BANK_VCCIO=3.3;
+
 // UART through USB-C port
 //IO_LOC "uart_rx" 70;
 //IO_LOC "uart_tx" 69;

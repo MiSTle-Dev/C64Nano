@@ -16,7 +16,7 @@ entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
+   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
@@ -320,14 +320,12 @@ signal frz_vs          : std_logic;
 signal hbl_out         : std_logic; 
 signal vbl_out         : std_logic;
 signal midi_data       : std_logic_vector(7 downto 0) := (others =>'0');
-signal midi_oe         : std_logic := '0';
-signal midi_en         : std_logic := '0';
+signal midi_oe         : std_logic;
+signal midi_en         : std_logic;
 signal midi_irq_n      : std_logic := '1';
 signal midi_nmi_n      : std_logic := '1';
 signal st_midi         : std_logic_vector(2 downto 0);
 signal phi             : std_logic;
-signal frz_hbl         : std_logic;
-signal frz_vbl         : std_logic;
 signal system_pause    : std_logic;
 signal paddle_1        : std_logic_vector(7 downto 0);
 signal paddle_2        : std_logic_vector(7 downto 0);
@@ -349,8 +347,6 @@ signal key_up          : std_logic;
 signal key_down        : std_logic;
 signal key_left        : std_logic;
 signal key_right       : std_logic;
-signal key_start       : std_logic;
-signal key_select      : std_logic;
 signal key_r12         : std_logic;
 signal key_r22         : std_logic;
 signal key_l12         : std_logic;
@@ -363,8 +359,6 @@ signal key_up2         : std_logic;
 signal key_down2       : std_logic;
 signal key_left2       : std_logic;
 signal key_right2      : std_logic;
-signal key_start2      : std_logic;
-signal key_select2     : std_logic;
 signal audio_div       : unsigned(8 downto 0);
 signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
@@ -546,7 +540,6 @@ component DCS
 begin
 
   jtagseln <= pll_locked;
-  midi_tx <= '1';
   reconfign <= 'Z';
   -- BL616 console to hw pins for external USB-UART adapter
   uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
@@ -606,8 +599,8 @@ gamepad_p1: entity work.dualshock2
     key_square    => key_square,
     key_circle    => key_circle,
     key_cross     => key_cross,
-    key_start     => key_start,
-    key_select    => key_select,
+    key_start     => open,
+    key_select    => open,
     key_lstick    => open,
     key_rstick    => open,
     debug1        => open,
@@ -641,8 +634,8 @@ gamepad_p2: entity work.dualshock2
     key_square    => key_square2,
     key_circle    => key_circle2,
     key_cross     => key_cross2,
-    key_start     => key_start2,
-    key_select    => key_select2,
+    key_start     => open,
+    key_select    => open,
     key_lstick    => open,
     key_rstick    => open,
     debug1        => open,
@@ -1331,7 +1324,7 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
-      --    unsigned(midi_data) when (midi_oe and midi_en) = '1' else
+            unsigned(midi_data) when midi_oe = '1' else
             uart_data when uart_oe = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
@@ -1385,10 +1378,10 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   game         => game,
   exrom        => exrom,
   io_rom       => io_rom,
-  io_ext       => reu_oe or cart_oe or uart_oe, --or (midi_oe and midi_en)
+  io_ext       => reu_oe or cart_oe or uart_oe or (midi_oe and midi_en),
   io_data      => io_data,
-  irq_n        => '1', -- midi_irq_n,
-  nmi_n        => not nmi and uart_irq, -- and midi_nmi_n 
+  irq_n        => midi_irq_n,
+  nmi_n        => not nmi and uart_irq and midi_nmi_n,
   nmi_ack      => nmi_ack,
   romL         => romL,
   romH         => romH,
@@ -1575,7 +1568,7 @@ yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi
   port map (
     clk32   => clk32,
-    reset   => not reset_n or not midi_en,
+    reset   => not reset_n,
     Mode    => st_midi,
     E       => phi,
     IOE     => IOE,
@@ -1583,7 +1576,7 @@ yes_midi: if MIDI /= 0 generate
     Din     => std_logic_vector(c64_data_out),
     Dout    => midi_data,
     OE      => midi_oe,
-    RnW     => not (ram_we and IOE),
+    RnW     => not ram_we,
     nIRQ    => midi_irq_n,
     nNMI    => midi_nmi_n,
  
