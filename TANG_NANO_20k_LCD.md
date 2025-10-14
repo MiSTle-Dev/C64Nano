@@ -15,9 +15,7 @@ For actual board setup also have a look at the [VIC20][def] pages.
 ## Adhoc setup of a TN20k, LCD, Speaker and M0S
 
 **Pinmap TN20k Interfaces LCD Output**
-M0S Dock, LCD, Speaker
-
-![wiring](\.assets/wiring_tn20k_lcd.png)
+LCD, Speaker
 
 ![setup](\.assets/tn20k_lcd.png)
 

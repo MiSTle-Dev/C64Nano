@@ -12,11 +12,11 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.numeric_std.ALL;
 
-entity tang_nano_20k_c64_top_25k is
+entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
+   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
@@ -32,8 +32,8 @@ entity tang_nano_20k_c64_top_25k is
     bl616_mon_tx : out std_logic;
     --bl616_mon_rx : in std_logic;
    -- external hw pin UART
-  --  uart_ext_rx : in std_logic;
-  --  uart_ext_tx : out std_logic;
+    uart_ext_rx : in std_logic;
+    uart_ext_tx : out std_logic;
     -- SPI interface Sipeed M0S Dock external BL616 uC
     m0s         : inout std_logic_vector(4 downto 0) := (others => 'Z');
     -- SPI connection to onboard BL616
@@ -71,7 +71,7 @@ entity tang_nano_20k_c64_top_25k is
     );
 end;
 
-architecture Behavioral_top of tang_nano_20k_c64_top_25k is
+architecture Behavioral_top of c64nano_top is
 
 signal clk64          : std_logic;
 signal clk32          : std_logic;
@@ -284,21 +284,13 @@ signal c64_iec_clk_old : std_logic;
 signal drive_iec_clk_old : std_logic;
 signal drive_stb_i_old : std_logic;
 signal drive_stb_o_old : std_logic;
-signal hsync_out       : std_logic;
-signal vsync_out       : std_logic;
-signal hblank          : std_logic;
-signal vblank          : std_logic;
-signal frz_hs          : std_logic;
-signal frz_vs          : std_logic;
-signal hbl_out         : std_logic; 
-signal vbl_out         : std_logic;
 signal midi_data       : std_logic_vector(7 downto 0) := (others =>'0');
-signal midi_oe         : std_logic := '0';
-signal midi_en         : std_logic := '0';
+signal midi_oe         : std_logic;
+signal midi_en         : std_logic;
 signal midi_irq_n      : std_logic := '1';
 signal midi_nmi_n      : std_logic := '1';
 signal midi_rx         : std_logic;
-signal midi_tx         : std_logic := 'Z';
+signal midi_tx         : std_logic;
 signal st_midi         : std_logic_vector(2 downto 0);
 signal phi             : std_logic;
 signal system_pause    : std_logic;
@@ -550,6 +542,9 @@ end process;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
   m0s(4)      <= uart_tx_i when spi_ext = '1' else int_out_n;
+
+  midi_rx <= uart_ext_rx;
+  uart_ext_tx <= midi_tx when midi_en = '1' else uart_tx_i;
 
 process(clk32, disk_reset)
 variable reset_cnt : integer range 0 to 2147483647;
@@ -978,7 +973,6 @@ begin
 end process;
 
 -- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
-
 process(clk32)
 begin
   if rising_edge(clk32) then
@@ -1207,7 +1201,7 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
-      --    unsigned(midi_data) when (midi_oe and midi_en) = '1' else
+            unsigned(midi_data) when midi_oe = '1' else
             uart_data when uart_oe = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
@@ -1261,10 +1255,10 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   game         => game,
   exrom        => exrom,
   io_rom       => io_rom,
-  io_ext       => reu_oe or cart_oe or uart_oe, --or (midi_oe and midi_en)
+  io_ext       => reu_oe or cart_oe or uart_oe or (midi_oe and midi_en),
   io_data      => io_data,
-  irq_n        => '1', -- midi_irq_n,
-  nmi_n        => not nmi and uart_irq, -- and midi_nmi_n 
+  irq_n        => midi_irq_n,
+  nmi_n        => not nmi and uart_irq and midi_nmi_n,
   nmi_ack      => nmi_ack,
   romL         => romL,
   romH         => romH,
@@ -1451,7 +1445,7 @@ yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi
   port map (
     clk32   => clk32,
-    reset   => not reset_n or not midi_en,
+    reset   => not reset_n,
     Mode    => st_midi,
     E       => phi,
     IOE     => IOE,
@@ -1459,7 +1453,7 @@ yes_midi: if MIDI /= 0 generate
     Din     => std_logic_vector(c64_data_out),
     Dout    => midi_data,
     OE      => midi_oe,
-    RnW     => not (ram_we and IOE),
+    RnW     => not ram_we,
     nIRQ    => midi_irq_n,
     nNMI    => midi_nmi_n,
  
@@ -1781,8 +1775,7 @@ port map (
 );
 
 -- external HW pin UART interface
-uart_rx_muxed <= uart_rx when system_uart = "00" else '1';
---uart_ext_tx <= uart_tx;
+uart_rx_muxed <= uart_rx when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
 
 -- UART_RX synchronizer
 process(clk32)

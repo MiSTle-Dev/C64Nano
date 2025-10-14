@@ -64,10 +64,10 @@ IO_LOC "m0s[4]" L11;
 IO_PORT "m0s[4]" PULL_MODE=UP IO_TYPE=LVCMOS33;
 //IO_LOC "m0s[5]" K11; // spare
 //IO_PORT "m0s[5]" PULL_MODE=UP IO_TYPE=LVCMOS33;
-//IO_LOC "uart_ext_rx" K5;  // ext UART hw pin RX input
-//IO_PORT "uart_ext_rx" PULL_MODE=UP IO_TYPE=LVCMOS33;
-//IO_LOC "uart_ext_tx" L5;  // ext UART hw pin TX output
-//IO_PORT "uart_ext_tx" PULL_MODE=NONE IO_TYPE=LVCMOS33;
+IO_LOC "uart_ext_rx" K5;  // ext UART hw pin RX input
+IO_PORT "uart_ext_rx" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC "uart_ext_tx" L5;  // ext UART hw pin TX output
+IO_PORT "uart_ext_tx" PULL_MODE=NONE IO_TYPE=LVCMOS33;
 
 // generic IO pins
 

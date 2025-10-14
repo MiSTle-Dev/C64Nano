@@ -1641,7 +1641,7 @@ yes_midi: if MIDI /= 0 generate
     Din     => std_logic_vector(c64_data_out),
     Dout    => midi_data,
     OE      => midi_oe,
-    RnW     => not (ram_we and IOE),
+    RnW     => not ram_we,
     nIRQ    => midi_irq_n,
     nNMI    => midi_nmi_n,
  

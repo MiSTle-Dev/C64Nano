@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------
---  C64 Top level for Tang Nano
+--  C64 Top level for Tang Nano 20k LCD
 --  2023...2025 Stefan Voss
 --  based on the work of many others
 --
@@ -16,7 +16,7 @@ entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
+   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
@@ -65,7 +65,9 @@ entity c64nano_top is
     O_sdram_addr : out std_logic_vector(10 downto 0);  -- 11 bit multiplexed address bus
     O_sdram_ba   : out std_logic_vector(1 downto 0);     -- two banks
     O_sdram_dqm  : out std_logic_vector(3 downto 0);     -- 32/4
-
+    -- MIDI
+    midi_rx       : in std_logic;
+    midi_tx       : out std_logic;
     -- spi flash interface
     mspi_cs       : out std_logic;
     mspi_clk      : out std_logic;
@@ -296,14 +298,11 @@ signal c64_iec_clk_old : std_logic;
 signal drive_iec_clk_old : std_logic;
 signal drive_stb_i_old : std_logic;
 signal drive_stb_o_old : std_logic;
-signal hsync_out       : std_logic;
-signal vsync_out       : std_logic;
-signal hblank          : std_logic;
-signal vblank          : std_logic;
-signal frz_hs          : std_logic;
-signal frz_vs          : std_logic;
-signal hbl_out         : std_logic; 
-signal vbl_out         : std_logic;
+signal midi_data       : std_logic_vector(7 downto 0) := (others =>'0');
+signal midi_oe         : std_logic;
+signal midi_en         : std_logic;
+signal midi_irq_n      : std_logic := '1';
+signal midi_nmi_n      : std_logic := '1';
 signal st_midi         : std_logic_vector(2 downto 0);
 signal phi             : std_logic;
 signal system_pause    : std_logic;
@@ -561,6 +560,7 @@ end component;
 
 begin
 
+  -- onboard BL616
   spi_io_din  <= spi_dat;
   spi_io_ss   <= spi_csn;
   spi_io_clk  <= spi_sclk;
@@ -1179,7 +1179,7 @@ process(clk32, reset_n)
     joystick1_y_pos <= x"ff";
     joystick2_x_pos <= x"ff";
     joystick2_y_pos <= x"ff";
-    elsif rising_edge(clk32) then
+  elsif rising_edge(clk32) then
     if mouse_strobe = '1' then
      -- due to limited resolution on the c64 side, limit the mouse movement speed
      if mouse_x > 40 then mov_x:="0101000"; elsif mouse_x < -40 then mov_x:= "1011000"; else mov_x := mouse_x(6 downto 0); end if;
@@ -1191,8 +1191,8 @@ process(clk32, reset_n)
       joystick1_y_pos <= std_logic_vector(joystick0ay(7 downto 0));
       joystick2_x_pos <= std_logic_vector(joystick1ax(7 downto 0));
       joystick2_y_pos <= std_logic_vector(joystick1ay(7 downto 0));
-     end if;
     end if;
+  end if;
 end process;
 
 mcu_spi_inst: entity work.mcu_spi 
@@ -1279,7 +1279,7 @@ hid_inst: entity work.hid
   system_turbo_mode   => turbo_mode,
   system_turbo_speed  => turbo_speed,
   system_video_std    => ntscMode,
-  system_midi         => open,
+  system_midi         => st_midi,
   system_pause        => system_pause,
   system_vic_variant  => vic_variant, 
   system_cia_mode     => cia_mode,
@@ -1338,6 +1338,7 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
+            unsigned(midi_data) when midi_oe = '1' else
             uart_data when uart_oe = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
@@ -1391,10 +1392,10 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   game         => game,
   exrom        => exrom,
   io_rom       => io_rom,
-  io_ext       => reu_oe or cart_oe or uart_oe,
+  io_ext       => reu_oe or cart_oe or uart_oe or (midi_oe and midi_en),
   io_data      => io_data,
-  irq_n        => '1',
-  nmi_n        => not nmi and uart_irq,
+  irq_n        => midi_irq_n,
+  nmi_n        => not nmi and uart_irq and midi_nmi_n,
   nmi_ack      => nmi_ack,
   romL         => romL,
   romH         => romH,
@@ -1574,6 +1575,29 @@ port map
     nmi         => nmi,
     nmi_ack     => nmi_ack
   );
+
+midi_en <= st_midi(2) or st_midi(1) or st_midi(0);
+
+yes_midi: if MIDI /= 0 generate
+  midi_inst : entity work.c64_midi
+  port map (
+    clk32   => clk32,
+    reset   => not reset_n,
+    Mode    => st_midi,
+    E       => phi,
+    IOE     => IOE,
+    A       => std_logic_vector(c64_addr),
+    Din     => std_logic_vector(c64_data_out),
+    Dout    => midi_data,
+    OE      => midi_oe,
+    RnW     => not ram_we,
+    nIRQ    => midi_irq_n,
+    nNMI    => midi_nmi_n,
+ 
+    RX      => midi_rx,
+    TX      => midi_tx
+  );
+end generate;
 
 crt_inst : entity work.loader_sd_card
 port map (

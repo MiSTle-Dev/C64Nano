@@ -1,4 +1,4 @@
-CLOCK_LOC "spi_sclk_d" BUFG = CLK;
+//CLOCK_LOC "spi_sclk_d" BUFG = CLK;
 //CLOCK_LOC "spi_sclk_d" LOCAL_CLOCK;
 
 IO_PORT "reconfign" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
@@ -59,8 +59,8 @@ IO_LOC "tmds_d_p[1]" J15,H15;
 IO_PORT "tmds_d_p[1]" PULL_MODE=NONE DRIVE=8 IO_TYPE=LVCMOS33D;
 IO_LOC "tmds_d_p[2]" K17,J17
 IO_PORT "tmds_d_p[2]" PULL_MODE=NONE DRIVE=8 IO_TYPE=LVCMOS33D;
-IO_LOC  "pwr_sav"  K14; // DVI-A_PSV
-IO_PORT "pwr_sav"  PULL_MODE=UP BANK_VCCIO=3.3;
+//IO_LOC  "pwr_sav"  K14; // DVI-A_PSV
+//IO_PORT "pwr_sav"  PULL_MODE=UP BANK_VCCIO=3.3;
 
 // SDCard/TF_SDIO
 IO_LOC "sd_clk" V15;
@@ -128,6 +128,12 @@ IO_PORT "uart_ext_rx" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
 // UART ext TX
 IO_LOC  "uart_ext_tx" C22;
 IO_PORT "uart_ext_tx" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+
+// MIDI
+IO_LOC "midi_rx" T14; // FAN Tacho / PCIe WAKE (temporary)
+IO_PORT "midi_rx" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
+IO_LOC "midi_tx" W11; // PCIe_RST (temporary) T14;
+IO_PORT "midi_tx" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
 
 // SDRAM
 IO_LOC "IO_sdram_dq[0]" E14;

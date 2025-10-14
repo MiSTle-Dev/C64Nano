@@ -1,6 +1,6 @@
 set_device GW2AR-LV18QN88C8/I7 -name GW2AR-18C
 
-add_file src/acia.v
+add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
 add_file src/cartridge.v
 add_file src/dualshock2.v

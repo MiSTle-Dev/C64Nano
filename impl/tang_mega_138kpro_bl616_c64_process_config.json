@@ -79,7 +79,7 @@
  "Show_All_Warnings" : false,
  "Synthesize_tool" : "GowinSyn",
  "TclPre" : "",
- "TopModule" : "tang_nano_20k_c64_top_138k",
+ "TopModule" : "c64nano_top",
  "USERCODE" : "default",
  "Unused_Pin" : "As_input_tri_stated_with_pull_up",
  "VCC" : "0.9",
