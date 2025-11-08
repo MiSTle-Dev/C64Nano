@@ -64,7 +64,7 @@
  "RECONFIG_N" : false,
  "Ram_RW_Check" : false,
  "Replicate_Resources" : false,
- "Report_Auto-Placed_Io_Information" : true,
+ "Report_Auto-Placed_Io_Information" : false,
  "Route_Maxfan" : 23,
  "Route_Option" : "1",
  "Run_Timing_Driven" : true,

@@ -296,7 +296,7 @@ always @(posedge clk) begin
                     // RS232 UART port
                     if(id == "*") system_uart <= data_in[1:0];
                     // Joystick swap port
-                    if(id == "&") system_joyswap <= data_in[0];
+                    if(id == "%") system_joyswap <= data_in[0];
                     // cartridge detach
                     if(id == "F") system_detach_reset <= data_in[0];
                     // shift_mod

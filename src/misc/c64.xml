@@ -79,7 +79,7 @@
   </actions>
   
   <menu label="C64Nano">
- <button label="Detach Cartridge &amp; Reset" action="detach_reset_hide"/>
+ <button label="Detach Cartridge + Reset" action="detach_reset_hide"/>
     <menu label="System">
       <list label="Joyport 1:" id="Q" default="10">
  <listentry label="Retro D9 1" value="0"/>
@@ -107,7 +107,7 @@
  <listentry label="DualS Padd" value="9"/>
  <listentry label="Off" value="10"/>
       </list>
-      <list label="Swap Joyst:" id="&amp;" default="0">
+      <list label="Swap Joyst:" id="%" default="0">
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
       </list>
