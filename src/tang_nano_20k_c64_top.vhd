@@ -557,10 +557,11 @@ begin
 
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi (M0S Dock) , then the connection is being switched
-process (all)
+process (flash_clk, flash_lock)
 begin
   if flash_lock = '0' then
     spi_ext <= '0';
+    m0s(3 downto 1) <= "ZZZ";
   elsif rising_edge(flash_clk) then
     if m0s(2) = '0' then
         spi_ext <= '1';
