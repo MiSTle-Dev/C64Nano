@@ -12,7 +12,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.numeric_std.ALL;
 
-entity tang_nano_20k_c64_top_138k is
+entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
@@ -91,7 +91,7 @@ entity tang_nano_20k_c64_top_138k is
     );
 end;
 
-architecture Behavioral_top of tang_nano_20k_c64_top_138k is
+architecture Behavioral_top of c64nano_top is
 
 signal clk64          : std_logic;
 signal clk32          : std_logic;

@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------
---  C64 Top level for Tang Nano
+--  C64 Top level for Tang Nano 20k
 --  2023...2025 Stefan Voss
 --  based on the work of many others
 --
@@ -21,6 +21,8 @@ entity c64nano_top is
    );
   port
   (
+--  jtagseln    : out std_logic := '0';
+    reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
@@ -107,12 +109,14 @@ signal pll_locked_hid : std_logic;
 signal clk_pixel_x10  : std_logic;
 signal clk_pixel_x5   : std_logic;
 signal spi_io_clk     : std_logic;
+signal flash_clk      : std_logic;
 attribute syn_keep : integer;
 attribute syn_keep of clk64         : signal is 1;
 attribute syn_keep of clk32         : signal is 1;
 attribute syn_keep of clk_pixel_x10 : signal is 1;
 attribute syn_keep of clk_pixel_x5  : signal is 1;
 attribute syn_keep of spi_io_clk    : signal is 1;
+attribute syn_keep of flash_clk     : signal is 1;
 
 -- custom pins
 signal uart_ext_rx   : std_logic;
@@ -333,7 +337,6 @@ signal ntscModeD       : std_logic;
 signal ntscModeD1      : std_logic;
 signal ntscModeD2      : std_logic;
 signal audio_div       : unsigned(8 downto 0);
-signal flash_clk       : std_logic;
 signal flash_lock      : std_logic;
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(22 downto 0);
@@ -544,6 +547,9 @@ component rPLL
 end component;
 
 begin
+
+--jtagseln <= '0' when pll_locked = '0' or (reset and user) = '1' else '1';
+  reconfign <= 'Z';
 
   -- BL616 console to hw pins for external USB-UART adapter
   uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
@@ -984,49 +990,15 @@ port map(
     CALIB  => '0'
 );
 
--- 64.125Mhz for flash controller c1541 ROM
-flashclock: rPLL
-        generic map (
-          FCLKIN => "27",
-          DEVICE => "GW2AR-18C",
-          DYN_IDIV_SEL => "false",
-          IDIV_SEL => 6,
-          DYN_FBDIV_SEL => "false",
-          FBDIV_SEL => 25,
-          DYN_ODIV_SEL => "false",
-          ODIV_SEL => 8,
-          PSDA_SEL => "1111",
-          DYN_DA_EN => "false",
-          DUTYDA_SEL => "1000",
-          CLKOUT_FT_DIR => '1',
-          CLKOUTP_FT_DIR => '1',
-          CLKOUT_DLY_STEP => 0,
-          CLKOUTP_DLY_STEP => 0,
-          CLKFB_SEL => "internal",
-          CLKOUT_BYPASS => "false",
-          CLKOUTP_BYPASS => "false",
-          CLKOUTD_BYPASS => "false",
-          DYN_SDIV_SEL => 2,
-          CLKOUTD_SRC => "CLKOUT",
-          CLKOUTD3_SRC => "CLKOUT"
-        )
-        port map (
-            CLKOUT   => flash_clk, -- clock Flash controller
-            LOCK     => flash_lock,
-            CLKOUTP  => mspi_clk, -- phase shifted clock SPI Flash
-            CLKOUTD  => open,
-            CLKOUTD3 => open,
-            RESET    => '0',
-            RESET_P  => '0',
-            CLKIN    => clk,
-            CLKFB    => '0',
-            FBDSEL   => (others => '0'),
-            IDSEL    => (others => '0'),
-            ODSEL    => (others => '0'),
-            PSDA     => (others => '0'),
-            DUTYDA   => (others => '0'),
-            FDLY     => (others => '1')
-        );
+
+flashclock: entity work.Gowin_rPLL_flash
+    port map (
+        clkout  => flash_clk,
+        lock    => flash_lock,
+        clkoutp => mspi_clk,
+        clkoutd => open, -- 32Mhz
+        clkin   => clk
+    );
 
 pll_locked_comb <= pll_locked_hid and flash_lock;
 leds_n <=  not leds;

@@ -1,10 +1,11 @@
 //CLOCK_LOC "spi_sclk_d" BUFG = CLK;
 //CLOCK_LOC "spi_io_clk" LOCAL_CLOCK;
 
-//IO_PORT "reconfign" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
-//IO_LOC  "reconfign" 9;
+IO_LOC "reconfign" 9;
+IO_PORT "reconfign" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 
 //NET_LOC "jtagseln" V_JTAGSELN;
+//IO_PORT "jtagseln" IO_TYPE=LVCMOS33;
 
 // external UART hw pin
 //IO_LOC "uart_ext_rx" 75;
