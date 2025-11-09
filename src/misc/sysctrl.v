@@ -135,14 +135,14 @@ always @(posedge clk) begin
       system_volume <= 2'b10;
       system_wide_screen <= 1'b0;
       system_floppy_wprot <= 2'b00;
-      system_port_1 <= 4'b0111;
+      system_port_1 <= 4'b1010;
       system_port_2 <= 4'b0000;
       system_dos_sel <= 2'b00;
       system_sid_digifix <= 1'b0;
       system_turbo_mode <= 2'b00;
       system_turbo_speed <= 2'b00;
       system_video_std <= 1'b0;
-      system_midi <= 3'b001;
+      system_midi <= 3'b000;
       system_pause <= 1'b0;
       system_vic_variant <= 2'b00;
       system_cia_mode <= 1'b0;
