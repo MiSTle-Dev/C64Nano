@@ -81,31 +81,35 @@
   <menu label="C64Nano">
  <button label="Detach Cartridge + Reset" action="detach_reset_hide"/>
     <menu label="System">
-      <list label="Joyport 1:" id="Q" default="10">
+      <list label="Joyport 1:" id="Q" default="12">
  <listentry label="Retro D9 1" value="0"/>
  <listentry label="Retro D9 2" value="1"/>
- <listentry label="USB Joy  1" value="2"/>
- <listentry label="USB Joy  2" value="3"/>
- <listentry label="DualS Joy " value="4"/>
- <listentry label="NumPad Joy" value="5"/>
- <listentry label="USB Mouse " value="6"/>
- <listentry label="USB Padd 1" value="7"/>
- <listentry label="USB Padd 2" value="8"/>
- <listentry label="DualS Padd" value="9"/>
- <listentry label="Off" value="10"/>
+ <listentry label="USB Joy 1" value="2"/>
+ <listentry label="USB Joy 2" value="3"/>
+ <listentry label="DS Joy 1" value="4"/>
+ <listentry label="DS Joy 2" value="5"/>
+ <listentry label="NumPad Joy" value="6"/>
+ <listentry label="USB Mouse " value="7"/>
+ <listentry label="USB Padd 1" value="8"/>
+ <listentry label="USB Padd 2" value="9"/>
+ <listentry label="DS Padd 1" value="10"/>
+ <listentry label="DS Padd 2" value="11"/>
+ <listentry label="Off" value="12"/>
       </list>
       <list label="Joyport 2:" id="J" default="2">
  <listentry label="Retro D9 1" value="0"/>
  <listentry label="Retro D9 2" value="1"/>
- <listentry label="USB Joy  1" value="2"/>
- <listentry label="USB Joy  2" value="3"/>
- <listentry label="DualS Joy " value="4"/>
- <listentry label="NumPad Joy" value="5"/>
- <listentry label="USB Mouse " value="6"/>
- <listentry label="USB Padd 1" value="7"/>
- <listentry label="USB Padd 2" value="8"/>
- <listentry label="DualS Padd" value="9"/>
- <listentry label="Off" value="10"/>
+ <listentry label="USB Joy 1" value="2"/>
+ <listentry label="USB Joy 2" value="3"/>
+ <listentry label="DS Joy 1" value="4"/>
+ <listentry label="DS Joy 2" value="5"/>
+ <listentry label="NumPad Joy" value="6"/>
+ <listentry label="USB Mouse " value="7"/>
+ <listentry label="USB Padd 1" value="8"/>
+ <listentry label="USB Padd 2" value="9"/>
+ <listentry label="DS Padd 1" value="10"/>
+ <listentry label="DS Padd 2" value="11"/>
+ <listentry label="Off" value="12"/>
       </list>
       <list label="Swap Joyst:" id="%" default="0">
  <listentry label="Off" value="0"/>

@@ -2,9 +2,6 @@
     sysctrl.v
  
     generic system control interface from/via the MCU
-
-    TODO: This is currently very core specific. This needs to be
-    generic for all cores.
 */
 
 module sysctrl (
@@ -178,13 +175,13 @@ always @(posedge clk) begin
       port_out_strobe <= 1'b0;
       port_in_strobe <= 1'b0;
 
-      // iack bit 0 acknowledges the system control interrupt
+      // iack bit 0 acknowledges the coldboot notification
       if(int_ack[0]) sys_int <= 1'b0;      
-            
+
       // (further) data has just become available, so raise interrupt
       port_out_availableD <= (port_out_available != 8'd0);
-      if(port_out_available && !port_out_availableD)
-        sys_int <= 1'b1;
+      if((port_out_available != 8'd0) && !port_out_availableD)
+        sys_int <= 1'b1;      
       
       // monitor buttons for changes and raise interrupt
       if(buttons_irq_enable) begin
