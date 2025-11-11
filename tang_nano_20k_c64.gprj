@@ -69,10 +69,10 @@
         <File path="src/t65/T65_ALU.vhd" type="file.vhdl" enable="1"/>
         <File path="src/t65/T65_MCode.vhd" type="file.vhdl" enable="1"/>
         <File path="src/t65/T65_Pack.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/tang_nano_20k_c64_top.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/tang/tn20k/tang_nano_20k_c64_top.vhd" type="file.vhdl" enable="1"/>
         <File path="src/uart6551/BaudRate.vhd" type="file.vhdl" enable="1"/>
         <File path="src/video_vicII_656x.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/tang_nano_20k_c64_top.cst" type="file.cst" enable="1"/>
-        <File path="src/tang_nano_20k_c64_top.sdc" type="file.sdc" enable="1"/>
+        <File path="src/tang/tn20k/tang_nano_20k_c64_top.cst" type="file.cst" enable="1"/>
+        <File path="src/tang/tn20k/tang_nano_20k_c64_top.sdc" type="file.sdc" enable="1"/>
     </FileList>
 </Project>

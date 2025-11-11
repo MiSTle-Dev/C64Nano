@@ -53,10 +53,10 @@ add_file src/t65/T65.vhd
 add_file src/t65/T65_ALU.vhd
 add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
-add_file src/tang_nano_20k_c64_top.vhd
+add_file src/tang/tn20k/tang_nano_20k_c64_top.vhd
 add_file src/video_vicII_656x.vhd
-add_file src/tang_nano_20k_c64_top.cst
-add_file src/tang_nano_20k_c64_top.sdc
+add_file src/tang/tn20k/tang_nano_20k_c64_top.cst
+add_file src/tang/tn20k/tang_nano_20k_c64_top.sdc
 add_file src/loader_sd_card.sv
 add_file src/fifo_sc_hs/fifo_sc_hs.vhd
 add_file src/c1530.vhd
