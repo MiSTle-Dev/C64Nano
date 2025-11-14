@@ -91,10 +91,10 @@ These DOS for the c1541 emulation can later be selected from the on-screen-displ
 | Type                      | TN20k    | TP25k    | TM60k    |TM138k    |Console60k/138k| |
 | FPGA bitstream            | 0x000000 | 0x000000 | 0x000000 | 0x000000 |0x000000 |ROM size|
 | reserved for Atari ST ROM | 0x100000 | 0x100000 | 0x500000 | 0x900000 |0x500000 | - |
-| c1541 Dolphin DOS 2       | 0x200000 | 0x200000 | 0x700000 | 0xA00000 |0x700000 |32k|
-| c1541 CBM DOS 2.6         | 0x20C000 | 0x20C000 | 0x70C000 | 0xA0C000 |0x70C000 |16k|
-| c1541 Speed DOS Plus      | 0x214000 | 0x214000 | 0x714000 | 0xA14000 |0x714000 |16k|
-| c1541 Jiffy DOS           | 0x21C000 | 0x21C000 | 0x71C000 | 0xA1C000 |0x71C000 |16k|
+| c1541 Dolphin DOS 2       | 0x200000 | 0x200000 | 0x700000 | 0x700000 |0x700000 |32k|
+| c1541 CBM DOS 2.6         | 0x20C000 | 0x20C000 | 0x70C000 | 0x70C000 |0x70C000 |16k|
+| c1541 Speed DOS Plus      | 0x214000 | 0x214000 | 0x714000 | 0x714000 |0x714000 |16k|
+| c1541 Jiffy DOS           | 0x21C000 | 0x21C000 | 0x71C000 | 0x71C000 |0x71C000 |16k|
 
 **shell / command line Programming alternative**
 
