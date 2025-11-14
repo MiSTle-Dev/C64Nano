@@ -5,10 +5,10 @@
     <Version>5</Version>
     <Device name="GW2AR-18C" pn="GW2AR-LV18QN88C8/I7">gw2ar18c-000</Device>
     <FileList>
-        <File path="src/gen_uart.v" type="file.verilog" enable="1"/>
         <File path="src/c1541/mist_sd_card.sv" type="file.verilog" enable="1"/>
         <File path="src/cartridge.v" type="file.verilog" enable="1"/>
         <File path="src/dualshock2.v" type="file.verilog" enable="1"/>
+        <File path="src/gen_uart.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_dpb/gowin_dpb_track_buffer_b.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_dpb/gowin_dpb_trkbuf.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_dpb/sector_dpram.v" type="file.verilog" enable="1"/>
@@ -59,6 +59,7 @@
         <File path="src/fpga64_sid_iec.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_prom/gowin_prom_basic.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_prom/gowin_prom_chargen.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_rpll/gowin_rpll_flash.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_sdpb/gowin_sdpb_kernal_8k.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_sp/gowin_sp_2k.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_sp/gowin_sp_8k.vhd" type="file.vhdl" enable="1"/>
@@ -67,10 +68,10 @@
         <File path="src/t65/T65_ALU.vhd" type="file.vhdl" enable="1"/>
         <File path="src/t65/T65_MCode.vhd" type="file.vhdl" enable="1"/>
         <File path="src/t65/T65_Pack.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/tang/tn20k_lcd/tang_nano_20k_c64_top_lcd.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/tang/tn20k_lcd/c64nano.vhd" type="file.vhdl" enable="1"/>
         <File path="src/uart6551/BaudRate.vhd" type="file.vhdl" enable="1"/>
         <File path="src/video_vicII_656x.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/tang/tn20k_lcd/tang_nano_20k_c64_top_lcd.cst" type="file.cst" enable="1"/>
-        <File path="src/tang/tn20k_lcd/tang_nano_20k_c64_top_lcd.sdc" type="file.sdc" enable="1"/>
+        <File path="src/tang/tn20k_lcd/c64nano.cst" type="file.cst" enable="1"/>
+        <File path="src/tang/tn20k_lcd/c64nano.sdc" type="file.sdc" enable="1"/>
     </FileList>
 </Project>

@@ -5,7 +5,7 @@ use IEEE.numeric_std.all;
 --
 -- Model 1541B
 --
--- 2023 Stefan Voss Dolphindos 2 and external ROM added
+-- 2023 & 2025 Stefan Voss Dolphindos 2 and external ROM added
 
 entity c1541_logic is
   generic
@@ -20,11 +20,10 @@ entity c1541_logic is
     ce              : in std_logic;
 
     -- serial bus
-    sb_data_oe      : buffer std_logic;
+    sb_data_oe      : out std_logic;
     sb_data_in      : in std_logic;
-    sb_clk_oe       : buffer std_logic;
+    sb_clk_oe       : out std_logic;
     sb_clk_in       : in std_logic;
-    sb_atn_oe       : out std_logic;
     sb_atn_in       : in std_logic;
 
     -- parallel bus
@@ -57,10 +56,8 @@ end c1541_logic;
 architecture SYN of c1541_logic is
 
   -- clocks, reset
-  signal reset_n        : std_logic;
   signal p2_h_r         : std_logic;
   signal p2_h_f         : std_logic;
-  signal clk_1M_pulse   : std_logic;
     
   -- cpu signals  
   signal cpu_a          : std_logic_vector(23 downto 0);
@@ -69,7 +66,6 @@ architecture SYN of c1541_logic is
   signal cpu_rw_n       : std_logic;
   signal cpu_irq_n      : std_logic;
   signal cpu_so_n       : std_logic;
-  signal cpu_sync       : std_logic;  -- DAR
 
   -- rom signals
   signal rom_cs         : std_logic;
@@ -83,7 +79,6 @@ architecture SYN of c1541_logic is
   -- UC1 (VIA6522) signals
   signal uc1_do         : std_logic_vector(7 downto 0);
   signal uc1_do_oe_n    : std_logic;
-  signal uc1_cs1        : std_logic;
   signal uc1_cs2_n      : std_logic;
   signal uc1_irq_n      : std_logic;
   signal uc1_ca1_i      : std_logic;
@@ -99,7 +94,6 @@ architecture SYN of c1541_logic is
   -- UC3 (VIA6522) signals
   signal uc3_do         : std_logic_vector(7 downto 0);
   signal uc3_do_oe_n    : std_logic;
-  signal uc3_cs1        : std_logic;
   signal uc3_cs2_n      : std_logic;
   signal uc3_irq_n      : std_logic;
   signal uc3_ca1_i      : std_logic;
@@ -117,7 +111,6 @@ architecture SYN of c1541_logic is
   signal uc3_cb1_oe     : std_logic;
 
   -- internal signals
-  signal atna           : std_logic; -- ATN ACK - input gate array
   signal atn            : std_logic; -- attention
   signal soe            : std_logic; -- set overflow enable
   
@@ -140,32 +133,19 @@ architecture SYN of c1541_logic is
 
   signal cpu_b_slice    : std_logic_vector(2 downto 0);
   signal extram_cs      : std_logic;
-  signal extram_do      : std_logic_vector(7 downto 0);
+  signal extram_do      : std_logic_vector(7 downto 0) := x"FF";
   signal extram_wr      : std_logic;
 
   begin
 
-  reset_n <= not reset;
-  
---flux_comp_inst :  entity work.c1541_flux
---port map (
---  clk      => clk_32M,
---  pause    => pause,
---  ce       => ce,
-
---  p2_h_r    => p2_h_r,
---  p2_h_f    => p2_h_f,
---  clk_1M_pulse => clk_1M_pulse
---);
   process (clk_32M)
     variable count  : std_logic_vector(4 downto 0) := (others => '0');
   begin
     if rising_edge(clk_32M) then
         if pause = '0' then count := std_logic_vector(unsigned(count) + 1); end if;
     end if;
-  if count = "10000" then clk_1M_pulse <= '1'; else clk_1M_pulse <='0' ; end if;
-  if count = "00000" then p2_h_r <= '1'; else p2_h_r <='0' ; end if;
-  if count = "10000" then p2_h_f <= '1'; else p2_h_f <='0' ; end if;
+    if count = "00000" then p2_h_r <= '1'; else p2_h_r <='0' ; end if;
+    if count = "10000" then p2_h_f <= '1'; else p2_h_f <='0' ; end if;
   end process;
 
   -- decode logic
@@ -221,14 +201,9 @@ port map (
     din => cpu_do
 );
 
-  --
-  -- hook up UC1 ports
-  uc1_cs1 <= '1';
-  --uc1_cs2_n: see decode logic above
-  -- CA1
-  uc1_ca1_i <= not sb_atn_in;
+  sb_data_oe <= not (uc1_pb_o(1) or uc1_pb_oe_n(1)) and not atn;
+  sb_clk_oe <= not(uc1_pb_o(3) or not uc1_pb_oe(3));
 
-  -- PA
   par_stb_o  <= uc1_ca2_o or not uc1_ca2_oe;
   par_data_o <= uc1_pa_o or not uc1_pa_oe; 
   cb1_i <= par_stb_i when ext_en = '1' else '1';
@@ -237,30 +212,18 @@ port map (
   -- PB
   uc1_pb_i(0) <=  not (sb_data_in and sb_data_oe);
   uc1_pb_i(1) <=  '1';
-  sb_data_oe  <=  not (uc1_pb_o(1) or uc1_pb_oe_n(1)) and not atn;
   uc1_pb_i(2) <=  not (sb_clk_in and sb_clk_oe);
-  sb_clk_oe   <=  not (uc1_pb_o(3) or uc1_pb_oe_n(3));
   uc1_pb_i(4 downto 3) <= "11"; -- NC
-  atna <= uc1_pb_o(4) or uc1_pb_oe_n(4);
+  atn <= (uc1_pb_o(4) or uc1_pb_oe_n(4)) xor (not sb_atn_in);
   uc1_pb_i(6 downto 5) <= DEVICE_SELECT xor ds;     -- allows override
   uc1_pb_i(7) <= not sb_atn_in;
 
   --
   -- hook up UC3 ports
   --
-  
-  uc3_cs1 <= '1';
-  --uc3_cs2_n: see decode logic above
-  -- CA1
-  uc3_ca1_i <= cpu_so_n; -- byte ready gated with soe
-  -- CA2
   soe <= uc3_ca2_o or uc3_ca2_oe_n;
-  -- PA
-  uc3_pa_i <= di;
   do <= uc3_pa_o or uc3_pa_oe_n;
-  -- CB2
   mode <= uc3_cb2_o or uc3_cb2_oe_n;
-  -- PB
   stp(1) <= uc3_pb_o(0) or uc3_pb_oe_n(0);
   stp(0) <= uc3_pb_o(1) or uc3_pb_oe_n(1);
   mtr <= uc3_pb_o(2) or uc3_pb_oe_n(2);
@@ -274,26 +237,19 @@ port map (
   cpu_di <= cpu_do when cpu_rw_n = '0' else
             rom_do when rom_cs = '1' else
             ram_do when ram_cs = '1' else
-            uc1_do when (uc1_cs1 = '1' and uc1_cs2_n = '0') else
-            uc3_do when (uc3_cs1 = '1' and uc3_cs2_n = '0') else
+            uc1_do when uc1_cs2_n = '0' else
+            uc3_do when uc3_cs2_n = '0' else
             extram_do when extram_cs = '1' else
             (others => '1');
   cpu_irq_n <= uc1_irq_n and uc3_irq_n;
   cpu_so_n <= byte_n or not soe;
   
-  -- internal connections
-  atn <= atna xor (not sb_atn_in);
-  
-  -- external connections
-  -- ATN never driven by the 1541
-  sb_atn_oe <= '0';
-
   cpu_inst : entity work.T65
     port map
     (
-      Mode        => "00",  -- 6502
-      Res_n       => reset_n,
-      Enable      => clk_1M_pulse,
+      Mode        => "00",
+      Res_n       => not reset,
+      Enable      => p2_h_f,
       Clk         => clk_32M,
       Rdy         => '1',
       Abort_n     => '1',
@@ -301,14 +257,6 @@ port map (
       NMI_n       => '1',
       SO_n        => cpu_so_n,
       R_W_n       => cpu_rw_n,
-      Sync        => cpu_sync, -- open -- DAR
-      EF          => open,
-      MF          => open,
-      XF          => open,
-      ML_n        => open,
-      VP_n        => open,
-      VDA         => open,
-      VPA         => open,
       A           => cpu_a,
       DI          => cpu_di,
       DO          => cpu_do
@@ -336,7 +284,7 @@ port map (
       clock           => clk_32M,
       rising          => p2_h_r,
       falling         => p2_h_f,
-      reset           => not reset_n,
+      reset           => reset,
 
       addr            => cpu_a(3 downto 0),
       wen             => not cpu_rw_n and not uc1_cs2_n,
@@ -344,29 +292,27 @@ port map (
       data_in         => cpu_do,
       data_out        => uc1_do,
 
-      port_a_i        => (uc1_pa_o  or not uc1_pa_oe) and uc1_pa_i,
-      port_a_t        => uc1_pa_oe,
       port_a_o        => uc1_pa_o,
+      port_a_t        => uc1_pa_oe,
+      port_a_i        => uc1_pa_i and (uc1_pa_o or not uc1_pa_oe),
 
       port_b_o        => uc1_pb_o,
       port_b_t        => uc1_pb_oe,
-      port_b_i        => uc1_pb_i,
+      port_b_i        => uc1_pb_i and (uc1_pb_o or not uc1_pb_oe),
 
-
-      ca1_i           => uc1_ca1_i,
-      ca2_i           => (uc1_ca2_o or not uc1_ca2_oe),
-
+      ca1_i           => not sb_atn_in,
 
       ca2_o           => uc1_ca2_o,
       ca2_t           => uc1_ca2_oe,
+      ca2_i           => uc1_ca2_o or not uc1_ca2_oe,
 
-      cb1_i           => (uc1_cb1_o or not uc1_cb1_oe) and cb1_i,
       cb1_o           => uc1_cb1_o,
       cb1_t           => uc1_cb1_oe, 
+      cb1_i           => cb1_i and (uc1_cb1_o or not uc1_cb1_oe),
 
-      cb2_i           => (uc1_cb2_o or not uc1_cb2_oe),
-      cb2_t           => uc1_cb2_oe,
       cb2_o           => uc1_cb2_o,
+      cb2_t           => uc1_cb2_oe,
+      cb2_i           => uc1_cb2_o or not uc1_cb2_oe,
 
       irq             => uc1_irq
     );
@@ -383,7 +329,7 @@ port map (
       clock           => clk_32M,
       rising          => p2_h_r,
       falling         => p2_h_f,
-      reset           => not reset_n,
+      reset           => reset,
 
       addr            => cpu_a(3 downto 0),
       wen             => not cpu_rw_n and not uc3_cs2_n,
@@ -393,25 +339,25 @@ port map (
 
       port_a_o        => uc3_pa_o,
       port_a_t        => uc3_pa_oe,
-      port_a_i        => uc3_pa_i,
+      port_a_i        => di and (uc3_pa_o or not uc3_pa_oe),
 
       port_b_o        => uc3_pb_o,
       port_b_t        => uc3_pb_oe,
-      port_b_i        => uc3_pb_i,
+      port_b_i        => uc3_pb_i and (uc3_pb_o or not uc3_pb_oe) ,
 
-      ca1_i           => uc3_ca1_i,
+      ca1_i           => cpu_so_n,
 
       ca2_o           => uc3_ca2_o,
-      ca2_i           => (uc3_ca2_o or not uc3_ca2_oe),
       ca2_t           => uc3_ca2_oe,
+      ca2_i           => uc3_ca2_o or not uc3_ca2_oe,
 
-      cb1_i           => (uc3_cb1_o or not uc3_cb1_oe),
       cb1_o           => uc3_cb1_o,
       cb1_t           => uc3_cb1_oe,
+      cb1_i           => uc3_cb1_o or not uc3_cb1_oe,
 
       cb2_o           => uc3_cb2_o,
-      cb2_i           => (uc3_cb2_o or not uc3_cb2_oe),
       cb2_t           => uc3_cb2_oe,
+      cb2_i           => uc3_cb2_o or not uc3_cb2_oe,
 
       irq             => uc3_irq
     );

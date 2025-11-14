@@ -1,5 +1,6 @@
 set_device GW2AR-LV18QN88C8/I7 -name GW2AR-18C
 
+add_file src/gowin_rpll/gowin_rpll_flash.vhd
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
 add_file src/cartridge.v
@@ -52,10 +53,10 @@ add_file src/t65/T65.vhd
 add_file src/t65/T65_ALU.vhd
 add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
-add_file src/tang_nano_20k_c64_top.vhd
+add_file src/tang/tn20k/c64nano.vhd
 add_file src/video_vicII_656x.vhd
-add_file src/tang_nano_20k_c64_top.cst
-add_file src/tang_nano_20k_c64_top.sdc
+add_file src/tang/tn20k/c64nano.cst
+add_file src/tang/tn20k/c64nano.sdc
 add_file src/loader_sd_card.sv
 add_file src/fifo_sc_hs/fifo_sc_hs.vhd
 add_file src/c1530.vhd
@@ -78,6 +79,12 @@ set_option -top_module c64nano_top
 set_option -use_mspi_as_gpio 1
 set_option -use_sspi_as_gpio 1
 set_option -use_jtag_as_gpio 1
+set_option -use_ready_as_gpio 0
+set_option -use_done_as_gpio 0
+set_option -use_reconfign_as_gpio 0
+set_option -use_mode_as_gpio 0
+set_option -use_i2c_as_gpio 0
+set_option -use_cpu_as_gpio 0
 set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -multi_boot 0

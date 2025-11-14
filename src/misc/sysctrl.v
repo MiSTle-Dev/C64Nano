@@ -2,9 +2,6 @@
     sysctrl.v
  
     generic system control interface from/via the MCU
-
-    TODO: This is currently very core specific. This needs to be
-    generic for all cores.
 */
 
 module sysctrl (
@@ -135,14 +132,14 @@ always @(posedge clk) begin
       system_volume <= 2'b10;
       system_wide_screen <= 1'b0;
       system_floppy_wprot <= 2'b00;
-      system_port_1 <= 4'b0111;
+      system_port_1 <= 4'b1010;
       system_port_2 <= 4'b0000;
       system_dos_sel <= 2'b00;
       system_sid_digifix <= 1'b0;
       system_turbo_mode <= 2'b00;
       system_turbo_speed <= 2'b00;
       system_video_std <= 1'b0;
-      system_midi <= 3'b001;
+      system_midi <= 3'b000;
       system_pause <= 1'b0;
       system_vic_variant <= 2'b00;
       system_cia_mode <= 1'b0;
@@ -178,13 +175,13 @@ always @(posedge clk) begin
       port_out_strobe <= 1'b0;
       port_in_strobe <= 1'b0;
 
-      // iack bit 0 acknowledges the system control interrupt
+      // iack bit 0 acknowledges the coldboot notification
       if(int_ack[0]) sys_int <= 1'b0;      
-            
+
       // (further) data has just become available, so raise interrupt
       port_out_availableD <= (port_out_available != 8'd0);
-      if(port_out_available && !port_out_availableD)
-        sys_int <= 1'b1;
+      if((port_out_available != 8'd0) && !port_out_availableD)
+        sys_int <= 1'b1;      
       
       // monitor buttons for changes and raise interrupt
       if(buttons_irq_enable) begin
@@ -296,7 +293,7 @@ always @(posedge clk) begin
                     // RS232 UART port
                     if(id == "*") system_uart <= data_in[1:0];
                     // Joystick swap port
-                    if(id == "&") system_joyswap <= data_in[0];
+                    if(id == "%") system_joyswap <= data_in[0];
                     // cartridge detach
                     if(id == "F") system_detach_reset <= data_in[0];
                     // shift_mod

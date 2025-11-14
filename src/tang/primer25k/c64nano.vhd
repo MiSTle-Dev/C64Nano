@@ -21,6 +21,8 @@ entity c64nano_top is
    );
   port
   (
+    jtagseln    : out std_logic := '0';
+    reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
@@ -122,14 +124,14 @@ signal iec_data_i  : std_logic;
 signal iec_clk_o   : std_logic;
 signal iec_clk_i   : std_logic;
 signal iec_atn_o   : std_logic;
-signal iec_atn_i   : std_logic;
 
   -- keyboard
 signal joyUsb1      : std_logic_vector(6 downto 0);
 signal joyUsb2      : std_logic_vector(6 downto 0);
 signal joyUsb1A     : std_logic_vector(6 downto 0);
 signal joyUsb2A     : std_logic_vector(6 downto 0);
-signal joyDigital   : std_logic_vector(6 downto 0);
+signal joyDigital0  : std_logic_vector(6 downto 0);
+signal joyDigital1  : std_logic_vector(6 downto 0);
 signal joyNumpad    : std_logic_vector(6 downto 0);
 signal joyMouse     : std_logic_vector(6 downto 0);
 signal joyDS2A_p1   : std_logic_vector(6 downto 0); 
@@ -314,8 +316,6 @@ signal key_up          : std_logic;
 signal key_down        : std_logic;
 signal key_left        : std_logic;
 signal key_right       : std_logic;
-signal key_start       : std_logic;
-signal key_select      : std_logic;
 signal key_r12         : std_logic;
 signal key_r22         : std_logic;
 signal key_l12         : std_logic;
@@ -328,8 +328,6 @@ signal key_up2         : std_logic;
 signal key_down2       : std_logic;
 signal key_left2       : std_logic;
 signal key_right2      : std_logic;
-signal key_start2      : std_logic;
-signal key_select2     : std_logic;
 signal ntscModeD       : std_logic;
 signal ntscModeD1      : std_logic;
 signal audio_div       : unsigned(8 downto 0);
@@ -512,6 +510,9 @@ component DCS
 
 begin
 
+  -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
+  jtagseln <= '0' when pll_locked = '0' or (reset and user) = '1' else '1';
+  reconfign <= 'Z';
   -- BL616 console to hw pins for external USB-UART adapter
   --uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
   bl616_mon_tx <= uart_rx;
@@ -537,7 +538,8 @@ end process;
   spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
 
   -- onboard BL616
-  spi_dir     <= spi_io_dout;
+  -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
+  spi_dir     <= spi_io_dout when jtagseln = '1' else 'Z';
   spi_irqn    <= int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
@@ -640,7 +642,6 @@ port map
     iec_data_i    => iec_data_o,
     iec_clk_i     => iec_clk_o,
 
-    iec_atn_o     => iec_atn_i,
     iec_data_o    => iec_data_i,
     iec_clk_o     => iec_clk_i,
 
@@ -870,7 +871,8 @@ leds(0) <= led1541;
 -- 4 3 2 1 0 digital c64
 joyDS2_p1  <= (others => '0');
 joyDS2_p2  <= (others => '0');
-joyDigital <= (others => '0');
+joyDigital0 <= (others => '0');
+joyDigital1 <= (others => '0');
 joyUsb1    <= joystick1(6 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
 joyUsb2    <= joystick2(6 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
 joyNumpad  <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);
@@ -887,38 +889,38 @@ process(clk32)
 begin
 	if rising_edge(clk32) then
     case port_1_sel is
-      when "0000"  => joyA <= joyDigital;
-        paddle_1_analogA <= '0';
-        paddle_2_analogA <= '0';      
-      when "0001"  => joyA <= joyUsb1;
+      when "0000"  => joyA <= joyDigital0;
         paddle_1_analogA <= '0';
         paddle_2_analogA <= '0';
-      when "0010"  => joyA <= joyUsb2;
+      when "0001"  => joyA <= joyDigital1;
         paddle_1_analogA <= '0';
         paddle_2_analogA <= '0';
-      when "0011"  => joyA <= joyNumpad;
+      when "0010"  => joyA <= joyUsb1;
+        paddle_1_analogA <= '0';
+        paddle_2_analogA <= '0';
+      when "0011"  => joyA <= joyUsb2;
         paddle_1_analogA <= '0';
         paddle_2_analogA <= '0';
       when "0100"  => joyA <= joyDS2_p1;
         paddle_1_analogA <= '0';
         paddle_2_analogA <= '0';
-      when "0101"  => joyA <= joyMouse;
+      when "0101"  => joyA <= joyDS2_p2;
         paddle_1_analogA <= '0';
         paddle_2_analogA <= '0';
-      when "0110"  => joyA <= joyDS2A_p1;
+      when "0110"  => joyA <= joyNumpad;
+        paddle_1_analogA <= '0';
+        paddle_2_analogA <= '0';
+      when "0111"  => joyA <= joyMouse;
+        paddle_1_analogA <= '0';
+        paddle_2_analogA <= '0';
+      when "1000"  => joyA <= joyUsb1A;
+        paddle_1_analogA <= '0';
+        paddle_2_analogA <= '0';
+      when "1001"  => joyA <= joyUsb2A;
+        paddle_1_analogA <= '0';
+        paddle_2_analogA <= '0';
+      when "1010"  => joyA <= joyDS2A_p1;
         paddle_1_analogA <= '1';
-        paddle_2_analogA <= '0';
-      when "0111"  => joyA <= joyUsb1A;
-        paddle_1_analogA <= '0';
-        paddle_2_analogA <= '0';
-      when "1000"  => joyA <= joyUsb2A;
-        paddle_1_analogA <= '0';
-        paddle_2_analogA <= '0';
-      when "1001"  => joyA <= (others => '0');
-        paddle_1_analogA <= '0';
-        paddle_2_analogA <= '0';
-      when "1010"  => joyA <= joyDS2_p2;
-        paddle_1_analogA <= '0';
         paddle_2_analogA <= '0';
       when "1011"  => joyA <= joyDS2A_p2;
         paddle_1_analogA <= '0';
@@ -929,40 +931,40 @@ begin
       end case;
 
     case port_2_sel is
-      when "0000"  => joyB <= joyDigital;  -- 0
+      when "0000"  => joyB <= joyDigital0;
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '0';
-      when "0001"  => joyB <= joyUsb1;     -- 1
+      when "0001"  => joyB <= joyDigital1;
+        paddle_1_analogA <= '0';
+        paddle_2_analogA <= '0';
+      when "0010"  => joyB <= joyUsb1;
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '0';
-      when "0010"  => joyB <= joyUsb2;     -- 2
+      when "0011"  => joyB <= joyUsb2;
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '0';
-      when "0011"  => joyB <= joyNumpad;   -- 3
+      when "0100"  => joyB <= joyDS2_p1;
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '0';
-      when "0100"  => joyB <= joyDS2_p1;   -- 4
+      when "0101"  => joyB <= joyDS2_p2;
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '0';
-      when "0101"  => joyB <= joyMouse;    -- 5
+      when "0110"  => joyB <= joyNumpad;
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '0';
-      when "0110"  => joyB <= joyDS2A_p1;  -- 6
+      when "0111"  => joyB <= joyMouse;
+        paddle_1_analogB <= '0';
+        paddle_2_analogB <= '0';
+      when "1000"  => joyB <= joyUsb1A;
+        paddle_1_analogB <= '0';
+        paddle_2_analogB <= '0';
+      when "1001"  => joyB <= joyUsb2A;
+        paddle_1_analogB <= '0';
+        paddle_2_analogB <= '0';
+      when "1010"  => joyB <= joyDS2A_p1;
         paddle_1_analogB <= '1';
         paddle_2_analogB <= '0';
-      when "0111"  => joyB <= joyUsb1A;    -- 7
-        paddle_1_analogB <= '0';
-        paddle_2_analogB <= '0';
-      when "1000"  => joyB <= joyUsb2A;    -- 8
-        paddle_1_analogB <= '0';
-        paddle_2_analogB <= '0';
-      when "1001"  => joyB <= (others => '0');--9
-        paddle_1_analogB <= '0';
-        paddle_2_analogB <= '0';
-      when "1010"  => joyB <= joyDS2_p2;   -- 10
-        paddle_1_analogB <= '0';
-        paddle_2_analogB <= '0';
-      when "1011"  => joyB <= joyDS2A_p2;  -- 11
+      when "1011"  => joyB <= joyDS2A_p2;
         paddle_1_analogB <= '0';
         paddle_2_analogB <= '1';
       when others  => joyB <= (others => '0');
@@ -973,6 +975,7 @@ begin
 end process;
 
 -- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
+
 process(clk32)
 begin
   if rising_edge(clk32) then
@@ -998,38 +1001,33 @@ pot3 <= pd1 when joyswap = '1' else pd3;
 pot4 <= pd2 when joyswap = '1' else pd4;
 
 -- paddle - mouse - GS controller 2nd button and 3rd button
-pd1 <=    not paddle_1 when port_1_sel = "0110" else
-          not paddle_3 when port_1_sel = "1011" else
-          joystick1_x_pos(7 downto 0) when port_1_sel = "0111" else
-          joystick2_x_pos(7 downto 0) when port_1_sel = "1000" else
-          ('0' & std_logic_vector(mouse_x_pos(6 downto 1)) & '0') when port_1_sel = "0101" else
-          x"ff" when unsigned(port_1_sel) < 5 and joyA(5) = '1' else
-          x"ff" when unsigned(port_1_sel) = "1010" and joyA(5) = '1' else
-          x"00";
-pd2 <=    not paddle_2 when port_1_sel = "0110" else
-          not paddle_4 when port_1_sel = "1011" else
-          joystick1_y_pos(7 downto 0) when port_1_sel = "0111" else
-          joystick2_y_pos(7 downto 0) when port_1_sel = "1000" else
-          ('0' & std_logic_vector(mouse_y_pos(6 downto 1)) & '0') when port_1_sel = "0101" else
-          x"ff" when unsigned(port_1_sel) < 5 and joyA(6) = '1' else
-          x"ff" when unsigned(port_1_sel) = "1010" and joyA(6) = '1' else
-          x"00";
-pd3 <=    not paddle_3 when port_2_sel = "1011" else
-          not paddle_1 when port_2_sel = "0110" else
-          joystick1_x_pos(7 downto 0) when port_2_sel = "0111" else
-          joystick2_x_pos(7 downto 0) when port_2_sel = "1000" else
-          ('0' & std_logic_vector(mouse_x_pos(6 downto 1)) & '0') when port_2_sel = "0101" else
-          x"ff" when unsigned(port_2_sel) < 5 and joyB(5) = '1' else
-          x"ff" when unsigned(port_2_sel) = "1010" and joyB(5) = '1' else
-          x"00";
-pd4 <=    not paddle_4 when port_2_sel = "1011" else
-          not paddle_2 when port_2_sel = "0110" else
-          joystick1_y_pos(7 downto 0) when port_2_sel = "0111" else
-          joystick2_y_pos(7 downto 0) when port_2_sel = "1000" else
-          ('0' & std_logic_vector(mouse_y_pos(6 downto 1)) & '0') when port_2_sel = "0101" else
-          x"ff" when unsigned(port_2_sel) < 5 and joyB(6) = '1' else
-          x"ff" when unsigned(port_2_sel) = "1010" and joyB(6) = '1' else
-          x"00";
+pd1 <=    not paddle_1 when port_1_sel = "0100" else
+          not paddle_3 when port_1_sel = "0101" else
+          joystick1_x_pos(7 downto 0) when port_1_sel = "1000" else
+          joystick2_x_pos(7 downto 0) when port_1_sel = "1001" else
+          ('0' & std_logic_vector(mouse_x_pos(6 downto 1)) & '0') when port_1_sel = "0111" else
+          x"ff" when port_1_sel < 7 and joyA(5) = '1' else x"00";
+
+pd2 <=    not paddle_2 when port_1_sel = "0100" else
+          not paddle_4 when port_1_sel = "0101" else
+          joystick1_y_pos(7 downto 0) when port_1_sel = "1000" else
+          joystick2_y_pos(7 downto 0) when port_1_sel = "1001" else
+          ('0' & std_logic_vector(mouse_y_pos(6 downto 1)) & '0') when port_1_sel = "0111" else
+          x"ff" when port_1_sel < 7 and joyA(6) = '1' else x"00";
+
+pd3 <=    not paddle_3 when port_2_sel = "0101" else
+          not paddle_1 when port_2_sel = "0100" else
+          joystick1_x_pos(7 downto 0) when port_2_sel = "1000" else
+          joystick2_x_pos(7 downto 0) when port_2_sel = "1001" else
+          ('0' & std_logic_vector(mouse_x_pos(6 downto 1)) & '0') when port_2_sel = "0111" else
+          x"ff" when port_2_sel < 7 and joyB(5) = '1' else x"00";
+
+pd4 <=    not paddle_4 when port_2_sel = "0101" else
+          not paddle_2 when port_2_sel = "0100" else
+          joystick1_y_pos(7 downto 0) when port_2_sel = "1000" else
+          joystick2_y_pos(7 downto 0) when port_2_sel = "1001" else
+          ('0' & std_logic_vector(mouse_y_pos(6 downto 1)) & '0') when port_2_sel = "0111" else
+          x"ff" when port_2_sel < 7 and joyB(6) = '1' else x"00";
 
 process(clk32, reset_n)
  variable mov_x: signed(6 downto 0);
@@ -1047,8 +1045,8 @@ begin
      -- due to limited resolution on the c64 side, limit the mouse movement speed
      if mouse_x > 40 then mov_x:="0101000"; elsif mouse_x < -40 then mov_x:= "1011000"; else mov_x := mouse_x(6 downto 0); end if;
      if mouse_y > 40 then mov_y:="0101000"; elsif mouse_y < -40 then mov_y:= "1011000"; else mov_y := mouse_y(6 downto 0); end if;
-     mouse_x_pos <= mouse_x_pos - mov_x;
-     mouse_y_pos <= mouse_y_pos + mov_y;
+      mouse_x_pos <= mouse_x_pos - mov_x;
+      mouse_y_pos <= mouse_y_pos + mov_y;
     elsif joystick_strobe = '1' then
       joystick1_x_pos <= std_logic_vector(joystick0ax(7 downto 0));
       joystick1_y_pos <= std_logic_vector(joystick0ay(7 downto 0));
@@ -1201,7 +1199,7 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
-            unsigned(midi_data) when midi_oe = '1' else
+            unsigned(midi_data) when midi_oe = '1' and midi_en = '1' else
             uart_data when uart_oe = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
@@ -1465,7 +1463,7 @@ end generate;
 crt_inst : entity work.loader_sd_card
 port map (
   clk               => clk32,
-  system_reset      => unsigned'('0' & por),
+  reset             => por,
 
   sd_lba            => loader_lba,
   sd_rd             => sd_rd(5 downto 1),

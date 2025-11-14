@@ -1,5 +1,6 @@
 set_device GW2AR-LV18QN88C8/I7 -name GW2AR-18C
 
+add_file src/gowin_rpll/gowin_rpll_flash.vhd
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
 add_file src/cartridge.v
@@ -51,10 +52,10 @@ add_file src/t65/T65.vhd
 add_file src/t65/T65_ALU.vhd
 add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
-add_file src/tang/tn20k_lcd/tang_nano_20k_c64_top_lcd.vhd
+add_file src/tang/tn20k_lcd/c64nano.vhd
 add_file src/video_vicII_656x.vhd
-add_file src/tang/tn20k_lcd/tang_nano_20k_c64_top_lcd.cst
-add_file src/tang/tn20k_lcd/tang_nano_20k_c64_top_lcd.sdc
+add_file src/tang/tn20k_lcd/c64nano.cst
+add_file src/tang/tn20k_lcd/c64nano.sdc
 add_file src/loader_sd_card.sv
 add_file src/fifo_sc_hs/fifo_sc_hs.vhd
 add_file src/c1530.vhd
@@ -73,13 +74,25 @@ set_option -synthesis_tool gowinsynthesis
 set_option -output_base_name C64Nano_TN20k_lcd
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
-set_option -top_module tang_nano_20k_c64_top
+set_option -top_module c64nano_top
 set_option -use_mspi_as_gpio 1
 set_option -use_sspi_as_gpio 1
+set_option -use_jtag_as_gpio 1
+set_option -use_ready_as_gpio 0
+set_option -use_done_as_gpio 0
+set_option -use_reconfign_as_gpio 0
+set_option -use_mode_as_gpio 0
+set_option -use_i2c_as_gpio 0
+set_option -use_cpu_as_gpio 0
 set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -multi_boot 0
 set_option -mspi_jump 0
+set_option -place_option 2
+set_option -route_option 1
+set_option -ireg_in_iob 1
+set_option -oreg_in_iob 1
+set_option -ioreg_in_iob 1
 
 #run syn
 run all

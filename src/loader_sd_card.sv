@@ -6,7 +6,7 @@
 module loader_sd_card
 (
 	input clk,
-	input [1:0] system_reset,
+	input reset,
 
 	output reg [31:0] sd_lba,
 	output reg [4:0] sd_rd, // read request for target
@@ -62,7 +62,6 @@ reg boot_bin;
 reg boot_prg;
 //reg boot_tap;
 reg boot_flt;
-reg [1:0] system_resetD;
 
 	for(integer i = 0; i < 6; i = i + 1'd1)
 	begin
@@ -87,7 +86,7 @@ reg [1:0] system_resetD;
 		sd_wr <= 5'd0; 
 	end
 
-	if(system_reset[0])
+	if(reset)
 	begin
 		sd_rd <= 5'd0;
 		sd_wr <= 5'd0;
