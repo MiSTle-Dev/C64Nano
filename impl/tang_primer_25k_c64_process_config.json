@@ -50,7 +50,7 @@
  "MULTIJUMP_MODE" : "Single",
  "MULTIJUMP_SPI_FLASH_ADDRESS" : "000000",
  "Multi_Boot" : false,
- "OUTPUT_BASE_NAME" : "tang_nano_20k_c64_25k",
+ "OUTPUT_BASE_NAME" : "C64Nano_Primer25k",
  "POWER_ON_RESET_MONITOR" : true,
  "PRINT_BSRAM_VALUE" : true,
  "PROGRAM_DONE_BYPASS" : false,

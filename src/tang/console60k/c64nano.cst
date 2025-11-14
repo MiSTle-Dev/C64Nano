@@ -5,6 +5,7 @@ IO_PORT "reconfign" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 IO_LOC  "reconfign" N12;
 
 NET_LOC "jtagseln" V_JTAGSELN;
+IO_PORT "jtagseln" PULL_MODE=DOWN IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 
 // connections to the internal BL616 controller
 IO_LOC "spi_csn" T13; // TMS GPIO0 _SS

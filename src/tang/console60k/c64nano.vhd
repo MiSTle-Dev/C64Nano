@@ -149,7 +149,6 @@ signal iec_data_i  : std_logic;
 signal iec_clk_o   : std_logic;
 signal iec_clk_i   : std_logic;
 signal iec_atn_o   : std_logic;
-signal iec_atn_i   : std_logic;
 
   -- keyboard
 signal joyUsb1      : std_logic_vector(6 downto 0);
@@ -539,7 +538,8 @@ component DCS
 
 begin
 
-  jtagseln <= pll_locked;
+  -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
+  jtagseln <= '0' when pll_locked = '0' or (reset and user) = '0' else '1';
   reconfign <= 'Z';
   -- BL616 console to hw pins for external USB-UART adapter
   uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
@@ -566,7 +566,8 @@ end process;
   spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
 
   -- onboard BL616
-  spi_dir     <= spi_io_dout;
+  -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
+  spi_dir     <= spi_io_dout when jtagseln = '1' else 'Z';
   spi_irqn    <= int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
@@ -1119,34 +1120,34 @@ pd1 <=    not paddle_1 when port_1_sel = "0100" else
           joystick1_x_pos(7 downto 0) when port_1_sel = "1000" else
           joystick2_x_pos(7 downto 0) when port_1_sel = "1001" else
           ('0' & std_logic_vector(mouse_x_pos(6 downto 1)) & '0') when port_1_sel = "0111" else
-          x"ff" when unsigned(port_1_sel) < 7 and joyA(5) = '1' else x"00";
+          x"ff" when port_1_sel < 7 and joyA(5) = '1' else x"00";
 
 pd2 <=    not paddle_2 when port_1_sel = "0100" else
           not paddle_4 when port_1_sel = "0101" else
           joystick1_y_pos(7 downto 0) when port_1_sel = "1000" else
           joystick2_y_pos(7 downto 0) when port_1_sel = "1001" else
           ('0' & std_logic_vector(mouse_y_pos(6 downto 1)) & '0') when port_1_sel = "0111" else
-          x"ff" when unsigned(port_1_sel) < 7 and joyA(6) = '1' else x"00";
+          x"ff" when port_1_sel < 7 and joyA(6) = '1' else x"00";
 
 pd3 <=    not paddle_3 when port_2_sel = "0101" else
           not paddle_1 when port_2_sel = "0100" else
           joystick1_x_pos(7 downto 0) when port_2_sel = "1000" else
           joystick2_x_pos(7 downto 0) when port_2_sel = "1001" else
           ('0' & std_logic_vector(mouse_x_pos(6 downto 1)) & '0') when port_2_sel = "0111" else
-          x"ff" when unsigned(port_2_sel) < 7 and joyB(5) = '1' else x"00";
+          x"ff" when port_2_sel < 7 and joyB(5) = '1' else x"00";
 
 pd4 <=    not paddle_4 when port_2_sel = "0101" else
           not paddle_2 when port_2_sel = "0100" else
           joystick1_y_pos(7 downto 0) when port_2_sel = "1000" else
           joystick2_y_pos(7 downto 0) when port_2_sel = "1001" else
           ('0' & std_logic_vector(mouse_y_pos(6 downto 1)) & '0') when port_2_sel = "0111" else
-          x"ff" when unsigned(port_2_sel) < 7 and joyB(6) = '1' else x"00";
+          x"ff" when port_2_sel < 7 and joyB(6) = '1' else x"00";
 
 process(clk32, reset_n)
  variable mov_x: signed(6 downto 0);
  variable mov_y: signed(6 downto 0);
 begin
-  if  reset_n = '0' then
+  if reset_n = '0' then
     mouse_x_pos <= (others => '0');
     mouse_y_pos <= (others => '0');
     joystick1_x_pos <= x"ff";
@@ -1158,8 +1159,8 @@ begin
      -- due to limited resolution on the c64 side, limit the mouse movement speed
      if mouse_x > 40 then mov_x:="0101000"; elsif mouse_x < -40 then mov_x:= "1011000"; else mov_x := mouse_x(6 downto 0); end if;
      if mouse_y > 40 then mov_y:="0101000"; elsif mouse_y < -40 then mov_y:= "1011000"; else mov_y := mouse_y(6 downto 0); end if;
-     mouse_x_pos <= mouse_x_pos - mov_x;
-     mouse_y_pos <= mouse_y_pos + mov_y;
+      mouse_x_pos <= mouse_x_pos - mov_x;
+      mouse_y_pos <= mouse_y_pos + mov_y;
     elsif joystick_strobe = '1' then
       joystick1_x_pos <= std_logic_vector(joystick0ax(7 downto 0));
       joystick1_y_pos <= std_logic_vector(joystick0ay(7 downto 0));
@@ -1312,7 +1313,7 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
-            unsigned(midi_data) when midi_oe = '1' else
+            unsigned(midi_data) when midi_oe = '1' and midi_en = '1' else
             uart_data when uart_oe = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
@@ -1556,7 +1557,7 @@ yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi
   port map (
     clk32   => clk32,
-    reset   => not reset_n,
+    reset   => not reset_n or not midi_en,
     Mode    => st_midi,
     E       => phi,
     IOE     => IOE,

@@ -75,7 +75,7 @@ add_file src/uart6551/uart_6551.v
 add_file src/misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
-set_option -output_base_name C64Nano_138kpro_bl616
+set_option -output_base_name C64Nano_TM138kPro_bl616
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
 set_option -top_module c64nano_top

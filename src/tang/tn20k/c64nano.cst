@@ -4,6 +4,13 @@
 IO_LOC "reconfign" 9;
 IO_PORT "reconfign" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 
+IO_LOC "jtagblock[0]" 5;
+IO_PORT "jtagblock[0]" IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
+IO_LOC "jtagblock[1]" 6;
+IO_PORT "jtagblock[1]" IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
+IO_LOC "jtagblock[2]" 7;
+IO_PORT "jtagblock[2]" IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
+
 NET_LOC "jtagseln" V_JTAGSELN;
 IO_PORT "jtagseln" IO_TYPE=LVCMOS33 PULL_MODE=DOWN BANK_VCCIO=3.3;
 
@@ -15,7 +22,7 @@ IO_PORT "jtagseln" IO_TYPE=LVCMOS33 PULL_MODE=DOWN BANK_VCCIO=3.3;
 
 // onboard BL616 UART connection
 IO_LOC "uart_rx" 70;
-IO_LOC "uart_tx" 10; // JTAG TDO re-use 8
+IO_LOC "uart_tx" 8; // JTAG TDO re-use 8 war 10
 IO_PORT "uart_rx" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 IO_PORT "uart_tx" DRIVE=8 IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 

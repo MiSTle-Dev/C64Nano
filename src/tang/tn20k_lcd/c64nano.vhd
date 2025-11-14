@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------
---  C64 Top level for Tang Nano 20k
+--  C64 Top level for Tang Nano 20k LCD
 --  2023...2025 Stefan Voss
 --  based on the work of many others
 --
@@ -27,29 +27,29 @@ entity c64nano_top is
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(5 downto 0);
-    io          : in std_logic_vector(5 downto 0); -- JS0 Joystick D9
     -- USB-C BL616 UART
-    uart_rx     : in std_logic;
-    uart_tx     : out std_logic;
-    -- monitor port
-    bl616_mon_tx : out std_logic;
-    bl616_mon_rx : in std_logic;
-    -- external hw pin UART
-    --uart_ext_rx : in std_logic;
-    --uart_ext_tx : out std_logic;
-    -- SPI interface external uC
-    m0s         : inout std_logic_vector(4 downto 0) := (others => 'Z');
+    --uart_rx     : in std_logic;
+    --uart_tx     : out std_logic;
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
     spi_csn     : in std_logic;
     spi_dir     : out std_logic;
     spi_dat     : in std_logic;
     spi_irqn    : out std_logic;
-    --
-    tmds_clk_n  : out std_logic;
-    tmds_clk_p  : out std_logic;
-    tmds_d_n    : out std_logic_vector( 2 downto 0);
-    tmds_d_p    : out std_logic_vector( 2 downto 0);
+    -- internal lcd
+    lcd_clk     : out std_logic; -- lcd is RGB 565
+    lcd_hs      : out std_logic; -- lcd horizontal synchronization
+    lcd_vs      : out std_logic; -- lcd vertical synchronization        
+    lcd_de      : out std_logic; -- lcd data enable     
+    lcd_bl      : out std_logic; -- lcd backlight control
+    lcd_r       : out std_logic_vector(4 downto 0);  -- lcd red
+    lcd_g       : out std_logic_vector(5 downto 0);  -- lcd green
+    lcd_b       : out std_logic_vector(4 downto 0);  -- lcd blue
+    -- audio
+    hp_bck      : out std_logic;
+    hp_ws       : out std_logic;
+    hp_din      : out std_logic;
+    pa_en       : out std_logic;
     -- sd interface
     sd_clk      : out std_logic;
     sd_cmd      : inout std_logic;
@@ -66,13 +66,6 @@ entity c64nano_top is
     O_sdram_addr : out std_logic_vector(10 downto 0);  -- 11 bit multiplexed address bus
     O_sdram_ba   : out std_logic_vector(1 downto 0);     -- two banks
     O_sdram_dqm  : out std_logic_vector(3 downto 0);     -- 32/4
-    -- Gamepad DualShock /JS 1 misteryshield20k
-    ds2_clk       : inout std_logic; -- js1_btn1
-    ds2_mosi      : inout std_logic; -- js1_down
-    ds2_miso      : in std_logic;    -- js1_up
-    ds2_cs        : inout std_logic; -- js1_right
-    js1_left      : in std_logic;    -- js1_left
-    js1_btn2      : in std_logic;    -- js1_btn2
     -- MIDI
     midi_rx       : in std_logic;
     midi_tx       : out std_logic;
@@ -98,9 +91,9 @@ type states is (
   FSM_SWITCHED
 );
 
-signal ds2_clk_i : std_logic;
-signal ds2_mosi_i : std_logic;
-signal ds2_cs_i : std_logic;
+signal uart_rx     : std_logic;
+signal uart_tx     : std_logic;
+
 signal state          : states := FSM_RESET;
 signal clk64          : std_logic;
 signal clk32          : std_logic;
@@ -464,6 +457,8 @@ signal pll_locked_d    : std_logic;
 signal pll_locked_d1   : std_logic;
 signal paddle_analog   : std_logic;
 signal ds2select       : std_logic;
+signal lcd_r_i          : std_logic_vector(5 downto 0);
+signal lcd_b_i          : std_logic_vector(5 downto 0);
 signal flash_ready      : std_logic;
 signal pll_locked_comb  : std_logic;
 signal rts_cts          : std_logic;
@@ -550,70 +545,12 @@ begin
 
   jtagseln <= '0' when pll_locked = '0' or (reset and user) = '1' else '1';
   reconfign <= 'Z';
-
-  -- BL616 console to hw pins for external USB-UART adapter
-  uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
-  bl616_mon_tx <= uart_rx;
-
--- by default the internal SPI is being used. Once there is
--- a select from the external spi (M0S Dock) , then the connection is being switched
-process (flash_clk, flash_lock)
-begin
-  if flash_lock = '0' then
-    spi_ext <= '0';
-  elsif rising_edge(flash_clk) then
-    if m0s(2) = '0' then
-        spi_ext <= '1';
-    end if;
-  end if;
-end process;
-
-  -- map output data onto both spi outputs
-  spi_io_din  <= m0s(1) when spi_ext = '1' else spi_dat;
-  spi_io_ss   <= m0s(2) when spi_ext = '1' else spi_csn;
-  spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
-
   -- onboard BL616
+  spi_io_din  <= spi_dat;
+  spi_io_ss   <= spi_csn;
+  spi_io_clk  <= spi_sclk;
   spi_dir     <= spi_io_dout;
   spi_irqn    <= int_out_n;
-  -- external M0S Dock BL616 / PiPico  / ESP32
-  m0s(0)      <= spi_io_dout;
-  m0s(4)      <= uart_tx_i when spi_ext = '1' else int_out_n;
-
-gamepad_p2: entity work.dualshock2
-    port map (
-    clk           => clk32,
-    rst           => not reset_n,
-    vsync         => vsync,
-    ds2_dat       => ds2_miso,
-    ds2_cmd       => ds2_mosi_i,
-    ds2_att       => ds2_cs_i,
-    ds2_clk       => ds2_clk_i,
-    ds2_ack       => '0',
-    analog        => paddle_analog,
-    stick_lx      => paddle_1,
-    stick_ly      => paddle_2,
-    stick_rx      => paddle_3,
-    stick_ry      => paddle_4,
-    key_up        => key_up,
-    key_down      => key_down,
-    key_left      => key_left,
-    key_right     => key_right,
-    key_l1        => key_l1,
-    key_l2        => key_l2,
-    key_r1        => key_r1,
-    key_r2        => key_r2,
-    key_triangle  => key_triangle,
-    key_square    => key_square,
-    key_circle    => key_circle,
-    key_cross     => key_cross,
-    key_start     => open,
-    key_select    => open,
-    key_lstick    => open,
-    key_rstick    => open,
-    debug1        => open,
-    debug2        => open
-    );
 
     led_ws2812: entity work.ws2812
     port map
@@ -791,18 +728,21 @@ generic map (
     outbyte         => sd_rd_data         -- a byte of sector content
 );
 
-audio_div  <= to_unsigned(342,9) when ntscMode = '1' else to_unsigned(327,9);
-
 cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_finish;
 audio_l <= audio_data_l or (5x"00" & cass_snd & 12x"00000");
 audio_r <= audio_data_r or (5x"00" & cass_snd & 12x"00000");
 
-video_inst: entity work.video 
+lcd_r <= lcd_r_i(5 downto 1);
+lcd_b <= lcd_b_i(5 downto 1);
+
+video_inst: entity work.video
+generic map
+(
+  STEREO  => false
+)
 port map(
-      pll_lock     => pll_locked, 
+      pll_lock     => pll_locked,
       clk          => clk32,
-      clk_pixel_x5 => clk_pixel_x5,
-      audio_div    => audio_div,
 
       ntscmode  => ntscMode,
       hs_in_n   => hsync,
@@ -825,10 +765,19 @@ port map(
       system_scanlines => system_scanlines,
       system_volume => system_volume,
 
-      tmds_clk_n => tmds_clk_n,
-      tmds_clk_p => tmds_clk_p,
-      tmds_d_n   => tmds_d_n,
-      tmds_d_p   => tmds_d_p
+      lcd_clk  => lcd_clk,
+      lcd_hs_n => lcd_hs,
+      lcd_vs_n => lcd_vs,
+      lcd_de   => lcd_de,
+      lcd_r    => lcd_r_i,
+      lcd_g    => lcd_g,
+      lcd_b    => lcd_b_i,
+      lcd_bl   => lcd_bl,
+
+      hp_bck   => hp_bck,
+      hp_ws    => hp_ws,
+      hp_din   => hp_din,
+      pa_en    => pa_en
       );
 
 addr <= io_cycle_addr when io_cycle ='1' else reu_ram_addr(22 downto 0) when ext_cycle = '1' else cart_addr;
@@ -1003,20 +952,20 @@ leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
-joyDS2      <= key_circle & key_cross & key_square & key_right & key_left & key_down & key_up;
-joyDigital0 <= not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
-joyDigital1 <= not('1' & js1_btn2 & ds2_clk & ds2_cs & js1_left & ds2_mosi & ds2_miso);
-joyUsb1     <= joystick1(6 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
-joyUsb2     <= joystick2(6 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
-joyNumpad   <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);
-joyMouse    <= "00" & mouse_btns(0) & "000" & mouse_btns(1);
-joyDS2A     <= "00" & '0' & key_cross & key_square & "00";
-joyDS2B     <= "00" & '0' & key_triangle & key_circle & "00";
-joyUsb1A    <= "00" & '0' & joystick1(5) & joystick1(4) & "00"; -- Y,X button
-joyUsb2A    <= "00" & '0' & joystick2(5) & joystick2(4) & "00"; -- Y,X button
+joyDS2      <= 7x"00";
+joyDigital0 <= 7x"00";
+joyDigital1 <= 7x"00";
+joyUsb1    <= joystick1(6 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
+joyUsb2    <= joystick2(6 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
+joyNumpad  <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);
+joyMouse   <= "00" & mouse_btns(0) & "000" & mouse_btns(1);
+joyDS2A    <= 7x"00";
+joyDS2B    <= 7x"00";
+joyUsb1A   <= "00" & '0' & joystick1(5) & joystick1(4) & "00"; -- Y,X button
+joyUsb2A   <= "00" & '0' & joystick2(5) & joystick2(4) & "00"; -- Y,X button
 
 -- send external DB9 joystick port to µC
-db9_joy <= not(io(5) & io(0), io(2), io(1), io(4), io(3));
+db9_joy    <= 6x"00";
 
 process(clk32)
 begin
@@ -1106,10 +1055,6 @@ begin
       end case;
   end if;
 end process;
-
-ds2_clk <= ds2_clk_i when ds2select = '1' else 'Z';
-ds2_mosi <= ds2_mosi_i when ds2select = '1' else 'Z';
-ds2_cs <= ds2_cs_i when ds2select = '1' else 'Z';
 
 -- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
 process(clk32)
