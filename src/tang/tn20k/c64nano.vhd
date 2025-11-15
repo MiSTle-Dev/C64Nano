@@ -550,7 +550,7 @@ end component;
 
 begin
 
-  -- tristate JTAG TMI, TCK, TDI signal for V_JTAGSELN in JTAG mode
+  -- tristate JTAG TMS, TCK, TDI signals if V_JTAGSELN in JTAG mode
   jtagblock <= "ZZZ" when jtagseln = '0' else "111";
   -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
   jtagseln <= '0' when pll_locked = '0' or (reset and user) = '1' else '1';
@@ -559,7 +559,6 @@ begin
   -- BL616 console to hw pins for external USB-UART adapter
   -- tristate JTAG TDO for V_JTAGSELN in JTAG mode
   uart_tx <= 'Z' when jtagseln = '0' or spi_ext = '1' else bl616_mon_rx;
-
   bl616_mon_tx <= uart_rx;
 
 -- by default the internal SPI is being used. Once there is
@@ -1339,8 +1338,8 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
-            unsigned(midi_data) when midi_oe = '1' and midi_en = '1' else
-            uart_data when uart_oe = '1' else
+            unsigned(midi_data) when (midi_oe and midi_en) = '1' else
+            uart_data when (uart_oe and uart_en) = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
 sid_fc_lr <= 13x"0600" - (3x"0" & sid_fc_offset & 7x"00") when sid_filter(2) = '1' else (others => '0');
@@ -1393,7 +1392,7 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   game         => game,
   exrom        => exrom,
   io_rom       => io_rom,
-  io_ext       => reu_oe or cart_oe or uart_oe or (midi_oe and midi_en),
+  io_ext       => reu_oe or cart_oe or (uart_oe and uart_en) or (midi_oe and midi_en),
   io_data      => io_data,
   irq_n        => midi_irq_n,
   nmi_n        => not nmi and uart_irq and midi_nmi_n,
@@ -1520,7 +1519,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => flash_clk,
-    resetn    => flash_lock,
+    resetn    => flash_lock and jtagseln,
     ready     => flash_ready,
     busy      => open,
     address   => (X"2" & "000" & dos_sel & c1541rom_addr),
@@ -1583,7 +1582,7 @@ yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi
   port map (
     clk32   => clk32,
-    reset   => not reset_n or not midi_en,
+    reset   => not reset_n,
     Mode    => st_midi,
     E       => phi,
     IOE     => IOE,
@@ -1598,7 +1597,13 @@ yes_midi: if MIDI /= 0 generate
     RX      => midi_rx,
     TX      => midi_tx
   );
-end generate;
+else generate
+    midi_oe <= '0';
+    midi_irq_n <= '1';
+    midi_nmi_n <= '1';
+    midi_data <= x"FF";
+    midi_tx <= '1';
+end generate yes_midi;
 
 crt_inst : entity work.loader_sd_card
 port map (
