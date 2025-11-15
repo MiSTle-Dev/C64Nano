@@ -563,11 +563,11 @@ begin
 
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi (M0S Dock) , then the connection is being switched
-process (flash_clk, flash_lock)
+process (all)
 begin
   if flash_lock = '0' then
     spi_ext <= '0';
-    m0s(3 downto 1) <= (others => 'Z');
+    m0s(2) <= 'Z';
   elsif rising_edge(flash_clk) then
     if m0s(2) = '0' then
         spi_ext <= '1';
@@ -661,7 +661,12 @@ process(clk32, por)
   end if;
 end process;
 
-disk_reset <= '1' when not flash_ready or disk_pause or c1541_osd_reset or not reset_n or por or c1541_reset else '0';
+disk_reset <= '1' when flash_ready = '0' 
+    or disk_pause = '1' 
+    or c1541_osd_reset = '1' 
+    or reset_n = '0' 
+    or por = '1' 
+    or c1541_reset = '1' else '0';
 
 -- rising edge sd_change triggers detection of new disk
 process(clk32, pll_locked_hid)
@@ -1826,7 +1831,7 @@ variable reset_counter : integer;
         do_erase <= '1';
         reset_wait <= '1';
         reset_counter := 255;
-      elsif ioctl_download = '1' and (load_crt or load_rom) = '1' then
+      elsif ioctl_download = '1' and (load_crt = '1' or load_rom = '1') then
         do_erase <= '1';
         reset_counter := 255;
       elsif detach_reset_d = '0' and detach_reset = '1' then
@@ -1869,7 +1874,7 @@ end process;
 --------------- TAP -------------------
 
 tap_download <= ioctl_download and load_tap;
-tap_reset <= '1' when reset_n = '0' or tap_download = '1'or tap_last_addr = 0 or cass_finish = '1' or (cass_run = '1'and ((unsigned(tap_last_addr) - unsigned(tap_play_addr)) < 80)) else '0';
+tap_reset <= '1' when reset_n = '0' or tap_download = '1' or tap_last_addr = 0 or cass_finish = '1' or (cass_run = '1'and ((unsigned(tap_last_addr) - unsigned(tap_play_addr)) < 80)) else '0';
 tap_loaded <= '1' when tap_play_addr < tap_last_addr else '0';
 
 process(clk32)
