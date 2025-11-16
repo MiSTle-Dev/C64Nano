@@ -585,7 +585,7 @@ end process;
   spi_irqn    <= int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
-  m0s(4)      <= uart_tx_i when spi_ext = '1' else int_out_n;
+  m0s(4)      <= int_out_n when spi_ext = '1' else uart_tx_i;
 
 gamepad_p2: entity work.dualshock2
     port map (
