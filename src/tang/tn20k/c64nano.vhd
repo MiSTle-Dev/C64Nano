@@ -16,7 +16,7 @@ entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
+   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
@@ -483,6 +483,7 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
+signal m0s_d            : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -568,10 +569,14 @@ begin
   if flash_lock = '0' then
     spi_ext <= '0';
     m0s(2) <= 'Z';
+    m0s_d <= '1';
   elsif rising_edge(flash_clk) then
-    if m0s(2) = '0' then
+    m0s_d <= m0s(2);
+    if m0s_d = '0' then
         spi_ext <= '1';
-    end if;
+    else
+        spi_ext <= spi_ext; -- latches the value
+     end if;
   end if;
 end process;
 
@@ -781,12 +786,12 @@ generic map (
 
     -- output file/image information. Image size is e.g. used by fdc to 
     -- translate between sector/track/side and lba sector
-    image_size      => sd_img_size,           -- length of image file
-    image_mounted   => sd_img_mounted,
+    image_size(31 downto 0) => sd_img_size,           -- length of image file
+    image_mounted(5 downto 0)=> sd_img_mounted,
 
     -- user read sector command interface (sync with clk)
-    rstart          => sd_rd,
-    wstart          => sd_wr, 
+    rstart          => "00" & sd_rd,
+    wstart          => "00" & sd_wr, 
     rsector         => sd_lba,
     rbusy           => sd_busy,
     rdone           => sd_done,           --  done from sd reader acknowledges/clears start
@@ -1339,7 +1344,7 @@ uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
             unsigned(midi_data) when (midi_oe and midi_en) = '1' else
-            uart_data when (uart_oe and uart_en) = '1' else
+            uart_data when uart_oe = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
 sid_fc_lr <= 13x"0600" - (3x"0" & sid_fc_offset & 7x"00") when sid_filter(2) = '1' else (others => '0');
@@ -1392,10 +1397,10 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   game         => game,
   exrom        => exrom,
   io_rom       => io_rom,
-  io_ext       => reu_oe or cart_oe or (uart_oe and uart_en) or (midi_oe and midi_en),
+  io_ext       => reu_oe or cart_oe or uart_oe or (midi_oe and midi_en),
   io_data      => io_data,
-  irq_n        => midi_irq_n,
-  nmi_n        => not nmi and uart_irq and midi_nmi_n,
+  irq_n        => '0' when midi_irq_n = '0' and midi_en = '1' else '1',
+  nmi_n        => not nmi and (uart_irq or not uart_en), -- and (midi_nmi_n or not midi_en),
   nmi_ack      => nmi_ack,
   romL         => romL,
   romH         => romH,
@@ -1576,13 +1581,13 @@ port map
     nmi_ack     => nmi_ack
   );
 
-midi_en <= st_midi(2) or st_midi(1) or st_midi(0);
+midi_en <= '1' when st_midi /= 0 else '0';
 
 yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi
   port map (
     clk32   => clk32,
-    reset   => not reset_n,
+    reset   => '1' when reset_n = '0' or midi_en = '0' else '0',
     Mode    => st_midi,
     E       => phi,
     IOE     => IOE and midi_en,
@@ -1799,23 +1804,18 @@ begin
     end if;
 end process;
 
-por <= system_reset(1) or system_reset(0) or not pll_locked or not ram_ready;
+por <= system_reset(0) or not pll_locked or not ram_ready;
 
-process(clk32, por)
+process(clk32)
 variable reset_counter : integer;
   begin
-    if por = '1' then
-      reset_counter := 0;
-      do_erase <= '0';
-      reset_n <= '0';
-      reset_wait <= '0';
-      force_erase <= '0';
-      detach <= '0';
-    elsif rising_edge(clk32) then
+    if rising_edge(clk32) then
       detach_reset_d <= detach_reset;
-      old_download_r <= ioctl_download;
 
-      if system_reset(1) = '1' then
+      old_download_r <= ioctl_download;
+      if reset_counter = 0 then reset_n <= '1'; else reset_n <= '0'; end if;
+
+      if por = '1' then
         reset_counter := 100000;
         do_erase <= '1';
         reset_n <= '0';
@@ -1826,12 +1826,9 @@ variable reset_counter : integer;
         do_erase <= '1';
         reset_wait <= '1';
         reset_counter := 255;
-        reset_n <= '0';
       elsif ioctl_download = '1' and (load_crt or load_rom) = '1' then
         do_erase <= '1';
-        reset_wait <= '0';
         reset_counter := 255;
-        reset_n <= '0';
       elsif detach_reset_d = '0' and detach_reset = '1' then
         do_erase <= '1';
         reset_counter := 255;
@@ -1839,12 +1836,10 @@ variable reset_counter : integer;
       elsif erasing = '1' then 
         force_erase <= '0';
       elsif reset_counter = 0 then
-        reset_n <= '1'; 
         do_erase <= '0';
         detach <= '0';
         if reset_wait = '1' and c64_addr = X"FFCF" then reset_wait <= '0'; end if;
       else
-        reset_n <= '0';
         reset_counter := reset_counter - 1;
         if reset_counter = 100 and do_erase = '1' then force_erase <= '1'; end if;
       end if;

@@ -2,9 +2,6 @@
     sysctrl.v
  
     generic system control interface from/via the MCU
-
-    TODO: This is currently very core specific. This needs to be
-    generic for all cores.
 */
 
 module sysctrl (
@@ -87,6 +84,14 @@ reg	  buttons_irq_enable;
 // activates the interrupt line to the MCU by pulling it low
 assign int_out_n = (int_in != 8'h00 || sys_int)?1'b0:1'b1;
 
+// by default system is in reset
+reg [1:0] main_reset = 2'b11; 
+reg disk_reset = 1'b1;   
+assign system_reset = main_reset;  
+assign system_1541_reset = disk_reset;
+
+reg [31:0] main_reset_timeout;
+
 reg       port_out_availableD;
 reg [7:0] port_cmd;
 reg [7:0] port_index;
@@ -110,20 +115,24 @@ always @(posedge clk) begin
       state <= 4'd0;
       leds <= 2'b00;        // after reset leds are off
       color <= 24'h000000;  // color black -> rgb led off
+
+      // stay in reset for about 3 seconds or until MCU releases reset
+      main_reset <= 2'b11;   
+      main_reset_timeout <= 32'd86_000_000;      
+      disk_reset <= 1'b1;
+
       buttons_irq_enable <= 1'b1;  // allow buttons irq
       int_ack <= 8'h00;
       coldboot = 1'b1;      // reset is actually the power-on-reset
       sys_int = 1'b1;       // coldboot interrupt
       port_out_strobe <= 1'b0;
       port_in_strobe <= 1'b0;
-      system_reset <= 2'b11;
-      system_1541_reset <= 1'b1;
       system_reu_cfg <= 1'b0;
       system_scanlines <= 2'b00;
       system_volume <= 2'b10;
       system_wide_screen <= 1'b0;
       system_floppy_wprot <= 2'b00;
-      system_port_1 <= 4'b0111;
+      system_port_1 <= 4'b1010;
       system_port_2 <= 4'b0000;
       system_dos_sel <= 2'b00;
       system_sid_digifix <= 1'b0;
@@ -149,17 +158,31 @@ always @(posedge clk) begin
       //  bring button state into local clock domain
       buttonsD <= buttons;
       buttonsD2 <= buttonsD;
+
+      // release main reset after timeout
+      if(main_reset_timeout) begin
+	     main_reset_timeout <= main_reset_timeout - 32'd1;
+
+        if(main_reset_timeout == 32'd1) begin
+            main_reset <= 2'b00;
+            disk_reset <= 1'b0;
+            // BRG LED yellow if no MCU has responded
+            color <= 24'h000202;
+        end
+      end
+      
       int_ack <= 8'h00;
       port_out_strobe <= 1'b0;
       port_in_strobe <= 1'b0;
 
-      // iack bit 0 acknowledges the system control interrupt
+      // iack bit 0 acknowledges the coldboot notification
       if(int_ack[0]) sys_int <= 1'b0;      
-            
+
       // (further) data has just become available, so raise interrupt
       port_out_availableD <= (port_out_available != 8'd0);
+//    if((port_out_available != 8'd0) && !port_out_availableD)
       if(port_out_available && !port_out_availableD)
-        sys_int <= 1'b1;
+	sys_int <= 1'b1;
       
       // monitor buttons for changes and raise interrupt
       if(buttons_irq_enable) begin
@@ -217,7 +240,11 @@ always @(posedge clk) begin
                     // Value "V": REU cfg: off, on
                     if(id == "V") system_reu_cfg <= data_in[0];
                     // Value "R": coldboot(3), reset(1) or run(0)
-                    if(id == "R") system_reset <= data_in[1:0];
+                    if(id == "R") begin 
+                        main_reset <= data_in[1:0];
+                        // cancel out-timeout if MCU is active
+                        main_reset_timeout <= 32'd0;
+                    end
                     // Value "S": scanlines none(0), 25%(1), 50%(2) or 75%(3)
                     if(id == "S") system_scanlines <= data_in[1:0];
                     // Value "A": volume mute(0), 33%(1), 66%(2) or 100%(3)
@@ -233,7 +260,7 @@ always @(posedge clk) begin
                     // DOS system
                     if(id == "D") system_dos_sel <= data_in[1:0];
                     // c1541 reset
-                    if(id == "Z") system_1541_reset <= data_in[0];
+                    if(id == "Z") disk_reset <= data_in[0];
                     // sid audio filter
                     if(id == "U") system_sid_digifix <= data_in[0];
                     // turbo mode
@@ -267,7 +294,7 @@ always @(posedge clk) begin
                     // RS232 UART port
                     if(id == "*") system_uart <= data_in[1:0];
                     // Joystick swap port
-                    if(id == "&") system_joyswap <= data_in[0];
+                    if(id == "%") system_joyswap <= data_in[0];
                     // cartridge detach
                     if(id == "F") system_detach_reset <= data_in[0];
                     // shift_mod

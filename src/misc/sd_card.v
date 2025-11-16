@@ -35,17 +35,17 @@ module sd_card # (
     input			  iack,
 
     // export sd image size   
-    output reg [31:0] image_size,
+    output reg [63:0] image_size,
     // up to four images supported (e.g. 2x floppy, 2xACSI)
-    output reg [5:0]  image_mounted,
+    output reg [7:0]  image_mounted,
 
     // read sector command interface (sync with clk), this once was
     // directly tied to the sd card. Now this goes to the MCU via the
     // MCU interface as the MCU translates sector numbers from those
     // the core tries to use to physical ones inside the file system
     // of the sd card
-    input [5:0]		  rstart, // up to five different sources can request data 
-    input [5:0]		  wstart, 
+    input [7:0]		  rstart, // up to eight different sources can request data 
+    input [7:0]		  wstart, 
     input [31:0]	  rsector,
     output			  rbusy,
     output			  rdone,
@@ -77,7 +77,10 @@ reg [8:0]  mcu_tx_cnt;
    
 // only export outen if the resulting data is for the core
 wire louten;  
-  
+
+// drive outen only if the core reads data for itself
+assign outen = (state == CORE_IO && rstart_int)?louten:1'b0;   
+   
 // Keep track of current sector destination. We cannot use the command
 // directly as the MCU may alter this during sector transfer
 localparam [2:0] IDLE         = 3'd0,
@@ -88,10 +91,27 @@ localparam [2:0] IDLE         = 3'd0,
                  CORE_IO      = 3'd5;   // core itself does SD card IO
 
 reg [2:0] state; 
-// drive outen only if the core reads data for itself
-assign outen = (state == CORE_IO && rstart_int)?louten:1'b0; 
-
 wire [7:0] inbyte_int;  
+
+// drive index for the current request
+wire [2:0] drive =
+                 (rstart[0] || wstart[0])?3'd0:
+                 (rstart[1] || wstart[1])?3'd1:
+                 (rstart[2] || wstart[2])?3'd2:
+                 (rstart[3] || wstart[3])?3'd3:
+                 (rstart[4] || wstart[4])?3'd4:
+                 (rstart[5] || wstart[5])?3'd5:
+                 (rstart[6] || wstart[6])?3'd6:
+                 (rstart[7] || wstart[7])?3'd7:3'd7;
+
+// The MCU may allow for direct SD card access if the image is
+// continous (not fragmeneted) on card. In that case only the
+// start sector has to be known.
+
+// TODO: For unknown reason, direct IO does not work with the floppy. It
+// causes broken data and sporadic resets (may be due to broken data)
+reg [31:0] direct_start [4];   
+wire	   direct_enable = (drive == 0) && direct_start[drive] != 32'd0;   
 
 // interrupt handling
 wire rstart_any = {|{rstart}};
@@ -148,7 +168,7 @@ always @(posedge clk) begin
       startD <= start_any;
 	  
       // rising edge of rstart_any raises interrupt
-      if(start_any && !startD)
+      if(start_any && !startD && !direct_enable)
         irq <= 1'b1;
 	  
       // iack clears interrupt
@@ -165,12 +185,12 @@ always @(posedge clk) begin
       command <= 8'hff;
       rstart_int <= 1'b0;
       wstart_int <= 1'b0;
-      image_size <= 32'd0;
-      image_mounted <= 6'd0;
+      image_size <= 64'd0;
+      image_mounted <= 8'b00000000;
       state <= IDLE;      
 	  dinb_we <=1'b0;
    end else begin
-      image_mounted <= 6'd0;
+      image_mounted <= 8'b00000000;
 
       // done from sd reader acknowledges/clears start
       if(rdone) begin
@@ -188,6 +208,17 @@ always @(posedge clk) begin
 			state <= MCU_WRITE_SD;
 		 end
 	  end
+
+      // If the core requests IO and direct access is enabled, then
+      // don't wait for the MCU. Instead the sector to be read from SD card
+      // is a direct offset of the requested sector relative from the
+      // start of the image on card.
+      if(start_any && direct_enable && !rbusy) begin
+         lsector <= direct_start[drive] + rsector;
+         if(rstart_any) rstart_int <= 1'b1;
+         if(wstart_any) wstart_int <= 1'b1;              
+         state <= CORE_IO;               
+      end
 	  
       if(data_strobe) begin
          if(data_start) begin
@@ -204,7 +235,7 @@ always @(posedge clk) begin
 			if(command == 8'd1) begin
                // request status byte, for the MCU it doesn't matter whether
 			   // the core wants to write or to read
-			   if(byte_cnt == 4'd0) data_out <= { 2'b00, rstart | wstart };
+			   if(byte_cnt == 4'd0) data_out <= direct_enable?8'h00:{ rstart | wstart };
 			   if(byte_cnt == 4'd1) data_out <= rsector[31:24];
 			   if(byte_cnt == 4'd2) data_out <= rsector[23:16];
 			   if(byte_cnt == 4'd3) data_out <= rsector[15: 8];
@@ -256,12 +287,13 @@ always @(posedge clk) begin
 			   // MCU reports that some image has been inserted. If
 			   // the image size is 0, then no image is inserted
 			   if(byte_cnt == 4'd0) image_target <= data_in;
-			   if(byte_cnt == 4'd1) image_size[31:24] <= data_in;
+			   if(byte_cnt == 4'd1) image_size[63:24] <= { 32'h00000000, data_in };
 			   if(byte_cnt == 4'd2) image_size[23:16] <= data_in;
 			   if(byte_cnt == 4'd3) image_size[15:8]  <= data_in;
 			   if(byte_cnt == 4'd4) begin 
-				  image_size[7:0]   <= data_in;
-				  if(image_target <= 8'd5)  // images 0..5 are supported
+				  image_size[7:0] <= data_in;
+				  if(image_target <= 8'd7)  // images 0..7 are supported
+						direct_start[image_target] <= 32'd0;
 					image_mounted[image_target] <= 1'b1;
 			   end
 			end
@@ -291,20 +323,55 @@ always @(posedge clk) begin
 					 dinb_we <= 1'b1;
 				  end 
 			   end
-			end
+			end // if (command == 8'd5)
+
+            // SDC CMD 6: ENABLE DIRECT ACCESS
+            if(command == 8'd6) begin
+               reg [24:0] ds;
+                          
+               // MCU reports that the core may access the image
+               // directy without sector translation
+               if(byte_cnt == 4'd0) image_target <= data_in;
+               if(byte_cnt == 4'd1) ds[23:16] <= data_in;
+               if(byte_cnt == 4'd2) ds[15: 8] <= data_in;
+               if(byte_cnt == 4'd3) ds[ 7: 0] <= data_in;
+               if(byte_cnt == 4'd4) direct_start[image_target[1:0]] <= { ds, data_in };
+            end // if (command == 8'd6)
+			
+			// SDC CMD 7: LARGE FILE INSERTED
+			if(command == 8'd7) begin
+			   // MCU reports that some large image has been inserted.
+			   if(byte_cnt == 4'd0) image_target <= data_in;
+			   if(byte_cnt == 4'd1) image_size[63:56] <= data_in;
+			   if(byte_cnt == 4'd2) image_size[55:48] <= data_in;
+			   if(byte_cnt == 4'd3) image_size[47:40] <= data_in;
+			   if(byte_cnt == 4'd4) image_size[39:32] <= data_in;
+			   if(byte_cnt == 4'd5) image_size[31:24] <= data_in;
+			   if(byte_cnt == 4'd6) image_size[23:16] <= data_in;
+			   if(byte_cnt == 4'd7) image_size[15:8]  <= data_in;
+			   if(byte_cnt == 4'd8) begin 
+				  image_size[7:0]   <= data_in;
+				  if(image_target <= 8'd7)  // images 0..7 are supported
+               direct_start[image_target] <= 32'd0;
+					image_mounted[image_target] <= 1'b1;
+			   end
+            end // if (command == 8'd7)
 			
 			if(byte_cnt != 4'd15) byte_cnt <= byte_cnt + 4'd1;    
          end
       end
    end
 end
-   
+
+// TODO: FIXME
+wire sdclkx;
+assign sdclk = !sdclkx;  
 sd_rw #(.CLK_DIV(CLK_DIV), .SIMULATE(SIMULATE)) sd_rw (
    // rstn active-low, 1:working, 0:reset
    .rstn(rstn),
    .clk(clk),
 
-   .sdclk(sdclk),
+   .sdclk(sdclkx),
    .sdcmd(sdcmd),
    .sddat(sddat),
 `ifdef VERILATOR
