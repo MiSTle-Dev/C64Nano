@@ -163,7 +163,7 @@ reg boot_flt;
 					load_rom <= rd_sel[2]; 
 					load_tap <= rd_sel[3]; 
 					load_flt <= rd_sel[4]; 
-					ch_timeout <= 32'd1508863;
+					ch_timeout <= 32'd110000; // 32'd1508863;
 					ioctl_addr <= 23'd0;
 					ioctl_download <= 1'b1;
 					addr <= 23'd0;

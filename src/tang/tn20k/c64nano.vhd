@@ -16,7 +16,7 @@ entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
+   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
@@ -661,12 +661,7 @@ process(clk32, por)
   end if;
 end process;
 
-disk_reset <= '1' when flash_ready = '0' 
-    or disk_pause = '1' 
-    or c1541_osd_reset = '1' 
-    or reset_n = '0' 
-    or por = '1' 
-    or c1541_reset = '1' else '0';
+disk_reset <= '1' when not flash_ready or disk_pause or c1541_osd_reset or not reset_n or por or c1541_reset else '0';
 
 -- rising edge sd_change triggers detection of new disk
 process(clk32, pll_locked_hid)
@@ -1590,7 +1585,7 @@ yes_midi: if MIDI /= 0 generate
     reset   => not reset_n,
     Mode    => st_midi,
     E       => phi,
-    IOE     => IOE,
+    IOE     => IOE and midi_en,
     A       => std_logic_vector(c64_addr),
     Din     => std_logic_vector(c64_data_out),
     Dout    => midi_data,
@@ -1804,7 +1799,7 @@ begin
     end if;
 end process;
 
-por <= system_reset(0) or not pll_locked or not ram_ready;
+por <= system_reset(1) or system_reset(0) or not pll_locked or not ram_ready;
 
 process(clk32, por)
 variable reset_counter : integer;
@@ -1831,9 +1826,12 @@ variable reset_counter : integer;
         do_erase <= '1';
         reset_wait <= '1';
         reset_counter := 255;
-      elsif ioctl_download = '1' and (load_crt = '1' or load_rom = '1') then
+        reset_n <= '0';
+      elsif ioctl_download = '1' and (load_crt or load_rom) = '1' then
         do_erase <= '1';
+        reset_wait <= '0';
         reset_counter := 255;
+        reset_n <= '0';
       elsif detach_reset_d = '0' and detach_reset = '1' then
         do_erase <= '1';
         reset_counter := 255;
@@ -1848,9 +1846,7 @@ variable reset_counter : integer;
       else
         reset_n <= '0';
         reset_counter := reset_counter - 1;
-        if reset_counter = 100 and do_erase = '1' then 
-          force_erase <= '1'; 
-        end if;
+        if reset_counter = 100 and do_erase = '1' then force_erase <= '1'; end if;
       end if;
   end if;
 end process;
@@ -2042,6 +2038,10 @@ port map (
       i_CLOCK     => clk32,
       o_serialEn  => CLK_6551_EN
 );
-end generate;
+else generate
+  tx_6551 <= '1';
+  uart_data <= x"FF";
+  uart_irq <= '1';
+end generate yes_uart;
 
 end Behavioral_top;

@@ -35,13 +35,10 @@ reg		   dspi_mode;
 
 wire [1:0]	   dspi_out;
 
-reg mspi_hold_i;
-reg mspi_wp_i;
 reg mspi_cs_i;
-
 // drive hold and wp to their static default
-assign mspi_hold = !resetn?1'bz:mspi_hold_i;
-assign mspi_wp   = !resetn?1'bz:mspi_wp_i;
+assign mspi_hold = !resetn?1'bz:1'b1;
+assign mspi_wp   = !resetn?1'bz:1'b1;
 assign mspi_cs   = !resetn?1'bz:mspi_cs_i;
 
 wire [1:0] output_en = { 
