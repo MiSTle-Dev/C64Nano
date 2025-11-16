@@ -294,7 +294,7 @@ Button **cross / square** as Trigger
 | LED | function    | TN20K | TP25K |TM60K|TM138K Pro|Console60K/138k|
 | --- |           - | -     | -     | -   |-         |-|
 | 0 | c1541 activity| x     | x     | x   |x         |x|
-| 1 | D64 selected  | x     | x     | x   |x         |-|
+| 1 | D64 selected  | x     | x     | x   |x         |x|
 | 2 | CRT seleced   | x     | -     |   - |x         |-|
 | 3 | PRG selected  | x     | -     |   - |x         |-|
 | 4 |Kernal selected| x     | -     |   - |x         |-|
