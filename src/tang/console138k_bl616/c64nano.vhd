@@ -499,6 +499,7 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
+signal m0s_d            : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -538,9 +539,9 @@ begin
 
   -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
   jtagseln <= '0' when pll_locked = '0' or (reset and user) = '0' else '1';
-  reconfign <= 'Z';
+  reconfign <= 'Z';  -- for future use
   -- BL616 console to hw pins for external USB-UART adapter
-  uart_tx <= bl616_mon_rx;
+  uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
   bl616_mon_tx <= uart_rx;
 
   -- internal BL616 controller
@@ -771,12 +772,12 @@ generic map (
 
     -- output file/image information. Image size is e.g. used by fdc to 
     -- translate between sector/track/side and lba sector
-    image_size      => sd_img_size,           -- length of image file
-    image_mounted   => sd_img_mounted,
+    image_size(31 downto 0) => sd_img_size,           -- length of image file
+    image_mounted(5 downto 0)=> sd_img_mounted,
 
     -- user read sector command interface (sync with clk)
-    rstart          => sd_rd,
-    wstart          => sd_wr, 
+    rstart          => "00" & sd_rd,
+    wstart          => "00" & sd_wr, 
     rsector         => sd_lba,
     rbusy           => sd_busy,
     rdone           => sd_done,           --  done from sd reader acknowledges/clears start
@@ -955,7 +956,6 @@ port map (
 );
 
 leds_n(1 downto 0) <= not leds(1 downto 0);
-leds(1) <= '0';
 leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
@@ -1066,7 +1066,6 @@ begin
 end process;
 
 -- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
-
 process(clk32)
 begin
   if rising_edge(clk32) then
@@ -1123,7 +1122,7 @@ pd4 <=    not paddle_4 when port_2_sel = "0101" else
 process(clk32, reset_n)
  variable mov_x: signed(6 downto 0);
  variable mov_y: signed(6 downto 0);
-begin
+ begin
   if reset_n = '0' then
     mouse_x_pos <= (others => '0');
     mouse_y_pos <= (others => '0');
@@ -1290,7 +1289,7 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
-            unsigned(midi_data) when midi_oe = '1' and midi_en = '1' else
+            unsigned(midi_data) when (midi_oe and midi_en) = '1' else
             uart_data when uart_oe = '1' else
             unsigned(reu_dout);
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
@@ -1346,8 +1345,8 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   io_rom       => io_rom,
   io_ext       => reu_oe or cart_oe or uart_oe or (midi_oe and midi_en),
   io_data      => io_data,
-  irq_n        => midi_irq_n,
-  nmi_n        => not nmi and uart_irq and midi_nmi_n,
+  irq_n        => '0' when midi_irq_n = '0' and midi_en = '1' else '1',
+  nmi_n        => not nmi and (uart_irq or not uart_en), -- and (midi_nmi_n or not midi_en),
   nmi_ack      => nmi_ack,
   romL         => romL,
   romH         => romH,
@@ -1471,7 +1470,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => clk64_pal,
-    resetn    => pll_locked_pal,
+    resetn    => pll_locked_pal and jtagseln,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),
@@ -1528,16 +1527,16 @@ port map
     nmi_ack     => nmi_ack
   );
 
-midi_en <= st_midi(2) or st_midi(1) or st_midi(0);
+midi_en <= '1' when st_midi /= 0 else '0';
 
 yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi
   port map (
     clk32   => clk32,
-    reset   => not reset_n or not midi_en,
+    reset   => '1' when reset_n = '0' or midi_en = '0' else '0',
     Mode    => st_midi,
     E       => phi,
-    IOE     => IOE,
+    IOE     => IOE and midi_en,
     A       => std_logic_vector(c64_addr),
     Din     => std_logic_vector(c64_data_out),
     Dout    => midi_data,
@@ -1549,7 +1548,13 @@ yes_midi: if MIDI /= 0 generate
     RX      => midi_rx,
     TX      => midi_tx
   );
-end generate;
+else generate
+    midi_oe <= '0';
+    midi_irq_n <= '1';
+    midi_nmi_n <= '1';
+    midi_data <= x"FF";
+    midi_tx <= '1';
+end generate yes_midi;
 
 crt_inst : entity work.loader_sd_card
 port map (
@@ -1574,7 +1579,7 @@ port map (
   load_tap          => load_tap,
   load_flt          => load_flt,
   sd_img_size       => sd_img_size,
-  leds              => open,
+  leds              => leds(5 downto 1),
   img_select        => open,
 
   ioctl_download    => ioctl_download,
@@ -1747,21 +1752,16 @@ end process;
 
 por <= system_reset(0) or not pll_locked or not ram_ready;
 
-process(clk32, por)
+process(clk32)
 variable reset_counter : integer;
   begin
-    if por = '1' then
-      reset_counter := 0;
-      do_erase <= '0';
-      reset_n <= '0';
-      reset_wait <= '0';
-      force_erase <= '0';
-      detach <= '0';
-    elsif rising_edge(clk32) then
+    if rising_edge(clk32) then
       detach_reset_d <= detach_reset;
-      old_download_r <= ioctl_download;
 
-      if system_reset(1) = '1' then
+      old_download_r <= ioctl_download;
+      if reset_counter = 0 then reset_n <= '1'; else reset_n <= '0'; end if;
+
+      if por = '1' then
         reset_counter := 100000;
         do_erase <= '1';
         reset_n <= '0';
@@ -1782,16 +1782,12 @@ variable reset_counter : integer;
       elsif erasing = '1' then 
         force_erase <= '0';
       elsif reset_counter = 0 then
-        reset_n <= '1'; 
         do_erase <= '0';
         detach <= '0';
         if reset_wait = '1' and c64_addr = X"FFCF" then reset_wait <= '0'; end if;
       else
-        reset_n <= '0';
         reset_counter := reset_counter - 1;
-        if reset_counter = 100 and do_erase = '1' then 
-          force_erase <= '1'; 
-        end if;
+        if reset_counter = 100 and do_erase = '1' then force_erase <= '1'; end if;
       end if;
   end if;
 end process;
@@ -1815,7 +1811,7 @@ end process;
 --------------- TAP -------------------
 
 tap_download <= ioctl_download and load_tap;
-tap_reset <= '1' when reset_n = '0' or tap_download = '1'or tap_last_addr = 0 or cass_finish = '1' or (cass_run = '1'and ((unsigned(tap_last_addr) - unsigned(tap_play_addr)) < 80)) else '0';
+tap_reset <= '1' when reset_n = '0' or tap_download = '1' or tap_last_addr = 0 or cass_finish = '1' or (cass_run = '1'and ((unsigned(tap_last_addr) - unsigned(tap_play_addr)) < 80)) else '0';
 tap_loaded <= '1' when tap_play_addr < tap_last_addr else '0';
 
 process(clk32)
@@ -1983,6 +1979,10 @@ port map (
       i_CLOCK     => clk32,
       o_serialEn  => CLK_6551_EN
 );
-end generate;
+else generate
+  tx_6551 <= '1';
+  uart_data <= x"FF";
+  uart_irq <= '1';
+end generate yes_uart;
 
 end Behavioral_top;

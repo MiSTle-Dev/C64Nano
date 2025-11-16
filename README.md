@@ -30,7 +30,7 @@ Features:
 * [USB Mouse](https://en.wikipedia.org/wiki/Computer_mouse) as [c1351](https://en.wikipedia.org/wiki/Commodore_1351) Mouse emulation
 * [USB Gamepad](https://en.wikipedia.org/wiki/Gamepad) Stick as [Paddle](https://www.c64-wiki.com/wiki/Paddle) Emulation
 * [USB XBOX 360 Controller](https://en.wikipedia.org/wiki/Xbox_360_controller) as Joystick or Paddle
-* [legacy D9 Joystick](https://en.wikipedia.org/wiki/Atari_CX40_joystick) (Atari / Commodore digital type)
+* 2 x [legacy D9 Joystick](https://en.wikipedia.org/wiki/Atari_CX40_joystick) (Atari / Commodore digital type)
 * Joystick emulation on Keyboard Numpad
 * [Dualshock 2 Controller Gamepad](https://en.wikipedia.org/wiki/DualShock) for [MiSTeryShield20k](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k/README.md) via spare [pinheader](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md). Adapter [venice1200](https://github.com/venice1200)
 * [Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) DPad / left Stick as Joystick
@@ -186,8 +186,7 @@ Enable REU, select c1541 CBM DOS ROM and load the PRG.
 
 ## Push Button / DIP Switch utilization
 
-* S1 open OSD **and** Swap the Joystick Ports if OSD **Swap Joys** is set to Off mode.  
-(you might to press twice to return to original Joystick port setting)
+* S1 open OSD
 
 * S2 Reset
 
@@ -221,9 +220,14 @@ invoke by F12 keypress
 
 ## Gamecontrol support
 
-<u>legacy single D9 Digital Joystick.</u>  
-OSD: **Retro D9**
-Atari ST type of Joystick 2nd button supported using a MiSTeryNano shield.  
+<u>legacy D9 Digital Joystick.</u>  
+
+OSD: **Retro D9 1**
+Atari ST type of Joystick 2nd button supported using a MiSTeryNano shield buildin D9 connector.  
+Don't configure e.g. [ArcadeR](https://retroradionics.com) for C64 mode rather than normal digital 2nd button mode (2nd trigger button connect signal to ground)
+
+OSD: **Retro D9 2**
+Atari ST type of Joystick 2nd button supported using the MiSTeryNano shield **spare J8 connector header and extra wiring.**  
 Don't configure e.g. [ArcadeR](https://retroradionics.com) for C64 mode rather than normal digital 2nd button mode (2nd trigger button connect signal to ground)
 
 <u>USB Joystick(s)</u>.  
@@ -234,14 +238,10 @@ Also [RII Mini Keyboard i8](http://www.riitek.com/product/220.html) left Multime
 OSD: **DS #1 Joy** or **DS #2 Joy**
 At the moment Dpad only for original Pad. Some clone devices support at the same time Dpad and left stick simultaniously. ```circle and cross``` Buttons as Trigger:
 
-> [!IMPORTANT]
-> In a MiSTeryShield20k configuration Dualshock is supported via the internal ``spare J8`` pinheader.
-> See [MiSTeryShield20k DS2 Adapter / Cable](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md) for further information. Thx [venice1200](https://github.com/venice1200) !
-
 > [!NOTE]
 > TN20k: You have to select OSD **DS2 #2 Joy** or **DS #2 Paddle** for a ``MiSTeryShield20k`` configuration.
-> TN20k: You have to select OSD **DS2 #1 Joy** or **DS #1 Paddle** if you use the ``Sipeed Joy to DIP`` adapter.
-> Single DS interface active at the same time!
+> In a MiSTeryShield20k configuration Dualshock is supported via the internal ``spare J8`` pinheader. Multiplex supported in between DS2 or 2nd D9 retro Joystick.
+> See [MiSTeryShield20k DS2 Adapter / Cable](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md) for further information. Thx [venice1200](https://github.com/venice1200) !
 
 <u>Keyboard Numpad.</u>  
 OSD: **Numpad**
@@ -292,13 +292,13 @@ Button **cross / square** as Trigger
 ## LED UI
 
 | LED | function    | TN20K | TP25K |TM60K|TM138K Pro|Console60K/138k|
-| --- |           - | -     | -     | -    |-  |-|
-| 0 | c1541 activity| x     | x     | x    |x  |x|
-| 1 | D64 selected  | x     | x     | x    |x  |-|
-| 2 | CRT seleced   | x     | -     |   -  |x  |-|
-| 3 | PRG selected  | x     | -     |   -  |x  |-|
-| 4 |Kernal selected| x     | -     |   -  |x  |-|
-| 5 | TAP selected  | x     | -     |   -  |x  |-|
+| --- |           - | -     | -     | -   |-         |-|
+| 0 | c1541 activity| x     | x     | x   |x         |x|
+| 1 | D64 selected  | x     | x     | x   |x         |x|
+| 2 | CRT seleced   | x     | -     |   - |x         |-|
+| 3 | PRG selected  | x     | -     |   - |x         |-|
+| 4 |Kernal selected| x     | -     |   - |x         |-|
+| 5 | TAP selected  | x     | -     |   - |x         |-|
 
 Solid **<font color="red">red</font>** of the c1541 led after power-up indicates a missing DOS in Flash
 
@@ -313,6 +313,7 @@ Solid **<font color="red">red</font>** of the c1541 led after power-up indicates
 ## MIDI-IN and OUT
 
 Type of MIDI interface can be selected from OSD. There is support for Sequential Inc., Passport/Sentech, DATEL/SIEL/JMS/C-LAB and Namesoft. You can use a [MiSTeryNano shield](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k/README.md) to interface to a Keyboard.
+Note: Enabling persitent the MIDI interface will block other things like Multicard CRT ROMS.
 
 ## RS232 Serial Interface Swiftlink-232 <-> WIFI Modem
 
@@ -348,10 +349,6 @@ OSD selection allows to change in between TANG USB-C port or external HW pin int
 
 Remember that in + out to be crossed to connect to external device. Level are 3V3 tolerant.
 
-## Powering
-
-Prototype circuit with Keyboard can be powered by Tang USB-C connector from PC or a Power Supply Adapter.
-
 ## Synthesis
 
 Source code can be synthesized, fitted and programmed with GOWIN IDE Windows or Linux.
@@ -361,7 +358,7 @@ Alternatively use the command line build script **gw_sh.exe / gw_sh.sh** [build_
 ## HW circuit considerations
 
 **Pinmap TN20k Interfaces**
- Sipeed M0S Dock, digital Joystick D9 and DualShock Gamepad connection.
+ Sipeed M0S Dock, digital Joystick D9. TN20k DS2 JoyToDIP is not supported anymore.
  ![wiring](\.assets/wiring_spi_irq.png)
 
 ## Pinmap D-SUB 9 Joystick Interface
@@ -384,19 +381,7 @@ Alternatively use the command line build script **gw_sh.exe / gw_sh.sh** [build_
 
 ## Pinmap Dualshock 2 Controller Interface
 
-<img src="./.assets/controller-pinout.jpg" alt="image" width="30%" height="auto">
-
-| DS pin | Tang Nano pin | FPGA pin | DS Function |
-| ----------- | ---   | --------  | ----- |
-| 1 | J5 18 | 71 MISO | JOYDAT  |
-| 2 | J5 19 | 53 MOSI  | JOYCMD |
-| 3 | n.c. | - | 7V5 |
-| 4 | J5 15 | - | GND |
-| 5 | J5 16| - | 3V3 |
-| 6 | J5 17 | 72 CS | JOYATN|
-| 7 | J5 20 | 52 MCLK | JOYCLK |
-| 8 | n.c. | - | JOYIRQ |
-| 9 | n.c. | - | JOYACK |
+See [MiSTeryShield20k DS2 Adapter / Cable](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md)
 
 ## Getting started
 
@@ -418,7 +403,7 @@ or [Tang Mega 60K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-mega-60k/me
 and [PMOD SDRAM](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#TANG_SDRAM)  
 and [PMOD DS2x2](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#PMOD_DS2x2)  
 and [M0S PMOD adapter](https://github.com/harbaum/MiSTeryNano/tree/main/board/m0s_pmod/README.md)  
-or [Tang Console 60K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)  
+or [Tang Console 60K/138k NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)  
 and [PMOD DS2x2](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#PMOD_DS2x2)  
 and [Sipeed M0S Dock](https://wiki.sipeed.com/hardware/en/maixzero/m0s/m0s.html)
 and [M0S PMOD adapter](https://github.com/harbaum/MiSTeryNano/tree/main/board/m0s_pmod/README.md)  

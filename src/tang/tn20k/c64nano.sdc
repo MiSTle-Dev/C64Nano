@@ -9,5 +9,6 @@ create_generated_clock -name clk64 -source [get_pins {mainclock/CLKOUT}] -master
 create_generated_clock -name clk32 -source [get_pins {div1_inst/CLKOUT}] -master_clock clk64 -divide_by 2 -multiply_by 1 [get_pins {div2_inst/CLKOUT}]
 set_clock_groups -asynchronous -group [get_clocks {flash_clk}] -group [get_clocks {clk32}]
 set_clock_groups -asynchronous -group [get_clocks {clk32}] -group [get_clocks {m0s[3]}]
+set_clock_groups -asynchronous -group [get_clocks {clk32}] -group [get_clocks {spi_io_clk}]
 report_timing -hold -from_clock [get_clocks {clk*}] -to_clock [get_clocks {clk*}] -max_paths 25 -max_common_paths 1
 report_timing -setup -from_clock [get_clocks {clk*}] -to_clock [get_clocks {clk*}] -max_paths 25 -max_common_paths 1

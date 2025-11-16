@@ -180,8 +180,9 @@ always @(posedge clk) begin
 
       // (further) data has just become available, so raise interrupt
       port_out_availableD <= (port_out_available != 8'd0);
-      if((port_out_available != 8'd0) && !port_out_availableD)
-        sys_int <= 1'b1;      
+//    if((port_out_available != 8'd0) && !port_out_availableD)
+      if(port_out_available && !port_out_availableD)
+	sys_int <= 1'b1;
       
       // monitor buttons for changes and raise interrupt
       if(buttons_irq_enable) begin

@@ -327,7 +327,6 @@ always @ (posedge clk or negedge rstn)
                     end
 		end
 	        WCRC : begin
-                   outaddr <= 9'd0;
 		   for(i=0;i<4;i=i+1) 
 		     sddatout[i] <= data_crc[i][4'd15 - ridx[3:0]];
 		   
@@ -391,7 +390,6 @@ always @ (posedge clk or negedge rstn)
                     end
                 end
                 RCRC : begin
-                   outaddr <= 9'd0;		   
                    for(i=0;i<4;i=i+1) begin
 		      read_crc[i][4'd15 - ridx[3:0]] <= sddatin[i];
 		   end
