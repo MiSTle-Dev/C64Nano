@@ -967,34 +967,46 @@ port map(
     CALIB  => '0'
 );
 
-mainclock_pal: entity work.Gowin_PLL_138k_pal
+mainclock_pal: entity work.Gowin_PLL_138k_pal_MOD
 port map (
     lock => pll_locked_pal,
     clkout0 => open,
     clkout1 => clk_pixel_x5_pal,
     clkout2 => clk64_pal,
-    clkout3 => open,
-    clkin => clk
+    clkout3 => open, -- 64Mhz 180 deg phase
+    clkin => clk,
+    reset => '0',
+    icpsel => (others => '0'),
+    lpfres => (others => '0'),
+    lpfcap => "00"
 );
 
-mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc
+mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc_MOD
 port map (
     lock => pll_locked_ntsc,
     clkout0 => open,
     clkout1 => clk_pixel_x5_ntsc,
     clkout2 => clk64_ntsc,
     clkout3 => open,
-    clkin => clk
+    clkin => clk,
+    reset => '0',
+    icpsel => (others => '0'),
+    lpfres => (others => '0'),
+    lpfcap => "00"
 );
 
 -- 64.0Mhz for flash controller c1541 ROM
-flashclock: entity work.Gowin_PLL_138k_flash
+flashclock: entity work.Gowin_PLL_138k_flash_MOD
     port map (
         lock => flash_lock,
         clkout0 => flash_clk,
         clkout1 => mspi_clk,
-        clkin => clk
-    );
+        clkin => clk,
+        reset => '0',
+        icpsel => (others => '0'),
+        lpfres => (others => '0'),
+        lpfcap => "00"
+);
 
 leds_n <=  not leds;
 leds(0) <= led1541;

@@ -5,6 +5,7 @@
 --Part Number: GW5AST-LV138FPG676AC1/I0
 --Device: GW5AST-138
 --Device Version: B
+--Created Time: Thu Nov 20 22:29:28 2025
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -273,8 +274,8 @@ begin
             DYN_DPA_EN => "FALSE",
             CLKOUT0_PE_COARSE => 0,
             CLKOUT0_PE_FINE => 0,
-            CLKOUT1_PE_COARSE => 14,
-            CLKOUT1_PE_FINE => 2,
+            CLKOUT1_PE_COARSE => 9,
+            CLKOUT1_PE_FINE => 4,
             CLKOUT2_PE_COARSE => 0,
             CLKOUT2_PE_FINE => 0,
             CLKOUT3_PE_COARSE => 0,
