@@ -27,7 +27,7 @@ entity c64nano_top is
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(5 downto 0);
-    io          : in std_logic_vector(5 downto 0); -- TR2 TR1 RI LE DN UP
+    io          : in std_logic_vector(5 downto 0);
     -- USB-C BL616 UART
     uart_rx     : in std_logic;
     uart_tx     : out std_logic;
@@ -38,6 +38,8 @@ entity c64nano_top is
    -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
+    -- SPI interface external uC
+    m0s         : inout std_logic_vector(4 downto 0) := (others => 'Z');
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
     spi_csn     : in std_logic;
@@ -108,10 +110,10 @@ signal clk32          : std_logic;
 signal pll_locked     : std_logic;
 signal clk_pixel_x5   : std_logic;
 signal clk64_ntsc     : std_logic;
-signal pll_locked_ntsc: std_logic :='0';
+signal pll_locked_ntsc: std_logic;
 signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
-signal pll_locked_pal : std_logic :='0';
+signal pll_locked_pal : std_logic;
 signal clk_pixel_x5_pal   : std_logic;
 signal spi_io_clk     : std_logic;
 attribute syn_keep : integer;
@@ -351,6 +353,8 @@ signal key_down2       : std_logic;
 signal key_left2       : std_logic;
 signal key_right2      : std_logic;
 signal audio_div       : unsigned(8 downto 0);
+signal flash_clk       : std_logic;
+signal flash_lock      : std_logic;
 signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(22 downto 0);
@@ -493,7 +497,7 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d            : std_logic;
+signal m0s_d, m0s_d1    : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -532,20 +536,44 @@ component DCS
 begin
 
   -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
-  jtagseln <= '0' when pll_locked = '0' or (reset and user) = '0' else '1';
+  jtagseln <= pll_locked; -- '0' when pll_locked = '0' or (reset and user) = '0' else '1';
   reconfign <= 'Z';  -- for future use
   twimux <= "100"; -- connect BL616 TWI4 PLL1
   -- BL616 console to hw pins for external USB-UART adapter
-  uart_tx <= bl616_mon_rx;
+  uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
   bl616_mon_tx <= uart_rx;
 
-  -- internal BL616 controller
-  spi_io_din  <= spi_dat;
-  spi_io_ss   <= spi_csn;
-  spi_io_clk  <= spi_sclk;
+-- ----------------- SPI input parser ----------------------
+-- by default the internal SPI is being used. Once there is
+-- a select from the external spi, then the connection is being switched
+process (all)
+begin
+  if flash_lock = '0' then
+    spi_ext <= '0';
+    m0s_d <= '1';
+    m0s_d1 <= '1';
+  elsif rising_edge(flash_clk) then
+    m0s_d <= m0s(2);
+    m0s_d1 <= m0s_d;
+    if m0s_d1 = '1' and m0s_d = '0' then
+    --spi_ext <= '1';
+      spi_ext <= '0'; -- workaround
+    end if;
+  end if;
+end process;
+
+  -- map output data onto both spi outputs
+  spi_io_din  <= m0s(1) when spi_ext = '1' else spi_dat;
+  spi_io_ss   <= m0s(2) when spi_ext = '1' else spi_csn;
+  spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
+
+  -- onboard BL616
   -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
-  spi_dir     <= spi_io_dout when jtagseln = '1' else 'Z';
-  spi_irqn    <= int_out_n;
+  spi_dir     <= spi_io_dout; -- when jtagseln = '1' else 'Z'; -- workaround
+  spi_irqn    <= int_out_n;  -- when spi_ext = '1' else uart_tx_i
+  -- external M0S Dock BL616 / PiPico  / ESP32
+  m0s(0)      <= spi_io_dout;
+  m0s(4)      <= int_out_n;
 
 gamepad_p1: entity work.dualshock2
     port map (
@@ -942,11 +970,11 @@ port map(
 mainclock_pal: entity work.Gowin_PLL_138k_pal
 port map (
     lock => pll_locked_pal,
-    clkout0 => clk_pixel_x5_pal,
-    clkout1 => clk64_pal,
-    clkout2 => mspi_clk,
-    clkin => clk,
-    init_clk => clk
+    clkout0 => open,
+    clkout1 => clk_pixel_x5_pal,
+    clkout2 => clk64_pal,
+    clkout3 => open,
+    clkin => clk
 );
 
 mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc
@@ -958,6 +986,15 @@ port map (
     clkout3 => open,
     clkin => clk
 );
+
+-- 64.0Mhz for flash controller c1541 ROM
+flashclock: entity work.Gowin_PLL_138k_flash
+    port map (
+        lock => flash_lock,
+        clkout0 => flash_clk,
+        clkout1 => mspi_clk,
+        clkin => clk
+    );
 
 leds_n <=  not leds;
 leds(0) <= led1541;
@@ -1263,7 +1300,7 @@ hid_inst: entity work.hid
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not user & not reset), -- S0 and S1 buttons on Tang Nano 20k
+  buttons             => unsigned'(not user & not reset), -- S0 and S1 buttons
   leds                => open,
   color               => ws2812_color
 );
@@ -1473,8 +1510,8 @@ port map(
 -- offset in spi flash TN20K, TP25K $200000, TM138K $A00000, TM60k $700000
 flash_inst: entity work.flash 
 port map(
-    clk       => clk64_pal,
-    resetn    => pll_locked_pal and jtagseln,
+    clk       => flash_clk,
+    resetn    => flash_lock,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),

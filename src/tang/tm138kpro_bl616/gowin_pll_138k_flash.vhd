@@ -2,31 +2,27 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 
 
-entity Gowin_PLL_138k_pal is
+entity Gowin_PLL_138k_flash is
     port (
         clkin: in std_logic;
         init_clk: in std_logic;
         clkout0: out std_logic;
         clkout1: out std_logic;
-        clkout2: out std_logic;
-        clkout3: out std_logic;
         lock: out std_logic
     );
-end Gowin_PLL_138k_pal;
+end Gowin_PLL_138k_flash;
 
 
-architecture Behavioral of Gowin_PLL_138k_pal is
+architecture Behavioral of Gowin_PLL_138k_flash is
     signal icpsel: std_logic_vector(5 downto 0);
     signal lpfres: std_logic_vector(2 downto 0);
     signal pll_lock: std_logic;
     signal pll_rst: std_logic;
 
 
-    component Gowin_PLL_138k_pal_MOD
+    component Gowin_PLL_138k_flash_MOD
         port (
             clkout1: out std_logic;
-            clkout2: out std_logic;
-            clkout3: out std_logic;
             clkout0: out std_logic;
             lock: out std_logic;
             reset: in std_logic;
@@ -56,11 +52,9 @@ architecture Behavioral of Gowin_PLL_138k_pal is
 
 
 begin
-    u_pll: Gowin_PLL_138k_pal_MOD
+    u_pll: Gowin_PLL_138k_flash_MOD
         port map (
             clkout1 => clkout1,
-            clkout2 => clkout2,
-            clkout3 => clkout3,
             clkout0 => clkout0,
             lock => pll_lock,
             clkin => clkin,
@@ -74,7 +68,7 @@ begin
     u_pll_init: PLL_INIT
         generic map (
             CLK_PERIOD => 20,
-            MULTI_FAC => 25
+            MULTI_FAC => 24
         )
         port map (
             I_RST => '0',
@@ -87,4 +81,4 @@ begin
         );
 
 
-end Behavioral; --Gowin_PLL_138k_pal
+end Behavioral; --Gowin_PLL_138k_flash

@@ -25,7 +25,7 @@ entity c64nano_top is
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(5 downto 0);
-    io          : in std_logic_vector(5 downto 0); -- TR2 TR1 RI LE DN UP
+    io          : in std_logic_vector(5 downto 0);
     -- USB-C BL616 UART
     uart_rx     : in std_logic;
     uart_tx     : out std_logic;
@@ -483,7 +483,7 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d            : std_logic;
+signal m0s_d, m0s_d1    : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -925,17 +925,17 @@ port map (
     clkout0 => clk_pixel_x5_pal,
     clkout1 => clk64_pal,
     clkout2 => mspi_clk,
-    clkin => clk
+    clkin => clk,
+    init_clk => clk
 );
 
 mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc
 port map (
     lock => pll_locked_ntsc,
-    clkout0 => open,
-    clkout1 => clk_pixel_x5_ntsc,
-    clkout2 => clk64_ntsc,
-    clkout3 => open,
-    clkin => clk
+    clkout0 => clk_pixel_x5_ntsc,
+    clkout1 => clk64_ntsc,
+    clkin => clk,
+    init_clk => clk
 );
 
 leds_n <=  not leds;
@@ -1054,7 +1054,7 @@ begin
   if rising_edge(clk32) then
     if vsync = '1' then
       numpad_d <= numpad;
-      if (numpad(7) = '1' and numpad_d(7) = '0') then
+      if numpad(7) = '1' and numpad_d(7) = '0' then
         joyswap <= not joyswap; -- toggle mode
         elsif system_joyswap = '1' then -- OSD fixed setting mode
           joyswap <= '1'; -- OSD fixed setting mode
@@ -1242,7 +1242,7 @@ hid_inst: entity work.hid
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not user & not reset), -- S0 and S1 buttons on Tang Nano 20k
+  buttons             => unsigned'(not user & not reset), -- S0 and S1 buttons
   leds                => open,
   color               => ws2812_color
 );

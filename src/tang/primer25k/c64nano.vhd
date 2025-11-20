@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------
 --  C64 Top level for Tang Nano Primer 25k
---  2023 / 2024 Stefan Voss
+--  2023 / 2025 Stefan Voss
 --  based on the work of many others
 --
 --  FPGA64 is Copyrighted 2005-2008 by Peter Wendrich (pwsoft@syntiac.com)
@@ -79,25 +79,22 @@ signal clk64          : std_logic;
 signal clk32          : std_logic;
 signal pll_locked     : std_logic;
 signal clk_pixel_x5   : std_logic;
-signal mspi_clk_x5    : std_logic;
 signal clk64_ntsc     : std_logic;
-signal clk32_ntsc     : std_logic;
 signal pll_locked_ntsc: std_logic;
 signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
-signal clk32_pal      : std_logic;
 signal pll_locked_pal : std_logic;
 signal clk_pixel_x5_pal   : std_logic;
+signal spi_io_clk     : std_logic;
 attribute syn_keep : integer;
 attribute syn_keep of clk64             : signal is 1;
 attribute syn_keep of clk32             : signal is 1;
 attribute syn_keep of clk_pixel_x5      : signal is 1;
 attribute syn_keep of clk64_pal         : signal is 1;
-attribute syn_keep of clk32_ntsc        : signal is 1;
-attribute syn_keep of clk32_pal         : signal is 1;
+attribute syn_keep of clk64_ntsc        : signal is 1;
 attribute syn_keep of clk_pixel_x5_pal  : signal is 1;
-attribute syn_keep of mspi_clk_x5       : signal is 1;
-attribute syn_keep of m0s               : signal is 1;
+attribute syn_keep of clk_pixel_x5_ntsc : signal is 1;
+attribute syn_keep of spi_io_clk        : signal is 1;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
 signal audio_data_r  : std_logic_vector(17 downto 0);
@@ -228,9 +225,8 @@ signal sdc_iack       : std_logic;
 signal int_ack        : std_logic_vector(7 downto 0);
 signal spi_io_din     : std_logic;
 signal spi_io_ss      : std_logic;
-signal spi_io_clk     : std_logic;
 signal spi_io_dout    : std_logic;
-signal spi_ext        : std_logic;
+signal spi_ext        : std_logic := '0';
 signal disk_g64       : std_logic;
 signal disk_g64_d     : std_logic;
 signal c1541_reset    : std_logic;
@@ -286,7 +282,7 @@ signal c64_iec_clk_old : std_logic;
 signal drive_iec_clk_old : std_logic;
 signal drive_stb_i_old : std_logic;
 signal drive_stb_o_old : std_logic;
-signal midi_data       : std_logic_vector(7 downto 0) := (others =>'0');
+signal midi_data       : std_logic_vector(7 downto 0);
 signal midi_oe         : std_logic;
 signal midi_en         : std_logic;
 signal midi_irq_n      : std_logic := '1';
@@ -328,10 +324,8 @@ signal key_up2         : std_logic;
 signal key_down2       : std_logic;
 signal key_left2       : std_logic;
 signal key_right2      : std_logic;
-signal ntscModeD       : std_logic;
-signal ntscModeD1      : std_logic;
 signal audio_div       : unsigned(8 downto 0);
-signal dcsclksel       : std_logic_vector(3 downto 0) := "0001";
+signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(22 downto 0);
 signal ioctl_req_wr    : std_logic := '0';
@@ -473,7 +467,7 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d            : std_logic;
+signal m0s_d, m0s_d1    : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -514,26 +508,24 @@ begin
   -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
   jtagseln <= '0' when pll_locked = '0' or (reset and user) = '1' else '1';
   reconfign <= 'Z';  -- for future use
-
   -- BL616 console to hw pins for external USB-UART adapter
   --uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
   bl616_mon_tx <= uart_rx;
 
 -- by default the internal SPI is being used. Once there is
--- a select from the external spi (M0S Dock) , then the connection is being switched
+-- a select from the external spi, then the connection is being switched
 process (all)
 begin
-  if pll_locked = '0' then
+  if pll_locked_pal = '0' then
     spi_ext <= '0';
-    m0s(2) <= 'Z';
     m0s_d <= '1';
-  elsif rising_edge(clk32) then
+    m0s_d1 <= '1';
+  elsif rising_edge(clk64_pal) then
     m0s_d <= m0s(2);
-    if m0s_d = '0' then
-        spi_ext <= '1';
-    else
-        spi_ext <= spi_ext; -- latches the value
-     end if;
+    m0s_d1 <= m0s_d;
+    if m0s_d1 = '1' and m0s_d = '0' then
+      spi_ext <= '1';
+    end if;
   end if;
 end process;
 
@@ -545,10 +537,10 @@ end process;
   -- onboard BL616
   -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
   spi_dir     <= spi_io_dout when jtagseln = '1' else 'Z';
-  spi_irqn    <= int_out_n;
+  spi_irqn    <= uart_tx_i when spi_ext = '1' else int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
-  m0s(4)      <= int_out_n when spi_ext = '1' else uart_tx_i;
+  m0s(4)      <= int_out_n;
 
   midi_rx <= uart_ext_rx;
   uart_ext_tx <= midi_tx when midi_en = '1' else uart_tx_i;
@@ -980,7 +972,6 @@ begin
 end process;
 
 -- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
-
 process(clk32)
 begin
   if rising_edge(clk32) then

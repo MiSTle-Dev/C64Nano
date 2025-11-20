@@ -106,10 +106,10 @@ signal clk32          : std_logic;
 signal pll_locked     : std_logic;
 signal clk_pixel_x5   : std_logic;
 signal clk64_ntsc     : std_logic;
-signal pll_locked_ntsc: std_logic :='0';
+signal pll_locked_ntsc: std_logic;
 signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
-signal pll_locked_pal : std_logic :='0';
+signal pll_locked_pal : std_logic;
 signal clk_pixel_x5_pal   : std_logic;
 signal spi_io_clk     : std_logic;
 attribute syn_keep : integer;
@@ -308,15 +308,7 @@ signal c64_iec_clk_old : std_logic;
 signal drive_iec_clk_old : std_logic;
 signal drive_stb_i_old : std_logic;
 signal drive_stb_o_old : std_logic;
-signal hsync_out       : std_logic;
-signal vsync_out       : std_logic;
-signal hblank          : std_logic;
-signal vblank          : std_logic;
-signal frz_hs          : std_logic;
-signal frz_vs          : std_logic;
-signal hbl_out         : std_logic; 
-signal vbl_out         : std_logic;
-signal midi_data       : std_logic_vector(7 downto 0) := (others =>'0');
+signal midi_data       : std_logic_vector(7 downto 0);
 signal midi_oe         : std_logic;
 signal midi_en         : std_logic;
 signal midi_irq_n      : std_logic := '1';
@@ -499,7 +491,7 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d            : std_logic;
+signal m0s_d, m0s_d1    : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -548,7 +540,7 @@ begin
   spi_io_din  <= spi_dat;
   spi_io_ss   <= spi_csn;
   spi_io_clk  <= spi_sclk;
-  spi_dir     <= spi_io_dout when jtagseln = '1' else 'Z';
+  spi_dir     <= spi_io_dout; -- when jtagseln = '1' else 'Z';
   spi_irqn    <= int_out_n;
 
 gamepad_p1: entity work.dualshock2
@@ -1470,7 +1462,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => clk64_pal,
-    resetn    => pll_locked_pal and jtagseln,
+    resetn    => pll_locked_pal, -- and jtagseln,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),

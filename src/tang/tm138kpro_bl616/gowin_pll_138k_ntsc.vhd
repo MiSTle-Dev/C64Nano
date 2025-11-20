@@ -8,8 +8,9 @@ entity Gowin_PLL_138k_ntsc is
         init_clk: in std_logic;
         clkout0: out std_logic;
         clkout1: out std_logic;
-        lock: out std_logic;
-        reset: in std_logic
+        clkout2: out std_logic;
+        clkout3: out std_logic;
+        lock: out std_logic
     );
 end Gowin_PLL_138k_ntsc;
 
@@ -24,6 +25,8 @@ architecture Behavioral of Gowin_PLL_138k_ntsc is
     component Gowin_PLL_138k_ntsc_MOD
         port (
             clkout1: out std_logic;
+            clkout2: out std_logic;
+            clkout3: out std_logic;
             clkout0: out std_logic;
             lock: out std_logic;
             reset: in std_logic;
@@ -56,6 +59,8 @@ begin
     u_pll: Gowin_PLL_138k_ntsc_MOD
         port map (
             clkout1 => clkout1,
+            clkout2 => clkout2,
+            clkout3 => clkout3,
             clkout0 => clkout0,
             lock => pll_lock,
             clkin => clkin,
@@ -69,10 +74,10 @@ begin
     u_pll_init: PLL_INIT
         generic map (
             CLK_PERIOD => 20,
-            MULTI_FAC => 13
+            MULTI_FAC => 39
         )
         port map (
-            I_RST => reset,
+            I_RST => '0',
             O_RST => pll_rst,
             PLLLOCK => pll_lock,
             O_LOCK => lock,
