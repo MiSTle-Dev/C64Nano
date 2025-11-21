@@ -104,10 +104,10 @@ set_option -convert_sdp32_36_to_sdp16_18 1
 set_option -correct_hold_violation 1
 set_option -loading_rate 70.000
 set_option -place_option 2
-set_option -route_option 2
-set_option -ireg_in_iob 0
-set_option -oreg_in_iob 0
-set_option -ioreg_in_iob 0
+set_option -route_option 1
+set_option -ireg_in_iob 1
+set_option -oreg_in_iob 1
+set_option -ioreg_in_iob 1
 set_option -bit_crc_check 1
 set_option -bit_security 1
 set_option -bit_incl_bsram_init 1
