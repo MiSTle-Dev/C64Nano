@@ -184,15 +184,11 @@ Enable REU, and load the PRG.
 Playing around with [GEOS](https://en.wikipedia.org/wiki/GEOS_(8-bit_operating_system))
 Enable REU, select c1541 CBM DOS ROM and load the PRG.
 
-## Push Button / DIP Switch utilization
+## Push Button utilization
 
 * S1 open OSD
 
 * S2 Reset
-
-> [!CAUTION]
-> A FLASH programm attempt without keeping the board in reset may lead to corruption of the C1541 DOS images stored in FLASH requiring re-programming.
-> Nano 20k S2 keep pressed during power-up for FLASH programming of FPGA bitstream  
 
 ## OSD
 
@@ -227,7 +223,7 @@ Atari ST type of Joystick 2nd button supported using a MiSTeryNano shield buildi
 Don't configure e.g. [ArcadeR](https://retroradionics.com) for C64 mode rather than normal digital 2nd button mode (2nd trigger button connect signal to ground)
 
 OSD: **Retro D9 2**
-Atari ST type of Joystick 2nd button supported using the MiSTeryNano shield **spare J8 connector header and extra wiring.**  
+Atari ST type of Joystick 2nd button supported using the MiSTeryNano shield **spare J8 connector header and extra wiring.** [->> wiki](https://github.com/MiSTle-Dev/.github/wiki/Classic-Joysticks)  
 Don't configure e.g. [ArcadeR](https://retroradionics.com) for C64 mode rather than normal digital 2nd button mode (2nd trigger button connect signal to ground)
 
 <u>USB Joystick(s)</u>.  

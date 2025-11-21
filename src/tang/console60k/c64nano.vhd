@@ -108,10 +108,10 @@ signal clk32          : std_logic;
 signal pll_locked     : std_logic;
 signal clk_pixel_x5   : std_logic;
 signal clk64_ntsc     : std_logic;
-signal pll_locked_ntsc: std_logic :='0';
+signal pll_locked_ntsc: std_logic;
 signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
-signal pll_locked_pal : std_logic :='0';
+signal pll_locked_pal : std_logic;
 signal clk_pixel_x5_pal   : std_logic;
 signal spi_io_clk     : std_logic;
 attribute syn_keep : integer;
@@ -493,7 +493,7 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d            : std_logic;
+signal m0s_d, m0s_d1    : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -540,20 +540,19 @@ begin
 
 -- ----------------- SPI input parser ----------------------
 -- by default the internal SPI is being used. Once there is
--- a select from the external spi (M0S Dock) , then the connection is being switched
-process (clk32, pll_locked)
+-- a select from the external spi, then the connection is being switched
+process (all)
 begin
-  if pll_locked = '0' then
+  if pll_locked_pal = '0' then
     spi_ext <= '0';
-    m0s(2) <= 'Z';
     m0s_d <= '1';
-  elsif rising_edge(clk32) then
+    m0s_d1 <= '1';
+  elsif rising_edge(clk64_pal) then
     m0s_d <= m0s(2);
-    if m0s_d = '0' then
-        spi_ext <= '1';
-    else
-        spi_ext <= spi_ext; -- latches the value
-     end if;
+    m0s_d1 <= m0s_d;
+    if m0s_d1 = '1' and m0s_d = '0' then
+      spi_ext <= '1';
+    end if;
   end if;
 end process;
 
@@ -565,10 +564,10 @@ end process;
   -- onboard BL616
   -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
   spi_dir     <= spi_io_dout when jtagseln = '1' else 'Z';
-  spi_irqn    <= int_out_n;
+  spi_irqn    <= uart_tx_i when spi_ext = '1' else int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
-  m0s(4)      <= int_out_n when spi_ext = '1' else uart_tx_i;
+  m0s(4)      <= int_out_n;
 
 gamepad_p1: entity work.dualshock2
     port map (

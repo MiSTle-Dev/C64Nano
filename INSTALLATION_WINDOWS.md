@@ -11,7 +11,7 @@ Software needed:
   - [Gowin V1.9.11.01](https://www.gowinsemi.com/en/support/home/) **to synthesize the core**
   - [Gowin V1.9.11.02](https://www.gowinsemi.com/en/support/home/) **to program the flash of the TANG FPGA**
   - [BouffaloLabDevCube](https://dev.bouffalolab.com/download) **to flash the BL616**
-  - [Latest release](https://github.com/vossstef/tang_nano_20k_c64/releases/latest) of C64Nano **FPGA** bitstream
+  - [Latest release](https://github.com/MiSTle-Dev/C64Nano/releases/latest) of C64Nano **FPGA** bitstream
   - [Latest release](http://github.com/harbaum/FPGA-Companion) of FPGA-Companion **BL616 µC firmware** (if not otherwise stated in the release note)
   - [Latest release](https://dl.sipeed.com/shareURL/TANG/Debugger/onboard/BL616) of the TANG onboard µC bl616 programmer firmware
 
@@ -48,12 +48,12 @@ flash process. Pressing the ```S2``` during power up will prevent the
 Tang Nano 20k from booting into the C64Nano core and will make sure
 the flash ROM can be updated.
 
-![](https://github.com/vossstef/tang_nano_20k_c64/blob/main/.assets/gowin1.jpg)
+![](https://github.com/MiSTle-Dev/C64Nano/blob/main/.assets/gowin1.jpg)
 
 Now press on the “programmer” marked red on the picture above. **You
 should see following screen:**
 
-![](https://github.com/vossstef/tang_nano_20k_c64/blob/main/.assets/device.png)
+![](https://github.com/MiSTle-Dev/C64Nano/blob/main/.assets/device.png)
 
 -   Press save on the dialog
 -   From there you can add a device for programming by pressing on the little
@@ -83,12 +83,12 @@ These DOS for the c1541 emulation can later be selected from the on-screen-displ
   - Mark each of your configs and press the little icon with the green play
     button. You should see a progress bar and then:
 
-![](https://github.com/vossstef/tang_nano_20k_c64/blob/main/.assets/c64_flash.png)
+![](https://github.com/MiSTle-Dev/C64Nano/blob/main/.assets/c64_flash.png)
 **At a glance the memory layout of the SPI Flash:**
 
 |                           |          |          |          |          |         | |
 |                          -|         -|         -|         -|         -|        -|-|
-| Type                      | TN20k    | TP25k    | TM60k    |TM138k    |Console60k/138k| |
+| Type                      | TN20k    | TP25k    | TM60k    |TM138k Pro|Console60k/138k| |
 | FPGA bitstream            | 0x000000 | 0x000000 | 0x000000 | 0x000000 |0x000000 |ROM size|
 | reserved for Atari ST ROM | 0x100000 | 0x100000 | 0x500000 | 0x900000 |0x500000 | - |
 | c1541 Dolphin DOS 2       | 0x200000 | 0x200000 | 0x700000 | 0x700000 |0x700000 |32k|
@@ -107,21 +107,21 @@ Windows shell and Gowin Programmer<br>
 ```programmer_cli -r 38 --mcuFile 2dosa_c.bin --spiaddr 0x200000 --cable-index 1 --d GW2AR-18C```<br>
 ```programmer_cli -r 38 --mcuFile 2dosa_c.bin --spiaddr 0x200000 --cable-index 1 --d GW5A-25A```<br>
 ```programmer_cli -r 38 --mcuFile 2dosa_c.bin --spiaddr 0x700000 --cable-index 1 --d GW5AT-60B```<br>
-```programmer_cli -r 38 --mcuFile 2dosa_c.bin --spiaddr 0xA00000 --cable-index 1 --d GW5AST-138B```<br><br>
+```programmer_cli -r 38 --mcuFile 2dosa_c.bin --spiaddr 0x700000 --cable-index 1 --d GW5AST-138B```<br><br>
 Linux shell and [openFPGAloader](https://github.com/trabucayre/openFPGALoader).<br>
 [Please read here if you run into trouble when using openFPGAloader under Linux](https://wiki.sipeed.com/hardware/en/tang/Tang-Nano-Doc/flash-in-linux.html).<br>
 ```openFPGALoader -b tangnano20k --external-flash -o 0x200000  2dosa_c.bin```<br>
 ```openFPGALoader -b tangnano20k -f tang_nano_20k_c64.fs```<br>
 <br>
 ```openFPGALoader -b tangprimer25k --external-flash -o 0x200000  2dosa_c.bin```<br>
-```openFPGALoader -b tangmega138k --external-flash -o 0xA00000  2dosa_c.bin```<br>
+```openFPGALoader -b tangmega138k --external-flash -o 0x700000  2dosa_c.bin```<br>
 
 **c1541 DOS ROM binaries** <br>
 The needed DOS files you will find on the Internet.<br>
 ```Dolphin DOS 2```<br>
 You will [find](https://e4aws.silverdr.com/projects/dolphindos2/) 2dosa_c.bin<br>
 Program at offset 0x200000<br>
-![](https://github.com/vossstef/tang_nano_20k_c64/blob/main/.assets/dolphin.png)
+![](https://github.com/MiSTle-Dev/C64Nano/blob/main/.assets/dolphin.png)
 
 ```CBM DOS```<br>
 You will [find](https://sourceforge.net/p/vice-emu/code/HEAD/tree/trunk/vice/data/DRIVES/dos1541-325302-01%2B901229-05.bin) dos1541-325302-01+901229-05.bin<br>
@@ -155,7 +155,7 @@ the Tang Nano 20K. Using an external M0S is nevertheless recommended.
 -   Start the BuffaloLabDevCube from the directory where you decompressed it it
     ask you what chip should be used. Select BL616/BL618 and press “finish”
 
-![](https://github.com/vossstef/tang_nano_20k_c64/blob/main/.assets/buffstart.png)
+![](https://github.com/MiSTle-Dev/C64Nano/blob/main/.assets/buffstart.png)
 
 - You'll now see the program screen. On the right it should auto detect your
   device with a COM port. If not take a look in the device manager to check for
@@ -165,7 +165,7 @@ the Tang Nano 20K. Using an external M0S is nevertheless recommended.
 - Choose “Open Uart” and than press “Create & Download”. The firmware should now be
   flashed
 
-![](https://github.com/vossstef/tang_nano_20k_c64/blob/main/.assets/bufffinish.png)
+![](https://github.com/MiSTle-Dev/C64Nano/blob/main/.assets/bufffinish.png)
 
 ## Prepare the SD card
 

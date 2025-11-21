@@ -483,7 +483,7 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d            : std_logic;
+signal m0s_d, m0s_d1    : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -556,7 +556,6 @@ begin
   -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
   jtagseln <= '0' when pll_locked = '0' or (reset and user) = '1' else '1';
   reconfign <= 'Z';  -- for future use
-
   -- BL616 console to hw pins for external USB-UART adapter
   -- tristate JTAG TDO for V_JTAGSELN in JTAG mode
   uart_tx <= 'Z' when jtagseln = '0' or spi_ext = '1' else bl616_mon_rx;
@@ -568,15 +567,14 @@ process (all)
 begin
   if flash_lock = '0' then
     spi_ext <= '0';
-    m0s(2) <= 'Z';
     m0s_d <= '1';
+    m0s_d1 <= '1';
   elsif rising_edge(flash_clk) then
     m0s_d <= m0s(2);
-    if m0s_d = '0' then
-        spi_ext <= '1';
-    else
-        spi_ext <= spi_ext; -- latches the value
-     end if;
+    m0s_d1 <= m0s_d;
+    if m0s_d1 = '1' and m0s_d = '0' then
+      spi_ext <= '1';
+    end if;
   end if;
 end process;
 
@@ -586,11 +584,12 @@ end process;
   spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
 
   -- onboard BL616
-  spi_dir     <= spi_io_dout;
-  spi_irqn    <= int_out_n;
+  -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
+  spi_dir     <= spi_io_dout when jtagseln = '1' else 'Z';
+  spi_irqn    <= uart_tx_i when spi_ext = '1' else int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
-  m0s(4)      <= int_out_n when spi_ext = '1' else uart_tx_i;
+  m0s(4)      <= int_out_n;
 
 gamepad_p2: entity work.dualshock2
     port map (

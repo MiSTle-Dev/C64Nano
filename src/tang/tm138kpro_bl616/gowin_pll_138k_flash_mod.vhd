@@ -5,27 +5,28 @@
 --Part Number: GW5AST-LV138FPG676AC1/I0
 --Device: GW5AST-138
 --Device Version: B
+--Created Time: Thu Nov 20 22:29:28 2025
 
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-entity Gowin_PLL_138k_ntsc_MOD is
+entity Gowin_PLL_138k_flash_MOD is
     port (
         lock: out std_logic;
         clkout0: out std_logic;
         clkout1: out std_logic;
-        clkout2: out std_logic;
-        clkout3: out std_logic;
         clkin: in std_logic;
         reset: in std_logic;
         icpsel: in std_logic_vector(5 downto 0);
         lpfres: in std_logic_vector(2 downto 0);
         lpfcap: in std_logic_vector(1 downto 0)
     );
-end Gowin_PLL_138k_ntsc_MOD;
+end Gowin_PLL_138k_flash_MOD;
 
-architecture Behavioral of Gowin_PLL_138k_ntsc_MOD is
+architecture Behavioral of Gowin_PLL_138k_flash_MOD is
 
+    signal clkout2: std_logic;
+    signal clkout3: std_logic;
     signal clkout4: std_logic;
     signal clkout5: std_logic;
     signal clkout6: std_logic;
@@ -228,22 +229,22 @@ begin
     PLL_inst: PLL
         generic map (
             FCLKIN => "50",
-            IDIV_SEL => 2,
+            IDIV_SEL => 1,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 3,
-            ODIV1_SEL => 6,
-            ODIV2_SEL => 15,
-            ODIV3_SEL => 30,
+            ODIV0_SEL => 19,
+            ODIV1_SEL => 19,
+            ODIV2_SEL => 8,
+            ODIV3_SEL => 8,
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
-            MDIV_SEL => 39,
-            MDIV_FRAC_SEL => 2,
+            MDIV_SEL => 24,
+            MDIV_FRAC_SEL => 0,
             ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
             CLKOUT1_EN => "TRUE",
-            CLKOUT2_EN => "TRUE",
-            CLKOUT3_EN => "TRUE",
+            CLKOUT2_EN => "FALSE",
+            CLKOUT3_EN => "FALSE",
             CLKOUT4_EN => "FALSE",
             CLKOUT5_EN => "FALSE",
             CLKOUT6_EN => "FALSE",
@@ -273,8 +274,8 @@ begin
             DYN_DPA_EN => "FALSE",
             CLKOUT0_PE_COARSE => 0,
             CLKOUT0_PE_FINE => 0,
-            CLKOUT1_PE_COARSE => 0,
-            CLKOUT1_PE_FINE => 0,
+            CLKOUT1_PE_COARSE => 9,
+            CLKOUT1_PE_FINE => 4,
             CLKOUT2_PE_COARSE => 0,
             CLKOUT2_PE_FINE => 0,
             CLKOUT3_PE_COARSE => 0,
@@ -373,4 +374,4 @@ begin
             SSCMDSEL_FRAC => SSCMDSEL_FRAC_i
         );
 
-end Behavioral; --Gowin_PLL_138k_ntsc_MOD
+end Behavioral; --Gowin_PLL_138k_flash_MOD

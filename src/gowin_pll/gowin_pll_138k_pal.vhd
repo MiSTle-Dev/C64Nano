@@ -1,3 +1,12 @@
+--Copyright (C)2014-2024 Gowin Semiconductor Corporation.
+--All rights reserved.
+--File Title: IP file
+--Tool Version: V1.9.9.01 (64-bit)
+--Part Number: GW5AST-LV138FPG676AES
+--Device: GW5AST-138B
+--Device Version: B
+--Created Time: Fri Mar  1 21:02:59 2024
+
 library IEEE;
 use IEEE.std_logic_1164.all;
 
@@ -7,13 +16,13 @@ entity Gowin_PLL_138k_pal is
         clkout0: out std_logic;
         clkout1: out std_logic;
         clkout2: out std_logic;
+        clkout3: out std_logic;
         clkin: in std_logic
     );
 end Gowin_PLL_138k_pal;
 
 architecture Behavioral of Gowin_PLL_138k_pal is
 
-    signal clkout3: std_logic;
     signal clkout4: std_logic;
     signal clkout5: std_logic;
     signal clkout6: std_logic;
@@ -222,22 +231,22 @@ begin
     PLL_inst: PLL
         generic map (
             FCLKIN => "50",
-            IDIV_SEL => 1,
+            IDIV_SEL => 2,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 8,
-            ODIV1_SEL => 20,
-            ODIV2_SEL => 20,
-            ODIV3_SEL => 8,
+            ODIV0_SEL => 5,
+            ODIV1_SEL => 10,
+            ODIV2_SEL => 25,
+            ODIV3_SEL => 50,
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
-            MDIV_SEL => 25,
-            MDIV_FRAC_SEL => 2,
+            MDIV_SEL => 63,
+            MDIV_FRAC_SEL => 0,
             ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
             CLKOUT1_EN => "TRUE",
             CLKOUT2_EN => "TRUE",
-            CLKOUT3_EN => "FALSE",
+            CLKOUT3_EN => "TRUE",
             CLKOUT4_EN => "FALSE",
             CLKOUT5_EN => "FALSE",
             CLKOUT6_EN => "FALSE",
@@ -269,7 +278,7 @@ begin
             CLKOUT0_PE_FINE => 0,
             CLKOUT1_PE_COARSE => 0,
             CLKOUT1_PE_FINE => 0,
-            CLKOUT2_PE_COARSE => 15,
+            CLKOUT2_PE_COARSE => 0,
             CLKOUT2_PE_FINE => 0,
             CLKOUT3_PE_COARSE => 0,
             CLKOUT3_PE_FINE => 0,
