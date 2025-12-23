@@ -24,6 +24,7 @@
         <File path="src/hdmi/tmds_channel.sv" type="file.verilog" enable="1"/>
         <File path="src/loader_sd_card.sv" type="file.verilog" enable="1"/>
         <File path="src/misc/flash_dspi_gw5a.v" type="file.verilog" enable="1"/>
+        <File path="src/misc/glitch_filter.v" type="file.verilog" enable="1"/>
         <File path="src/misc/hid.v" type="file.verilog" enable="1"/>
         <File path="src/misc/mcu_spi.v" type="file.verilog" enable="1"/>
         <File path="src/misc/osd_u8g2.v" type="file.verilog" enable="1"/>
@@ -58,6 +59,7 @@
         <File path="src/fpga64_keyboard.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fpga64_rgbcolor.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fpga64_sid_iec.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_osc/gowin_osc.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_prom/gowin_prom_basic.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_prom/gowin_prom_chargen.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_sdpb/gowin_sdpb_kernal_8k_gw5a.vhd" type="file.vhdl" enable="1"/>
