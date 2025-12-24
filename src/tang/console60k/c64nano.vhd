@@ -1770,16 +1770,21 @@ end process;
 
 por <= system_reset(0) or not pll_locked or not ram_ready;
 
-process(clk32)
+process(clk32, por)
 variable reset_counter : integer;
   begin
-    if rising_edge(clk32) then
+    if por = '1' then
+      reset_counter := 0;
+      do_erase <= '0';
+      reset_n <= '0';
+      reset_wait <= '0';
+      force_erase <= '0';
+      detach <= '0';
+    elsif rising_edge(clk32) then
       detach_reset_d <= detach_reset;
-
       old_download_r <= ioctl_download;
-      if reset_counter = 0 then reset_n <= '1'; else reset_n <= '0'; end if;
 
-      if por = '1' then
+      if system_reset(1) = '1' then
         reset_counter := 100000;
         do_erase <= '1';
         reset_n <= '0';
@@ -1800,12 +1805,16 @@ variable reset_counter : integer;
       elsif erasing = '1' then 
         force_erase <= '0';
       elsif reset_counter = 0 then
+        reset_n <= '1'; 
         do_erase <= '0';
         detach <= '0';
         if reset_wait = '1' and c64_addr = X"FFCF" then reset_wait <= '0'; end if;
       else
+        reset_n <= '0';
         reset_counter := reset_counter - 1;
-        if reset_counter = 100 and do_erase = '1' then force_erase <= '1'; end if;
+        if reset_counter = 100 and do_erase = '1' then 
+          force_erase <= '1'; 
+        end if;
       end if;
   end if;
 end process;
