@@ -97,7 +97,23 @@ entity c64nano_top is
     mspi_di       : inout std_logic;
     mspi_hold     : inout std_logic;
     mspi_wp       : inout std_logic;
-    mspi_do       : inout std_logic
+    mspi_do       : inout std_logic;
+    -- DDR3 interface
+    ddr_addr      :out std_logic_vector(15 downto 0);
+    ddr_bank      :out std_logic_vector(2 downto 0);
+    ddr_cs        :out std_logic;
+    ddr_ras       :out std_logic;
+    ddr_cas       :out std_logic;
+    ddr_we        :out std_logic;
+    ddr_ck        :out std_logic;
+    ddr_ck_n      :out std_logic;
+    ddr_cke       :out std_logic;
+    ddr_odt       :out std_logic;
+    ddr_reset_n   :out std_logic;
+    ddr_dm        :out std_logic_vector(1 downto 0);
+    ddr_dq        :inout std_logic_vector(15 downto 0);
+    ddr_dqs       :inout std_logic_vector(1 downto 0);
+    ddr_dqs_n     :inout std_logic_vector(1 downto 0)
     );
 end;
 
@@ -494,6 +510,12 @@ signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
 signal m0s_d, m0s_d1    : std_logic;
+signal clk27            : std_logic;
+signal pll_lock_27      : std_logic;
+signal hblank, vblank, hsync_out, vsync_out : std_logic;
+signal vga_ce, vga_de, old_hde, hde, vde : std_logic;
+signal div: std_logic_vector(2 downto 0);
+signal lores  : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -813,6 +835,104 @@ cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_fin
 audio_l <= audio_data_l or (5x"00" & cass_snd & 12x"00000");
 audio_r <= audio_data_r or (5x"00" & cass_snd & 12x"00000");
 
+
+pll_27m_inst: entity work.pll_27
+ port map (
+    clkin => clk,
+    clkout0 => clk27,
+    lock => pll_lock_27,
+    mdclk => clk
+ );
+
+vs_inst: entity work.video_sync
+ port map (
+	clk32  => clk32,
+	pause  => '0',
+	hsync  => lcd_hs,
+	vsync  => lcd_vs,
+	ntsc  => ntscMode,
+	wide  => '0',
+	hsync_out  => hsync_out,
+	vsync_out  => vsync_out,
+	hblank  => hblank,
+	vblank  => vblank
+);
+
+hde <= not hblank;
+vde <= not vblank;
+
+process (clk32)
+  begin
+    if rising_edge(clk32) then
+      old_hde <= hde;
+      if old_hde xor hde then
+        vga_de <= vde and hde;
+      end if;
+  end if;
+end process;
+
+process (clk64)
+  begin
+    if rising_edge(clk64) then
+    	div <= div + 1;
+      if div = "111" then 
+        lores <= not lores;
+      end if;
+      vga_ce <= '1' when lores = '0' and div = "000" else '0';
+      end if;
+end process;
+
+-- 297.00  DDR3 clock
+--  74.25  pixel clock = DDR :4
+-- 371.25  5x pixel clock
+framebuffer: entity work.ao486_to_hdmi
+ port map (
+	clk27       => clk27, 
+  pll_lock_27 => pll_lock_27,
+  clk50       => clk,
+  resetn      => reset_n,
+  clk_pixel   => open,
+    
+  clk_vga => clk32, 
+  vga_r => lcd_r,
+  vga_g => lcd_g,
+  vga_b => lcd_b,
+  vga_hs => lcd_hs,
+  vga_vs => lcd_vs,
+  vga_de => vga_de,
+  vga_ce => vga_ce,
+
+  sound_left => audio_l(17 downto 2),
+  sound_right => audio_r(17 downto 2),
+
+  ddr_addr =>ddr_addr, 
+  ddr_bank =>ddr_bank, 
+  ddr_cs =>ddr_cs, 
+  ddr_ras =>ddr_ras, 
+  ddr_cas =>ddr_cas,
+  ddr_we =>ddr_we, 
+  ddr_ck =>ddr_ck, 
+  ddr_ck_n =>ddr_ck_n, 
+  ddr_cke =>ddr_cke, 
+  ddr_odt =>ddr_odt,
+  ddr_reset_n =>ddr_reset_n, 
+  ddr_dm =>ddr_dm, 
+  ddr_dq =>ddr_dq, 
+  ddr_dqs =>ddr_dqs, 
+  ddr_dqs_n =>ddr_dqs_n,
+  tmds_clk_n => tmds_clk_n,
+  tmds_clk_p => tmds_clk_p,
+  tmds_d_n => tmds_d_n,
+  tmds_d_p => tmds_d_p,
+  ddr_prefetch_delay => 6x"00",
+  init_calib_complete => open,
+  freeze => '0',
+  overlay => '0',
+  overlay_x => open, 
+  overlay_y => open, 
+  overlay_color =>  (others =>'0')
+);
+
 video_inst: entity work.video
 generic map
 (
@@ -845,11 +965,7 @@ port map(
       system_scanlines => system_scanlines,
       system_volume => system_volume,
 
-      tmds_clk_n => tmds_clk_n,
-      tmds_clk_p => tmds_clk_p,
-      tmds_d_n   => tmds_d_n,
-      tmds_d_p   => tmds_d_p,
-
+      -- lcd
       lcd_clk  => lcd_clk,
       lcd_hs_n => lcd_hs,
       lcd_vs_n => lcd_vs,
@@ -927,20 +1043,6 @@ clk_switch_2: DCS
   
 pll_locked <= pll_locked_pal and pll_locked_ntsc;
 dcsclksel <= "0001" when ntscMode = '0' else "0010";
-
-clk_switch_1: DCS
-generic map (
-    DCS_MODE => "RISING"
-)
-port map (
-    CLKOUT => clk_pixel_x5,
-    CLKSEL => dcsclksel,
-    CLKIN0 => clk_pixel_x5_pal,
-    CLKIN1 => clk_pixel_x5_ntsc,
-    CLKIN2 => '0',
-    CLKIN3 => '0',
-    SELFORCE => '1'
-);
 
 div_inst: CLKDIV
 generic map(
@@ -1770,16 +1872,21 @@ end process;
 
 por <= system_reset(0) or not pll_locked or not ram_ready;
 
-process(clk32)
+process(clk32, por)
 variable reset_counter : integer;
   begin
-    if rising_edge(clk32) then
+    if por = '1' then
+      reset_counter := 0;
+      do_erase <= '0';
+      reset_n <= '0';
+      reset_wait <= '0';
+      force_erase <= '0';
+      detach <= '0';
+    elsif rising_edge(clk32) then
       detach_reset_d <= detach_reset;
-
       old_download_r <= ioctl_download;
-      if reset_counter = 0 then reset_n <= '1'; else reset_n <= '0'; end if;
 
-      if por = '1' then
+      if system_reset(1) = '1' then
         reset_counter := 100000;
         do_erase <= '1';
         reset_n <= '0';
@@ -1800,12 +1907,16 @@ variable reset_counter : integer;
       elsif erasing = '1' then 
         force_erase <= '0';
       elsif reset_counter = 0 then
+        reset_n <= '1'; 
         do_erase <= '0';
         detach <= '0';
         if reset_wait = '1' and c64_addr = X"FFCF" then reset_wait <= '0'; end if;
       else
+        reset_n <= '0';
         reset_counter := reset_counter - 1;
-        if reset_counter = 100 and do_erase = '1' then force_erase <= '1'; end if;
+        if reset_counter = 100 and do_erase = '1' then 
+          force_erase <= '1'; 
+        end if;
       end if;
   end if;
 end process;
