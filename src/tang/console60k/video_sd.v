@@ -67,6 +67,7 @@ always @(posedge clk) begin
     end
 end
 
+wire sd_hs_n, sd_vs_n; 
 wire [5:0] sd_r;
 wire [5:0] sd_g;
 wire [5:0] sd_b;
@@ -95,6 +96,10 @@ scandoubler #(11) scandoubler (
         .g_out(sd_g),
         .b_out(sd_b)
 );
+
+wire [5:0] osd_r;
+wire [5:0] osd_g;
+wire [5:0] osd_b;  
 
 osd_u8g2 osd_u8g2 (
         .clk(clk),
