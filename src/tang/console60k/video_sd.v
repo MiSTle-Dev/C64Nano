@@ -11,6 +11,10 @@ module video
           input [8:0] audio_div,
 
           input    ntscmode,
+
+          input    hbl_in,
+          input    vbl_in,
+
           input	   vs_in_n,
           input	   hs_in_n,
 
@@ -36,7 +40,7 @@ module video
           output lcd_clk,
           output lcd_hs_n,
           output lcd_vs_n,
-          output lcd_de,
+          output reg lcd_de,
           output [7:0] lcd_r,
           output [7:0] lcd_g,
           output [7:0] lcd_b,
@@ -55,7 +59,6 @@ module video
 reg clk_audio;
 
 reg [8:0] aclk_cnt;
-reg vresetD;
 
 always @(posedge clk) begin
     // divisor = pixel clock / 48000 / 2 - 1
@@ -67,7 +70,8 @@ always @(posedge clk) begin
     end
 end
 
-wire sd_hs_n, sd_vs_n; 
+wire sd_hs_n, sd_vs_n;
+wire hb_out, vb_out;
 wire [5:0] sd_r;
 wire [5:0] sd_g;
 wire [5:0] sd_b;
@@ -76,13 +80,15 @@ scandoubler #(11) scandoubler (
         // system interface
         .clk_sys(clk),
         .bypass(1'b0),
-        .ce_divider(1'b1),
+        .ce_divider(3'd1),
         .pixel_ena(),
 
         // scanlines (00-none 01-25% 10-50% 11-75%)
         .scanlines(system_scanlines),
 
         // shifter video interface
+        .hb_in(hbl_in),
+        .vb_in(vbl_in),
         .hs_in(hs_in_n),
         .vs_in(vs_in_n),
         .r_in( r_in ),
@@ -90,6 +96,8 @@ scandoubler #(11) scandoubler (
         .b_in( b_in ),
 
         // output interface
+        .hb_out(hb_out),
+        .vb_out(vb_out),
         .hs_out(sd_hs_n),
         .vs_out(sd_vs_n),
         .r_out(sd_r),
@@ -209,7 +217,7 @@ localparam YNTSC = 10'd980;
 localparam XPAL  = 11'd1880;
 localparam YPAL  = 10'd940;
 
-assign lcd_de = (hcnt < 11'd800) && (vcnt < 10'd480);
+//assign lcd_de = (hcnt < 11'd800) && (vcnt < 10'd480);
 
 // after scandoubler (with dim lines), ste video is 3*6 bits
 // lcd r and b are only 5 bits, so there may be some color
@@ -233,4 +241,11 @@ always @(posedge clk) begin
       hcnt <= hcnt + 11'd1;
 end
 
+reg old_hde;
+always @(posedge clk) begin
+		old_hde <= !hb_out;
+		if(old_hde ^ !hb_out) lcd_de <= !vb_out & !hb_out;
+	end
+
 endmodule
+

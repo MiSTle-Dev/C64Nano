@@ -75,8 +75,8 @@ assign fb_size_valid = (fb_width != 0) && (fb_height != 0);
 
 always @(posedge clk_vga) begin
     if (!resetn) begin
-   //     fb_width       <= 0;
-   //     fb_height      <= 0;
+        fb_width       <= 0;
+        fb_height      <= 0;
         cur_line_width <= 0;
         max_line_width <= 0;
         line_count     <= 0;
@@ -103,8 +103,8 @@ always @(posedge clk_vga) begin
             end
             // Rising edge of VSYNC: latch frame size and reset counters
             if (vga_vs && !vs_r) begin
-     //           fb_width       <= max_line_width;
-     //           fb_height      <= line_count;
+                fb_width       <= max_line_width;
+                fb_height      <= line_count;
                 cur_line_width <= 0;
                 max_line_width <= 0;
                 line_count     <= 0;
@@ -113,8 +113,6 @@ always @(posedge clk_vga) begin
     end
 end
 
-assign fb_width       = 1008;
-assign fb_height      = 624;
 
 // ------------------------------------------------------------ framebuffer
 

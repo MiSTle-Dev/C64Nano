@@ -18,7 +18,6 @@
         <File path="src/misc/hid.v" type="file.verilog" enable="1"/>
         <File path="src/misc/mcu_spi.v" type="file.verilog" enable="1"/>
         <File path="src/misc/osd_u8g2.v" type="file.verilog" enable="1"/>
-        <File path="src/misc/scandoubler.v" type="file.verilog" enable="1"/>
         <File path="src/misc/sd_card.v" type="file.verilog" enable="1"/>
         <File path="src/misc/sd_rw.v" type="file.verilog" enable="1"/>
         <File path="src/misc/sdcmd_ctrl.v" type="file.verilog" enable="1"/>
@@ -54,6 +53,8 @@
         <File path="src/tang/console60k/pll_hdmi_mod.v" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/pll_init.v" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/pll_mDRP_intf.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/scandoubler.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/video_freezer.sv" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/video_sd.v" type="file.verilog" enable="1"/>
         <File path="src/uart6551/io_fifo.v" type="file.verilog" enable="1"/>
         <File path="src/uart6551/uart_6551.v" type="file.verilog" enable="1"/>

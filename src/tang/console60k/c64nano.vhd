@@ -122,22 +122,22 @@ architecture Behavioral_top of c64nano_top is
 signal clk64          : std_logic;
 signal clk32          : std_logic;
 signal pll_locked     : std_logic;
-signal clk_pixel_x5   : std_logic;
+--signal clk_pixel_x5   : std_logic;
 signal clk64_ntsc     : std_logic;
 signal pll_locked_ntsc: std_logic;
-signal clk_pixel_x5_ntsc  : std_logic;
+--signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
 signal pll_locked_pal : std_logic;
-signal clk_pixel_x5_pal   : std_logic;
+--signal clk_pixel_x5_pal   : std_logic;
 signal spi_io_clk     : std_logic;
 attribute syn_keep : integer;
 attribute syn_keep of clk64             : signal is 1;
 attribute syn_keep of clk32             : signal is 1;
-attribute syn_keep of clk_pixel_x5      : signal is 1;
+--attribute syn_keep of clk_pixel_x5      : signal is 1;
 attribute syn_keep of clk64_pal         : signal is 1;
 attribute syn_keep of clk64_ntsc        : signal is 1;
-attribute syn_keep of clk_pixel_x5_pal  : signal is 1;
-attribute syn_keep of clk_pixel_x5_ntsc : signal is 1;
+--attribute syn_keep of clk_pixel_x5_pal  : signal is 1;
+--attribute syn_keep of clk_pixel_x5_ntsc : signal is 1;
 attribute syn_keep of spi_io_clk        : signal is 1;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
@@ -240,6 +240,7 @@ signal mouse_x        : signed(7 downto 0);
 signal mouse_y        : signed(7 downto 0);
 signal mouse_strobe   : std_logic;
 signal freeze         : std_logic;
+signal freeze_sync    : std_logic;
 signal c64_pause      : std_logic;
 signal old_sync       : std_logic;
 signal osd_status     : std_logic;
@@ -516,6 +517,10 @@ signal hblank, vblank, hsync_out, vsync_out : std_logic;
 signal vga_ce, vga_de, old_hde, hde, vde : std_logic;
 signal div: std_logic_vector(2 downto 0);
 signal lores  : std_logic;
+signal frz_hs          : std_logic;
+signal frz_vs          : std_logic;
+signal frz_hbl         : std_logic;
+signal frz_vbl         : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -835,7 +840,6 @@ cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_fin
 audio_l <= audio_data_l or (5x"00" & cass_snd & 12x"00000");
 audio_r <= audio_data_r or (5x"00" & cass_snd & 12x"00000");
 
-
 pll_27m_inst: entity work.pll_27
  port map (
     clkin => clk,
@@ -844,32 +848,43 @@ pll_27m_inst: entity work.pll_27
     mdclk => clk
  );
 
-vs_inst: entity work.video_sync
- port map (
-	clk32  => clk32,
-	pause  => '0',
-	hsync  => lcd_hs,
-	vsync  => lcd_vs,
-	ntsc  => ntscMode,
-	wide  => '0',
-	hsync_out  => hsync_out,
-	vsync_out  => vsync_out,
+video_sync_inst: entity work.video_sync
+port map(
+	clk32   => clk32,
+	pause   => c64_pause,
+	hsync   => hsync,
+	vsync   => vsync,
+	ntsc    => ntscMode,
+	wide    => system_wide_screen,
+	hsync_out => hsync_out,
+	vsync_out => vsync_out,
 	hblank  => hblank,
 	vblank  => vblank
 );
-
-hde <= not hblank;
-vde <= not vblank;
-
-process (clk32)
-  begin
-    if rising_edge(clk32) then
-      old_hde <= hde;
-      if old_hde xor hde then
-        vga_de <= vde and hde;
-      end if;
+process(clk32)
+begin
+  if rising_edge(clk32) then
+    old_sync <= freeze_sync;
+    if old_sync xor freeze_sync then
+      freeze <= osd_status and system_pause;
+    end if;
   end if;
 end process;
+
+video_freezer_inst: entity work.video_freezer
+port map(
+	clk     => clk32,
+	freeze  => freeze,
+	hs_in   => hsync_out,
+	vs_in   => vsync_out,
+	hbl_in  => hblank,
+	vbl_in  => vblank,
+	sync    => freeze_sync,
+	hs_out  => frz_hs,
+	vs_out  => frz_vs,
+	hbl_out => frz_hbl,
+	vbl_out => frz_vbl
+);
 
 process (clk64)
   begin
@@ -899,8 +914,8 @@ framebuffer: entity work.ao486_to_hdmi
   vga_b => lcd_b,
   vga_hs => lcd_hs,
   vga_vs => lcd_vs,
-  vga_de => vga_de,
-  vga_ce => vga_ce,
+  vga_de => lcd_de,
+  vga_ce => '1',
 
   sound_left => audio_l(17 downto 2),
   sound_right => audio_r(17 downto 2),
@@ -941,18 +956,21 @@ generic map
 port map(
       pll_lock     => pll_locked, 
       clk          => clk32,
-      clk_pixel_x5 => clk_pixel_x5,
+      clk_pixel_x5 => '0',
       audio_div    => audio_div,
 
       ntscmode  => ntscMode,
-      hs_in_n   => hsync,
-      vs_in_n   => vsync,
+      hbl_in    => frz_hbl,
+      vbl_in    => frz_vbl,
+
+      hs_in_n   => frz_hs,
+      vs_in_n   => frz_vs,
 
       r_in      => std_logic_vector(r(7 downto 4)),
       g_in      => std_logic_vector(g(7 downto 4)),
       b_in      => std_logic_vector(b(7 downto 4)),
 
-      audio_l => audio_l,  -- interface C64 core specific
+      audio_l => audio_l,
       audio_r => audio_r,
       osd_status => osd_status,
 
@@ -1058,7 +1076,7 @@ port map(
 mainclock_pal: entity work.Gowin_PLL_60k_pal
 port map (
     lock => pll_locked_pal,
-    clkout0 => clk_pixel_x5_pal,
+    clkout0 => open,
     clkout1 => clk64_pal,
     clkout2 => mspi_clk,
     clkin => clk,
@@ -1069,7 +1087,7 @@ mainclock_ntsc: entity work.Gowin_PLL_60k_ntsc
 port map (
     lock => pll_locked_ntsc,
     clkout0 => open,
-    clkout1 => clk_pixel_x5_ntsc,
+    clkout1 => open,
     clkout2 => clk64_ntsc,
     clkout3 => open,
     clkin => clk
@@ -1424,7 +1442,7 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   clk32        => clk32,
   reset_n      => reset_n,
   bios         => "00",
-  pause        => '0',
+  pause        => freeze,
   pause_out    => c64_pause,
 
   usb_key      => usb_key,
