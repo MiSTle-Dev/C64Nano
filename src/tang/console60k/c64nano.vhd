@@ -243,7 +243,7 @@ signal freeze         : std_logic;
 signal freeze_sync    : std_logic;
 signal c64_pause      : std_logic;
 signal old_sync       : std_logic;
-signal osd_status     : std_logic;
+signal osd_status     : std_logic := '0';
 signal ws2812_color   : std_logic_vector(23 downto 0);
 signal system_reset   : std_logic_vector(1 downto 0);
 signal disk_reset     : std_logic;
@@ -521,6 +521,8 @@ signal frz_hs          : std_logic;
 signal frz_vs          : std_logic;
 signal frz_hbl         : std_logic;
 signal frz_vbl         : std_logic;
+signal ce_pix          : std_logic;
+
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -871,21 +873,6 @@ begin
   end if;
 end process;
 
-video_freezer_inst: entity work.video_freezer
-port map(
-	clk     => clk32,
-	freeze  => freeze,
-	hs_in   => hsync_out,
-	vs_in   => vsync_out,
-	hbl_in  => hblank,
-	vbl_in  => vblank,
-	sync    => freeze_sync,
-	hs_out  => frz_hs,
-	vs_out  => frz_vs,
-	hbl_out => frz_hbl,
-	vbl_out => frz_vbl
-);
-
 process (clk64)
   begin
     if rising_edge(clk64) then
@@ -893,9 +880,36 @@ process (clk64)
       if div = "111" then 
         lores <= not lores;
       end if;
-      vga_ce <= '1' when lores = '0' and div = "000" else '0';
+      ce_pix <= '1' when lores = '0' and div = "000" else '0';
       end if;
 end process;
+
+vm_inst: entity work.video_mixer
+ port map (
+	CLK_VIDEO => clk64,
+
+	hq2x => '0',
+	scandoubler => '1',
+
+	ce_pix => ce_pix,
+	R => r(7 downto 4) & r(7 downto 4),
+	G => g(7 downto 4) & g(7 downto 4),
+	B => b(7 downto 4) & b(7 downto 4),
+	HSync => hsync_out,
+	VSync => vsync_out,
+	HBlank => hblank,
+	VBlank => vblank,
+
+	HDMI_FREEZE => freeze,
+	freeze_sync => freeze_sync,
+  CE_PIXEL => vga_ce, 
+	VGA_R => lcd_r, 
+	VGA_G => lcd_g,
+	VGA_B => lcd_b,
+	VGA_VS => lcd_vs,
+	VGA_HS => lcd_hs,
+	VGA_DE => lcd_de
+);
 
 -- 297.00  DDR3 clock
 --  74.25  pixel clock = DDR :4
@@ -907,15 +921,15 @@ framebuffer: entity work.ao486_to_hdmi
   clk50       => clk,
   resetn      => reset_n,
   clk_pixel   => open,
-    
+
   clk_vga => clk32, 
-  vga_r => lcd_r,
-  vga_g => lcd_g,
-  vga_b => lcd_b,
-  vga_hs => lcd_hs,
-  vga_vs => lcd_vs,
-  vga_de => lcd_de,
-  vga_ce => '1',
+  vga_r   => lcd_r,
+  vga_g   => lcd_g,
+  vga_b   => lcd_b,
+  vga_hs  => lcd_hs,
+  vga_vs  => lcd_vs,
+  vga_de  => lcd_de,
+  vga_ce  => vga_ce,
 
   sound_left => audio_l(17 downto 2),
   sound_right => audio_r(17 downto 2),
@@ -947,57 +961,6 @@ framebuffer: entity work.ao486_to_hdmi
   overlay_y => open, 
   overlay_color =>  (others =>'0')
 );
-
-video_inst: entity work.video
-generic map
-(
-  STEREO  => false
-)
-port map(
-      pll_lock     => pll_locked, 
-      clk          => clk32,
-      clk_pixel_x5 => '0',
-      audio_div    => audio_div,
-
-      ntscmode  => ntscMode,
-      hbl_in    => frz_hbl,
-      vbl_in    => frz_vbl,
-
-      hs_in_n   => frz_hs,
-      vs_in_n   => frz_vs,
-
-      r_in      => std_logic_vector(r(7 downto 4)),
-      g_in      => std_logic_vector(g(7 downto 4)),
-      b_in      => std_logic_vector(b(7 downto 4)),
-
-      audio_l => audio_l,
-      audio_r => audio_r,
-      osd_status => osd_status,
-
-      mcu_start => mcu_start,
-      mcu_osd_strobe => mcu_osd_strobe,
-      mcu_data  => mcu_data_out,
-
-      -- values that can be configure by the user via osd
-      system_wide_screen => system_wide_screen,
-      system_scanlines => system_scanlines,
-      system_volume => system_volume,
-
-      -- lcd
-      lcd_clk  => lcd_clk,
-      lcd_hs_n => lcd_hs,
-      lcd_vs_n => lcd_vs,
-      lcd_de   => lcd_de,
-      lcd_r    => lcd_r,
-      lcd_g    => lcd_g,
-      lcd_b    => lcd_b,
-      lcd_bl   => lcd_bl,
-
-      hp_bck   => hp_bck,
-      hp_ws    => hp_ws,
-      hp_din   => hp_din,
-      pa_en    => pa_en
-      );
 
 addr <= io_cycle_addr when io_cycle ='1' else reu_ram_addr(22 downto 0) when ext_cycle = '1' else cart_addr;
 cs <= io_cycle_ce when io_cycle ='1' else reu_ram_ce when ext_cycle = '1' else cart_ce; 

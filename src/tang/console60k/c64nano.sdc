@@ -6,7 +6,7 @@
 create_clock -name spi_clk -period 50 -waveform {0 25} [get_ports {spi_sclk}]
 create_clock -name ds_clk -period 500 -waveform {0 250} [get_nets {gamepad_p1/clk_spi}]
 create_clock -name ds2_clk -period 500 -waveform {0 250} [get_nets {gamepad_p2/clk_spi}]
-create_clock -name i2sclk -period 500 -waveform {0 250} [get_nets {video_inst/i2s_clk}]
+//create_clock -name i2sclk -period 500 -waveform {0 250} [get_nets {video_inst/i2s_clk}]
 create_clock -name spi_io_clk -period 50 -waveform {0 25} [get_nets {spi_io_clk}]
 create_clock -name clk64 -period 15.842 -waveform {0 7} [get_nets {clk64}]
 create_clock -name clk64_pal -period 15.842 -waveform {0 7} [get_nets {clk64_pal}]

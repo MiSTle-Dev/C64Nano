@@ -45,6 +45,7 @@
         <File path="src/tang/console60k/hdmi/serializer.sv" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/hdmi/source_product_description_info_frame.sv" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/hdmi/tmds_channel.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hq2x.sv" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/pll_27.v" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/pll_27_mod.v" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/pll_ddr3.v" type="file.verilog" enable="1"/>
@@ -55,7 +56,8 @@
         <File path="src/tang/console60k/pll_mDRP_intf.v" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/scandoubler.v" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/video_freezer.sv" type="file.verilog" enable="1"/>
-        <File path="src/tang/console60k/video_sd.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/video_mixer.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/video_sd.v" type="file.verilog" enable="0"/>
         <File path="src/uart6551/io_fifo.v" type="file.verilog" enable="1"/>
         <File path="src/uart6551/uart_6551.v" type="file.verilog" enable="1"/>
         <File path="src/c1530.vhd" type="file.vhdl" enable="1"/>
