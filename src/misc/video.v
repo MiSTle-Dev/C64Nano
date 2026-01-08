@@ -9,6 +9,9 @@ module video (
           input    ntscmode,
 	      input	   vs_in_n,
 	      input	   hs_in_n,
+          input    HBlank,
+	      input    VBlank,
+
 
 	      input [3:0]  r_in,
 	      input [3:0]  g_in,
@@ -17,6 +20,8 @@ module video (
           input [17:0] audio_l,
           input [17:0] audio_r,
 
+          input HDMI_FREEZE,
+          output freeze_sync,
           output osd_status,
 
           // (spi) interface from MCU
@@ -57,13 +62,30 @@ always @(posedge clk) begin
     end
 end
 
+wire frz_hs, frz_vs;
+wire frz_hbl, frz_vbl;
+video_freezer freezer
+(
+	.clk(clk),
+	.freeze(HDMI_FREEZE),
+	.hs_in(hs_in_n),
+	.vs_in(vs_in_n),
+	.hbl_in(HBlank),
+	.vbl_in(VBlank),
+	.sync(freeze_sync),
+	.hs_out(frz_hs),
+	.vs_out(frz_vs),
+	.hbl_out(frz_hbl),
+	.vbl_out(frz_vbl)
+);
+
 wire vreset;
 wire [1:0] vmode;
 
 video_analyzer video_analyzer (
    .clk(clk),
-   .vs(vs_in_n),
-   .hs(hs_in_n),
+   .vs(frz_vs),
+   .hs(frz_hs),
    .de(1'b1),
    .ntscmode(ntscmode),
    .mode(vmode),
@@ -86,8 +108,8 @@ scandoubler #(11) scandoubler (
         .scanlines(system_scanlines),
 
         // shifter video interface
-        .hs_in(hs_in_n),
-        .vs_in(vs_in_n),
+        .hs_in(frz_hs),
+        .vs_in(frz_vs),
         .r_in( r_in ),
         .g_in( g_in ),
         .b_in( b_in ),

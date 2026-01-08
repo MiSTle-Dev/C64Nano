@@ -70,6 +70,7 @@ reg  [10:0] max_line_width;
 reg   [9:0] line_count;
 reg         de_r;
 reg         vs_r;
+reg vsD, hsD;
 
 assign fb_size_valid = (fb_width != 0) && (fb_height != 0);
 
@@ -86,16 +87,17 @@ always @(posedge clk_vga) begin
         if (vga_ce) begin
             de_r <= vga_de;
             vs_r <= vga_vs;
+            hsD <= vga_hs;
 
             // Count active pixels in the line
-            if (vga_de) begin
-                if (!de_r)   // Start of active portion of a line
-                    cur_line_width <= 1;
-                else
-                    cur_line_width <= cur_line_width + 1'b1;
-            end
+          if (vga_de) begin
+             if (!de_r)   // Start of active portion of a line
+               cur_line_width <= 1;
+             else
+               cur_line_width <= cur_line_width + 1'b1;
+             end
             // End of active portion of a line
-            if (!vga_de && de_r) begin
+            if(vga_hs && !hsD) begin
                 if (cur_line_width > max_line_width)
                     max_line_width <= cur_line_width;
                 if (cur_line_width != 0)
@@ -192,7 +194,7 @@ ddr3_framebuffer #(
     .fb_height(overlay ? 224 : fb_height),
     .disp_width(960),         // 960x720 is 4:3
     .fb_vsync(vsync),
-    .fb_we(overlay ? overlay_we : vga_ce && vga_de),
+    .fb_we(vga_hs && !hsD),
     // Pack VGA RGB888 to RGB666 expected by framebuffer: {R[7:2], G[7:2], B[7:2]}
     // Previously this passed a 24-bit {R,G,B} vector into an 18-bit port, causing truncation
     // and channel mixing on hardware (red/green swapped/garbled). Simulation bypassed this path.
