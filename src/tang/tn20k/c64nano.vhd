@@ -223,9 +223,10 @@ signal mouse_x        : signed(7 downto 0);
 signal mouse_y        : signed(7 downto 0);
 signal mouse_strobe   : std_logic;
 signal freeze         : std_logic;
+signal freeze_sync    : std_logic;
 signal c64_pause      : std_logic;
 signal old_sync       : std_logic;
-signal osd_status     : std_logic;
+signal osd_status     : std_logic := '0';
 signal ws2812_color   : std_logic_vector(23 downto 0);
 signal system_reset   : std_logic_vector(1 downto 0);
 signal disk_reset     : std_logic;
@@ -484,6 +485,11 @@ signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
 signal m0s_d, m0s_d1    : std_logic;
+signal hblank, vblank, hsync_out, vsync_out : std_logic;
+signal frz_hs          : std_logic;
+signal frz_vs          : std_logic;
+signal frz_hbl         : std_logic;
+signal frz_vbl         : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -808,6 +814,30 @@ cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_fin
 audio_l <= audio_data_l or (5x"00" & cass_snd & 12x"00000");
 audio_r <= audio_data_r or (5x"00" & cass_snd & 12x"00000");
 
+video_sync_inst: entity work.video_sync
+port map(
+	clk32   => clk32,
+	pause   => c64_pause,
+	hsync   => hsync,
+	vsync   => vsync,
+	ntsc    => ntscMode,
+	wide    => system_wide_screen,
+	hsync_out => hsync_out,
+	vsync_out => vsync_out,
+	hblank  => hblank,
+	vblank  => vblank
+);
+
+process(clk32)
+begin
+  if rising_edge(clk32) then
+    old_sync <= freeze_sync;
+    if old_sync xor freeze_sync then
+      freeze <= osd_status and system_pause;
+    end if;
+  end if;
+end process;
+
 video_inst: entity work.video 
 port map(
       pll_lock     => pll_locked, 
@@ -816,8 +846,10 @@ port map(
       audio_div    => audio_div,
 
       ntscmode  => ntscMode,
-      hs_in_n   => hsync,
-      vs_in_n   => vsync,
+      hs_in_n   => hsync_out,
+      vs_in_n   => vsync_out,
+      HBlank    => hblank,
+      VBlank    => vblank,
 
       r_in      => std_logic_vector(r(7 downto 4)),
       g_in      => std_logic_vector(g(7 downto 4)),
@@ -826,6 +858,9 @@ port map(
       audio_l => audio_l,  -- interface C64 core specific
       audio_r => audio_r,
       osd_status => osd_status,
+
+	    HDMI_FREEZE => freeze,
+	    freeze_sync => freeze_sync,
 
       mcu_start => mcu_start,
       mcu_osd_strobe => mcu_osd_strobe,
@@ -1357,7 +1392,7 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   clk32        => clk32,
   reset_n      => reset_n,
   bios         => "00",
-  pause        => '0',
+  pause        => freeze,
   pause_out    => c64_pause,
 
   usb_key      => usb_key,

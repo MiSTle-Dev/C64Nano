@@ -498,6 +498,9 @@ signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
 signal m0s_d, m0s_d1    : std_logic;
+signal mos2_filtered    : std_logic;
+signal osc_clk          : std_logic;
+signal osc_rstn         : std_logic := '0';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -533,6 +536,12 @@ component DCS
     );
  end component;
 
+component Gowin_OSC
+    port (
+        oscout: out std_logic
+    );
+end component;
+
 begin
 
   -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
@@ -546,18 +555,43 @@ begin
 -- ----------------- SPI input parser ----------------------
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi, then the connection is being switched
-process (all)
+
+osc_inst: Gowin_OSC
+	port map (
+		oscout=> osc_clk
+ );
+
+process(osc_clk)
+variable rst_cnt : integer := 1000000;
+  begin
+    if rising_edge(osc_clk) then
+      if rst_cnt /= 0 then
+        rst_cnt := rst_cnt - 1;
+      elsif rst_cnt = 0 then
+        osc_rstn <= '1';
+    end if;
+  end if;
+end process;
+
+gf_inst: entity work.glitch_filter
+  port map (
+    clk  => osc_clk,
+    rstn => osc_rstn,
+    din  => m0s(2),
+    dout => mos2_filtered
+  );
+
+process (osc_clk, osc_rstn)
 begin
-  if flash_lock = '0' then
+  if osc_rstn = '0' then
     spi_ext <= '0';
     m0s_d <= '1';
     m0s_d1 <= '1';
-  elsif rising_edge(flash_clk) then
+  elsif rising_edge(osc_clk) then
     m0s_d <= m0s(2);
     m0s_d1 <= m0s_d;
     if m0s_d1 = '1' and m0s_d = '0' then
-    --spi_ext <= '1';
-      spi_ext <= '0'; -- workaround
+    spi_ext <= '1'; -- check
     end if;
   end if;
 end process;

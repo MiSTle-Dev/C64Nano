@@ -7,34 +7,23 @@
     <FileList>
         <File path="src/c1541/mist_sd_card.sv" type="file.verilog" enable="1"/>
         <File path="src/cartridge.v" type="file.verilog" enable="1"/>
+        <File path="src/ddr3_memory_interface/ddr3_memory_interface.v" type="file.verilog" enable="1"/>
         <File path="src/dualshock2.v" type="file.verilog" enable="1"/>
         <File path="src/gen_uart.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_dpb/gowin_dpb_track_buffer_b.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_dpb/gowin_dpb_trkbuf.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_dpb/sector_dpram.v" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/audio_clock_regeneration_packet.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/audio_info_frame.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/audio_sample_packet.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/auxiliary_video_information_info_frame.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/hdmi.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/packet_assembler.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/packet_picker.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/serializer.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/source_product_description_info_frame.sv" type="file.verilog" enable="1"/>
-        <File path="src/hdmi/tmds_channel.sv" type="file.verilog" enable="1"/>
         <File path="src/loader_sd_card.sv" type="file.verilog" enable="1"/>
         <File path="src/misc/flash_dspi_gw5a.v" type="file.verilog" enable="1"/>
         <File path="src/misc/hid.v" type="file.verilog" enable="1"/>
         <File path="src/misc/mcu_spi.v" type="file.verilog" enable="1"/>
         <File path="src/misc/osd_u8g2.v" type="file.verilog" enable="1"/>
-        <File path="src/misc/scandoubler.v" type="file.verilog" enable="1"/>
         <File path="src/misc/sd_card.v" type="file.verilog" enable="1"/>
         <File path="src/misc/sd_rw.v" type="file.verilog" enable="1"/>
         <File path="src/misc/sdcmd_ctrl.v" type="file.verilog" enable="1"/>
         <File path="src/misc/sysctrl.v" type="file.verilog" enable="1"/>
         <File path="src/misc/video_analyzer.v" type="file.verilog" enable="1"/>
         <File path="src/mos6526.v" type="file.verilog" enable="1"/>
-        <File path="src/pll_init.v" type="file.verilog" enable="1"/>
         <File path="src/reu.v" type="file.verilog" enable="1"/>
         <File path="src/sdram.v" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_dac.sv" type="file.verilog" enable="1"/>
@@ -43,7 +32,32 @@
         <File path="src/sid/sid_tables.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_top.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_voice.sv" type="file.verilog" enable="1"/>
-        <File path="src/tang/console60k/video.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/ao486_to_hdmi.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/async_fifo.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/ddr3_framebuffer.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hdmi/audio_clock_regeneration_packet.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hdmi/audio_info_frame.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hdmi/audio_sample_packet.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hdmi/auxiliary_video_information_info_frame.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hdmi/hdmi.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hdmi/packet_assembler.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hdmi/packet_picker.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hdmi/serializer.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hdmi/source_product_description_info_frame.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hdmi/tmds_channel.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/hq2x.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/pll_27.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/pll_27_mod.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/pll_ddr3.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/pll_ddr3_mod.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/pll_hdmi.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/pll_hdmi_mod.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/pll_init.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/pll_mDRP_intf.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/scandoubler.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/video_freezer.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/video_mixer.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/console60k/video_sd.v" type="file.verilog" enable="0"/>
         <File path="src/uart6551/io_fifo.v" type="file.verilog" enable="1"/>
         <File path="src/uart6551/uart_6551.v" type="file.verilog" enable="1"/>
         <File path="src/c1530.vhd" type="file.vhdl" enable="1"/>
@@ -72,6 +86,7 @@
         <File path="src/t65/T65_MCode.vhd" type="file.vhdl" enable="1"/>
         <File path="src/t65/T65_Pack.vhd" type="file.vhdl" enable="1"/>
         <File path="src/tang/console60k/c64nano.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/tang/console60k/video_sync.vhd" type="file.vhdl" enable="1"/>
         <File path="src/uart6551/BaudRate.vhd" type="file.vhdl" enable="1"/>
         <File path="src/video_vicII_656x.vhd" type="file.vhdl" enable="1"/>
         <File path="src/tang/console60k/c64nano.cst" type="file.cst" enable="1"/>
