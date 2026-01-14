@@ -21,9 +21,6 @@ entity c64nano_top is
    );
   port
   (
-    -- block JTAG signals from V_JTAGSELN automatic pin placement
-    jtagblock   : out std_logic_vector(2 downto 0) := (others => '1');
-    jtagseln    : out std_logic := '0';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
@@ -32,13 +29,9 @@ entity c64nano_top is
     io          : in std_logic_vector(5 downto 0); -- JS0 Joystick D9
     -- USB-C BL616 UART
     uart_rx     : in std_logic;
-    uart_tx     : out std_logic;
+  --uart_tx     : out std_logic; -- is now spi_irqn ! 
     -- monitor port
     bl616_mon_tx : out std_logic;
-    bl616_mon_rx : in std_logic;
-    -- external hw pin UART
-    --uart_ext_rx : in std_logic;
-    --uart_ext_tx : out std_logic;
     -- SPI interface external uC
     m0s         : inout std_logic_vector(4 downto 0) := (others => 'Z');
     -- SPI connection to onboard BL616
@@ -551,15 +544,8 @@ end component;
 
 begin
 
-  -- tristate JTAG TMS, TCK, TDI signals if V_JTAGSELN in JTAG mode
-  jtagblock <= "ZZZ" when jtagseln = '0' else "111";
-  -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
-  jtagseln <= '0' when pll_locked = '0' or (reset and user) = '1' else '1';
-  reconfign <= 'Z';  -- for future use
-  -- BL616 console to hw pins for external USB-UART adapter
-  -- tristate JTAG TDO for V_JTAGSELN in JTAG mode
-  uart_tx <= 'Z' when jtagseln = '0' or spi_ext = '1' else bl616_mon_rx;
-  bl616_mon_tx <= uart_rx;
+  reconfign <= 'Z';
+  bl616_mon_tx <= uart_rx; -- BL616 console debug output
 
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi (M0S Dock) , then the connection is being switched
@@ -585,7 +571,7 @@ end process;
 
   -- onboard BL616
   -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
-  spi_dir     <= spi_io_dout when jtagseln = '1' else 'Z';
+  spi_dir     <= spi_io_dout;
   spi_irqn    <= uart_tx_i when spi_ext = '1' else int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
@@ -1523,7 +1509,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => flash_clk,
-    resetn    => flash_lock and jtagseln,
+    resetn    => flash_lock,
     ready     => flash_ready,
     busy      => open,
     address   => (X"2" & "000" & dos_sel & c1541rom_addr),
@@ -1923,7 +1909,6 @@ port map (
 
 -- external HW pin UART interface
 uart_rx_muxed <= uart_rx when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
-uart_ext_tx <= uart_tx;
 
 -- UART_RX synchronizer
 process(clk32)

@@ -21,6 +21,7 @@ entity c64nano_top is
    );
   port
   (
+    bl616_nJTAGSEL : in std_logic;
     jtagseln    : out std_logic := '0';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
@@ -28,12 +29,9 @@ entity c64nano_top is
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(1 downto 0);
     -- onboard USB-C Tang BL616 UART
-    uart_rx     : in std_logic;
-    uart_tx     : out std_logic;
-    -- monitor port
-    bl616_mon_tx : out std_logic;
-    bl616_mon_rx : in std_logic;
-   -- external hw pin UART
+    --uart_rx     : in std_logic;
+    --uart_tx     : out std_logic;
+    -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
     -- SPI connection to onboard BL616
@@ -528,19 +526,14 @@ component DCS
  end component;
 
 begin
-
-  -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
-  jtagseln <= '0' when pll_locked = '0' or (reset and user) = '0' else '1';
-  reconfign <= 'Z';  -- for future use
-  -- BL616 console to hw pins for external USB-UART adapter
-  uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
-  bl616_mon_tx <= uart_rx;
+  jtagseln <= '0' when bl616_nJTAGSEL = '0' or reset = '0' or user = '0' else '1';
+  reconfign <= 'Z';
 
   -- internal BL616 controller
   spi_io_din  <= spi_dat;
   spi_io_ss   <= spi_csn;
   spi_io_clk  <= spi_sclk;
-  spi_dir     <= spi_io_dout; -- when jtagseln = '1' else 'Z';
+  spi_dir     <= spi_io_dout when bl616_nJTAGSEL = '1' else 'Z';
   spi_irqn    <= int_out_n;
 
 gamepad_p1: entity work.dualshock2
@@ -1462,7 +1455,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => clk64_pal,
-    resetn    => pll_locked_pal, -- and jtagseln,
+    resetn    => pll_locked_pal and jtagseln,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),
@@ -1861,8 +1854,8 @@ port map (
 );
 
 -- external HW pin UART interface
-uart_rx_muxed <= uart_rx when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
-uart_ext_tx <= uart_tx;
+uart_rx_muxed <= uart_ext_rx when system_uart = "01" else '1';
+uart_ext_tx <= uart_tx_i;
 
 -- UART_RX synchronizer
 process(clk32)

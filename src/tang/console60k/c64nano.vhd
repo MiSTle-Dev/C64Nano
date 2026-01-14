@@ -21,6 +21,7 @@ entity c64nano_top is
    );
   port
   (
+    bl616_nJTAGSEL : in std_logic;
     jtagseln    : out std_logic := '0';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
@@ -28,11 +29,8 @@ entity c64nano_top is
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(1 downto 0);
     -- onboard USB-C Tang BL616 UART
-    uart_rx     : in std_logic;
-    uart_tx     : out std_logic;
-    -- monitor port
-    bl616_mon_tx : out std_logic;
-    bl616_mon_rx : in std_logic;
+  --uart_rx     : in std_logic;  -- is now bl616_nJTAGSEL ! 
+  --uart_tx     : out std_logic; -- is now spi_irqn ! 
     -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
@@ -530,13 +528,8 @@ component DCS
  end component;
 
 begin
-
-  -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
-  jtagseln <= '0' when pll_locked = '0' or (reset and user) = '0' else '1';
-  reconfign <= 'Z';  -- for future use
-  -- BL616 console to hw pins for external USB-UART adapter
-  uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
-  bl616_mon_tx <= uart_rx;
+  jtagseln <= '0' when bl616_nJTAGSEL = '0' or reset = '0' or user = '0' else '1';
+  reconfign <= 'Z';
 
 -- ----------------- SPI input parser ----------------------
 -- by default the internal SPI is being used. Once there is
@@ -563,7 +556,7 @@ end process;
 
   -- onboard BL616
   -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
-  spi_dir     <= spi_io_dout when jtagseln = '1' else 'Z';
+  spi_dir     <= spi_io_dout when bl616_nJTAGSEL = '1' else 'Z';
   spi_irqn    <= uart_tx_i when spi_ext = '1' else int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
@@ -1887,8 +1880,8 @@ port map (
 );
 
 -- external HW pin UART interface
-uart_rx_muxed <= uart_rx when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
-uart_ext_tx <= uart_tx;
+uart_rx_muxed <= bl616_nJTAGSEL when spi_ext <= '1' and system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
+uart_ext_tx <= uart_tx_i;
 
 -- UART_RX synchronizer
 process(clk32)
