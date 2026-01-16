@@ -22,7 +22,7 @@ entity c64nano_top is
   port
   (
     bl616_nJTAGSEL : in std_logic;
-    jtagseln    : out std_logic := '0';
+    jtagseln    : out std_logic := '1';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
@@ -526,14 +526,14 @@ component DCS
  end component;
 
 begin
-  jtagseln <= '0' when bl616_nJTAGSEL = '0' or reset = '0' or user = '0' else '1';
+  jtagseln <= '0' when pll_locked = '0' or bl616_nJTAGSEL = '0' or reset = '0' else '1';
   reconfign <= 'Z';
 
   -- internal BL616 controller
   spi_io_din  <= spi_dat;
   spi_io_ss   <= spi_csn;
   spi_io_clk  <= spi_sclk;
-  spi_dir     <= spi_io_dout when bl616_nJTAGSEL = '1' else 'Z';
+  spi_dir     <= spi_io_dout;
   spi_irqn    <= int_out_n;
 
 gamepad_p1: entity work.dualshock2
@@ -1455,7 +1455,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => clk64_pal,
-    resetn    => pll_locked_pal and jtagseln,
+    resetn    => pll_locked_pal,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),

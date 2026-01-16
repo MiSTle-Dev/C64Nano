@@ -21,9 +21,6 @@ entity c64nano_top is
    );
   port
   (
-    -- block JTAG signals from V_JTAGSELN automatic pin placement
-    jtagblock   : out std_logic_vector(2 downto 0) := (others => '1');
-    jtagseln    : out std_logic := '0';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
@@ -546,10 +543,6 @@ end component;
 
 begin
 
-  -- tristate JTAG TMS, TCK, TDI signals if V_JTAGSELN in JTAG mode
-  jtagblock <= "ZZZ" when jtagseln = '0' else "111";
-  -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
-  jtagseln <= '0' when pll_locked = '0' or (reset and user) = '1' else '1';
   reconfign <= 'Z';
   -- onboard BL616
   spi_io_din  <= spi_dat;
@@ -1463,7 +1456,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => flash_clk,
-    resetn    => flash_lock and jtagseln,
+    resetn    => flash_lock,
     ready     => flash_ready,
     busy      => open,
     address   => (X"2" & "000" & dos_sel & c1541rom_addr),
