@@ -22,7 +22,7 @@ entity c64nano_top is
   port
   (
     bl616_nJTAGSEL : in std_logic;
-    jtagseln    : out std_logic := '0';
+    jtagseln    : out std_logic := '1';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
@@ -528,7 +528,7 @@ component DCS
  end component;
 
 begin
-  jtagseln <= '0' when bl616_nJTAGSEL = '0' or reset = '0' or user = '0' else '1';
+  jtagseln <= '0' when pll_locked = '0' or bl616_nJTAGSEL = '0' or reset = '0' else '1';
   reconfign <= 'Z';
 
 -- ----------------- SPI input parser ----------------------
@@ -553,10 +553,7 @@ end process;
   spi_io_din  <= m0s(1) when spi_ext = '1' else spi_dat;
   spi_io_ss   <= m0s(2) when spi_ext = '1' else spi_csn;
   spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
-
-  -- onboard BL616
-  -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
-  spi_dir     <= spi_io_dout when bl616_nJTAGSEL = '1' else 'Z';
+  spi_dir     <= spi_io_dout;
   spi_irqn    <= uart_tx_i when spi_ext = '1' else int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
@@ -1481,7 +1478,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => clk64_pal,
-    resetn    => pll_locked_pal and jtagseln,
+    resetn    => pll_locked_pal,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),
