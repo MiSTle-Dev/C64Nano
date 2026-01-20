@@ -20,8 +20,9 @@ entity c64nano_top is
    U6551 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
-  (
-    jtagseln    : out std_logic := '0';
+  (     
+    bl616_nJTAGSEL : in std_logic;
+    jtagseln    : out std_logic := '1';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
@@ -34,7 +35,6 @@ entity c64nano_top is
     -- monitor port
     twimux       : out std_logic_vector(2 downto 0);
     bl616_mon_tx : out std_logic;
-    bl616_mon_rx : in std_logic;
    -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
@@ -534,15 +534,12 @@ component DCS
  end component;
 
 begin
-
-  -- V_JTAGSELN to JTAG mode when both TANG buttons S1 and S2 are pressed
-  jtagseln <= pll_locked; -- '0' when pll_locked = '0' or (reset and user) = '0' else '1';
+  jtagseln <= '0' when pll_locked = '0' or bl616_nJTAGSEL = '0' or reset = '0' else '1';
   reconfign <= 'Z';  -- for future use
   twimux <= "100"; -- connect BL616 TWI4 PLL1
   -- BL616 console to hw pins for external USB-UART adapter
-  uart_tx <= bl616_mon_rx when spi_ext = '0' else 'Z';
   bl616_mon_tx <= uart_rx;
-
+  uart_tx <= '1';  -- not used
 -- ----------------- SPI input parser ----------------------
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi, then the connection is being switched
@@ -566,11 +563,8 @@ end process;
   spi_io_din  <= m0s(1) when spi_ext = '1' else spi_dat;
   spi_io_ss   <= m0s(2) when spi_ext = '1' else spi_csn;
   spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
-
-  -- onboard BL616
-  -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
-  spi_dir     <= spi_io_dout; -- when jtagseln = '1' else 'Z'; -- workaround
-  spi_irqn    <= int_out_n;  -- when spi_ext = '1' else uart_tx_i
+  spi_dir     <= spi_io_dout;
+  spi_irqn    <= int_out_n;
   -- external M0S Dock BL616 / PiPico  / ESP32
   m0s(0)      <= spi_io_dout;
   m0s(4)      <= int_out_n;
