@@ -2,7 +2,9 @@ IO_PORT "reconfign" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 IO_LOC  "reconfign" D8;
 
 NET_LOC "jtagseln" V_JTAGSELN;
-IO_PORT "jtagseln" PULL_MODE=DOWN IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
+
+IO_LOC "bl616_JTAGSEL" B3; // former BL616 UART output and FPGA input pin
+IO_PORT "bl616_JTAGSEL" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 
 // connections to the internal BL616 controller
 IO_LOC "spi_csn" B1; // TMS GPIO0 _SS
@@ -16,15 +18,15 @@ IO_PORT "spi_dir" PULL_MODE=NONE DRIVE=8 IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 IO_LOC "spi_irqn" C3; // UART TX
 IO_PORT "spi_irqn" PULL_MODE=NONE DRIVE=8 IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 
-IO_LOC "bl616_mon_tx" L6; // re-use USB A positive
-IO_PORT "bl616_mon_tx" DRIVE=4 IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
+//IO_LOC "bl616_mon_tx" L6; // re-use USB A positive
+//IO_PORT "bl616_mon_tx" DRIVE=4 IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 //IO_LOC "bl616_mon_rx" K6; // re-use USB-A negative
 //IO_PORT "bl616_mon_rx" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 
 // tang onboard bl616 µc uart
-IO_LOC "uart_rx" B3;
+//IO_LOC "uart_rx" B3;
 //IO_LOC "uart_tx" C3;
-IO_PORT "uart_rx" IO_TYPE=LVCMOS33;
+//IO_PORT "uart_rx" IO_TYPE=LVCMOS33;
 //IO_PORT "uart_tx" IO_TYPE=LVCMOS33;
 
 // HDMI (USB-A side PMOD)

@@ -5,12 +5,12 @@
 --Part Number: GW5AST-LV138PG484AC1/I0
 --Device: GW5AST-138
 --Device Version: B
---Created Time: Fri Jan 23 21:38:06 2026
+--Created Time: Fri Jan 23 21:36:38 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-entity Gowin_PLL_138k_pal_MOD is
+entity Gowin_PLL_138k_ntsc_MOD is
     port (
         lock: out std_logic;
         clkout0: out std_logic;
@@ -23,9 +23,9 @@ entity Gowin_PLL_138k_pal_MOD is
         lpfres: in std_logic_vector(2 downto 0);
         lpfcap: in std_logic_vector(1 downto 0)
     );
-end Gowin_PLL_138k_pal_MOD;
+end Gowin_PLL_138k_ntsc_MOD;
 
-architecture Behavioral of Gowin_PLL_138k_pal_MOD is
+architecture Behavioral of Gowin_PLL_138k_ntsc_MOD is
 
     signal clkout4: std_logic;
     signal clkout5: std_logic;
@@ -229,16 +229,16 @@ begin
     PLL_inst: PLL
         generic map (
             FCLKIN => "50",
-            IDIV_SEL => 1,
+            IDIV_SEL => 2,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 4,
-            ODIV1_SEL => 8,
-            ODIV2_SEL => 20,
-            ODIV3_SEL => 20,
+            ODIV0_SEL => 3,
+            ODIV1_SEL => 6,
+            ODIV2_SEL => 15,
+            ODIV3_SEL => 30,
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
-            MDIV_SEL => 25,
+            MDIV_SEL => 39,
             MDIV_FRAC_SEL => 2,
             ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
@@ -278,7 +278,7 @@ begin
             CLKOUT1_PE_FINE => 0,
             CLKOUT2_PE_COARSE => 0,
             CLKOUT2_PE_FINE => 0,
-            CLKOUT3_PE_COARSE => 10,
+            CLKOUT3_PE_COARSE => 0,
             CLKOUT3_PE_FINE => 0,
             CLKOUT4_PE_COARSE => 0,
             CLKOUT4_PE_FINE => 0,
@@ -374,4 +374,4 @@ begin
             SSCMDSEL_FRAC => SSCMDSEL_FRAC_i
         );
 
-end Behavioral; --Gowin_PLL_138k_pal_MOD
+end Behavioral; --Gowin_PLL_138k_ntsc_MOD
