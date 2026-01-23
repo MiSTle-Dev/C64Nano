@@ -21,7 +21,7 @@ entity c64nano_top is
    );
   port
   (
-    bl616_nJTAGSEL : in std_logic;
+    bl616_JTAGSEL : in std_logic;
     jtagseln    : out std_logic := '1';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
@@ -29,8 +29,10 @@ entity c64nano_top is
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(1 downto 0);
     -- onboard USB-C Tang BL616 UART
-  --uart_rx     : in std_logic;  -- is now bl616_nJTAGSEL ! 
-  --uart_tx     : out std_logic; -- is now spi_irqn ! 
+    uart_rx     : in std_logic; 
+  --uart_tx     : out std_logic;
+    -- monitor port
+    bl616_mon_tx : out std_logic;
     -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
@@ -492,6 +494,8 @@ signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
 signal m0s_d, m0s_d1    : std_logic;
+signal clkosc, btn_lock : std_logic := '0';
+signal btn_cnt          : std_logic_vector(31 downto 0) := x"00D00000"; -- ~5 sec
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -527,9 +531,56 @@ component DCS
     );
  end component;
 
+-- 210MHz oscillator
+-- GW5AST138K
+component OSC
+  generic (
+  FREQ_DIV:integer:=126
+  );
+  port(
+    OSCOUT:OUT STD_LOGIC
+  );
+end component;
+
+-- 210MHz oscillator
+-- GW5AT60 and GW5A25
+component OSCA
+  generic (
+  FREQ_DIV:integer:=126
+  );
+  port(
+    OSCOUT:OUT STD_LOGIC;
+    OSCEN :IN STD_LOGIC
+  );
+end component;
+
 begin
-  jtagseln <= '0' when pll_locked = '0' or bl616_nJTAGSEL = '0' or reset = '0' else '1';
+  -- bl616_JTAGSEL is by default in PC programmer mode high (uart tx) -> JTAG
+  -- and will be set by BL616 in companion mode to low -> SPI
+  jtagseln <= '0' when bl616_JTAGSEL = '1' or (btn_lock or reset) = '0' else '1';
   reconfign <= 'Z';
+  -- BL616 console to hw pins for external USB-UART adapter
+  bl616_mon_tx <= uart_rx;
+
+osc_inst: OSCA
+generic map (
+    FREQ_DIV => 126 -- 1.67MHz
+)
+port map (
+    OSCOUT => clkosc,
+    OSCEN  => '1'
+ );
+
+process(clkosc)
+  begin
+  if rising_edge(clkosc) then
+    if btn_cnt /= 0 then
+      btn_cnt <= btn_cnt - 1;
+    elsif btn_cnt = 0 then 
+      btn_lock <= '1';
+    end if;
+  end if;
+end process;
 
 -- ----------------- SPI input parser ----------------------
 -- by default the internal SPI is being used. Once there is
@@ -1478,7 +1529,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => clk64_pal,
-    resetn    => pll_locked_pal,
+    resetn    => pll_locked_pal and jtagseln,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),
@@ -1877,7 +1928,7 @@ port map (
 );
 
 -- external HW pin UART interface
-uart_rx_muxed <= bl616_nJTAGSEL when spi_ext <= '1' and system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
+uart_rx_muxed <= bl616_JTAGSEL when spi_ext <= '1' and system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
 uart_ext_tx <= uart_tx_i;
 
 -- UART_RX synchronizer
