@@ -21,6 +21,7 @@ entity c64nano_top is
    );
   port
   (
+    S3           : in std_logic; -- button S3
     bl616_JTAGSEL : in std_logic;
     jtagseln    : out std_logic;
     reconfign   : out std_logic := 'Z';
@@ -497,9 +498,12 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d, m0s_d1    : std_logic;
-signal clkosc, btn_lock : std_logic := '0';
-signal btn_cnt          : std_logic_vector(31 downto 0) := x"00D00000"; -- ~5 sec
+signal m0s_d, m0s_d1    : std_logic := '1';
+signal clkosc           : std_logic; 
+signal btn_lock         : std_logic := '0';
+signal btn_cnt          : std_logic_vector(23 downto 0) := std_logic_vector(to_unsigned(1666666*8, 24));
+signal core_cnt         : std_logic_vector(23 downto 0) := std_logic_vector(to_unsigned(1666666*2, 24)); 
+signal core_release     : std_logic := '0';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -536,7 +540,6 @@ component DCS
  end component;
 
 -- 210MHz oscillator
--- GW5AST138K
 component OSC
   generic (
   FREQ_DIV:integer:=126
@@ -546,26 +549,7 @@ component OSC
   );
 end component;
 
--- 210MHz oscillator
--- GW5AT60 and GW5A25
-component OSCA
-  generic (
-  FREQ_DIV:integer:=126
-  );
-  port(
-    OSCOUT:OUT STD_LOGIC;
-    OSCEN :IN STD_LOGIC
-  );
-end component;
-
 begin
-  -- bl616_JTAGSEL is by default in PC programmer mode high (uart tx) -> JTAG
-  -- and will be set by BL616 in companion mode to low -> SPI
-  jtagseln <= '0' when bl616_JTAGSEL = '1' or (btn_lock or reset) = '0' else '1';
-  reconfign <= 'Z';
-  twimux <= "100"; -- connect BL616 TWI4 PLL1
-  -- BL616 console to hw pins for external USB-UART adapter
-  bl616_mon_tx <= uart_rx;
 
 osc_inst: OSC
 generic map (
@@ -583,24 +567,33 @@ process(clkosc)
     elsif btn_cnt = 0 then 
       btn_lock <= '1';
     end if;
+
+    if core_cnt /= 0 then
+      core_cnt <= core_cnt - 1;
+    elsif core_cnt = 0 then 
+      core_release <= '1';
+    end if;
   end if;
 end process;
+
+  -- bl616_JTAGSEL is by default in PC programmer mode high (uart tx) -> JTAG
+  -- and will be set by BL616 in companion mode to low -> SPI. S3 is a debug feature
+  jtagseln <= '0' when bl616_JTAGSEL = '1' or (btn_lock or reset) = '0' or core_release = '0' or S3 = '0' else '1';
+  reconfign <= 'Z';
+  twimux <= "100"; -- connect BL616 TWI4 PLL1
+  -- BL616 console to hw pins for external USB-UART adapter
+  bl616_mon_tx <= uart_rx;
 
 -- ----------------- SPI input parser ----------------------
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi, then the connection is being switched
-process (all)
+process (clkosc)
 begin
-  if flash_lock = '0' then
-    spi_ext <= '0';
-    m0s_d <= '1';
-    m0s_d1 <= '1';
-  elsif rising_edge(flash_clk) then
-    m0s_d <= m0s(2);
+  if rising_edge(clkosc) then
+    m0s_d <= m0s(2) or not (btn_lock or reset);
     m0s_d1 <= m0s_d;
-    if m0s_d1 = '1' and m0s_d = '0' then
-    --spi_ext <= '1';
-      spi_ext <= '0'; -- workaround
+    if (m0s_d1 = '1') and (m0s_d = '0') then
+      spi_ext <= '1';
     end if;
   end if;
 end process;
