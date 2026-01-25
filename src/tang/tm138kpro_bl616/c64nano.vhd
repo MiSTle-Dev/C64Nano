@@ -21,7 +21,6 @@ entity c64nano_top is
    );
   port
   (
-    S3           : in std_logic; -- button S3
     bl616_JTAGSEL : in std_logic;
     jtagseln    : out std_logic;
     reconfign   : out std_logic := 'Z';
@@ -577,8 +576,8 @@ process(clkosc)
 end process;
 
   -- bl616_JTAGSEL is by default in PC programmer mode high (uart tx) -> JTAG
-  -- and will be set by BL616 in companion mode to low -> SPI. S3 is a debug feature
-  jtagseln <= '0' when bl616_JTAGSEL = '1' or (btn_lock or reset) = '0' or core_release = '0' or S3 = '0' else '1';
+  -- and will be set by BL616 in companion mode to low -> SPI.
+  jtagseln <= '0' when bl616_JTAGSEL = '1' or (btn_lock or reset) = '0' or core_release = '0' else '1';
   reconfign <= 'Z';
   twimux <= "100"; -- connect BL616 TWI4 PLL1
   -- BL616 console to hw pins for external USB-UART adapter
