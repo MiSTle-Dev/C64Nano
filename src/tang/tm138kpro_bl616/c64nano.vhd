@@ -501,7 +501,7 @@ signal m0s_d, m0s_d1    : std_logic := '1';
 signal clkosc           : std_logic; 
 signal btn_lock         : std_logic := '0';
 signal btn_cnt          : std_logic_vector(23 downto 0) := std_logic_vector(to_unsigned(1666666*8, 24));
-signal core_cnt         : std_logic_vector(23 downto 0) := std_logic_vector(to_unsigned(1666666*2, 24)); 
+signal core_cnt         : std_logic_vector(23 downto 0) := std_logic_vector(to_unsigned(1666666*3, 24)); 
 signal core_release     : std_logic := '0';
 
 -- 64k core ram                      0x000000
@@ -538,7 +538,6 @@ component DCS
     );
  end component;
 
--- 210MHz oscillator
 component OSC
   generic (
   FREQ_DIV:integer:=126
@@ -563,12 +562,14 @@ process(clkosc)
   if rising_edge(clkosc) then
     if btn_cnt /= 0 then
       btn_cnt <= btn_cnt - 1;
+      btn_lock <= '0';
     elsif btn_cnt = 0 then 
       btn_lock <= '1';
     end if;
 
     if core_cnt /= 0 then
       core_cnt <= core_cnt - 1;
+      core_release <= '0';
     elsif core_cnt = 0 then 
       core_release <= '1';
     end if;
@@ -589,10 +590,11 @@ end process;
 process (clkosc)
 begin
   if rising_edge(clkosc) then
-    m0s_d <= m0s(2) or not (btn_lock or reset);
+    m0s_d <= m0s(2) or not core_release;
     m0s_d1 <= m0s_d;
     if (m0s_d1 = '1') and (m0s_d = '0') then
-      spi_ext <= '1';
+    --spi_ext <= '1'; -- back-up
+      spi_ext <= '0';
     end if;
   end if;
 end process;
