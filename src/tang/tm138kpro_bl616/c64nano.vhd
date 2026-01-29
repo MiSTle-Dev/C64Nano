@@ -22,12 +22,15 @@ entity c64nano_top is
   port
   (
     bl616_JTAGSEL : in std_logic;
-    jtagseln    : out std_logic;
+    jtagseln    : out std_logic := '0';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
-    reset       : in std_logic; -- S2 button
-    user        : in std_logic; -- S1 button
+    reset       : in std_logic; -- S1 button
+    user        : in std_logic; -- S2 button
+    s0_key      : in std_logic; -- S0 button
+    som_key     : in std_logic; -- SOM button
     leds_n      : out std_logic_vector(5 downto 0);
+    somleds_n   : out std_logic_vector(1 downto 0);
     io          : in std_logic_vector(5 downto 0);
     -- USB-C BL616 UART
     uart_rx     : in std_logic;
@@ -39,7 +42,11 @@ entity c64nano_top is
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
     -- SPI interface external uC
-    m0s         : inout std_logic_vector(4 downto 0) := (others => 'Z');
+    --m0s0        : out std_logic;
+    --m0s1        : in std_logic;
+    --m0s2        : in std_logic;
+    --m0s3        : in std_logic;
+    --m0s4        : out std_logic;
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
     spi_csn     : in std_logic;
@@ -264,6 +271,7 @@ signal c1541_osd_reset : std_logic;
 signal system_wide_screen : std_logic;
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
+signal somleds        : std_logic_vector(1 downto 0);
 signal led1541        : std_logic;
 signal reu_cfg        : std_logic; 
 signal dma_req        : std_logic;
@@ -497,9 +505,10 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d, m0s_d1    : std_logic;
-signal clkosc, btn_lock : std_logic := '0';
-signal btn_cnt          : std_logic_vector(31 downto 0) := x"00D00000"; -- ~5 sec
+signal m0s_d, m0s_d1    : std_logic := '1';
+signal clkosc           : std_logic; 
+signal core_cnt         : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(1666666*8, 32)); 
+signal core_release     : std_logic := '0';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -535,8 +544,6 @@ component DCS
     );
  end component;
 
--- 210MHz oscillator
--- GW5AST138K
 component OSC
   generic (
   FREQ_DIV:integer:=126
@@ -546,26 +553,7 @@ component OSC
   );
 end component;
 
--- 210MHz oscillator
--- GW5AT60 and GW5A25
-component OSCA
-  generic (
-  FREQ_DIV:integer:=126
-  );
-  port(
-    OSCOUT:OUT STD_LOGIC;
-    OSCEN :IN STD_LOGIC
-  );
-end component;
-
 begin
-  -- bl616_JTAGSEL is by default in PC programmer mode high (uart tx) -> JTAG
-  -- and will be set by BL616 in companion mode to low -> SPI
-  jtagseln <= '0' when bl616_JTAGSEL = '1' or (btn_lock or reset) = '0' else '1';
-  reconfign <= 'Z';
-  twimux <= "100"; -- connect BL616 TWI4 PLL1
-  -- BL616 console to hw pins for external USB-UART adapter
-  bl616_mon_tx <= uart_rx;
 
 osc_inst: OSC
 generic map (
@@ -578,42 +566,31 @@ port map (
 process(clkosc)
   begin
   if rising_edge(clkosc) then
-    if btn_cnt /= 0 then
-      btn_cnt <= btn_cnt - 1;
-    elsif btn_cnt = 0 then 
-      btn_lock <= '1';
+    if core_cnt /= 0 then
+      core_cnt <= core_cnt - 1;
+    elsif core_cnt = 0 then 
+      core_release <= '1';
     end if;
   end if;
 end process;
 
--- ----------------- SPI input parser ----------------------
--- by default the internal SPI is being used. Once there is
--- a select from the external spi, then the connection is being switched
-process (all)
-begin
-  if flash_lock = '0' then
-    spi_ext <= '0';
-    m0s_d <= '1';
-    m0s_d1 <= '1';
-  elsif rising_edge(flash_clk) then
-    m0s_d <= m0s(2);
-    m0s_d1 <= m0s_d;
-    if m0s_d1 = '1' and m0s_d = '0' then
-    --spi_ext <= '1';
-      spi_ext <= '0'; -- workaround
-    end if;
-  end if;
-end process;
+  -- bl616_JTAGSEL is by default in PC programmer mode high (uart tx) -> JTAG
+  -- and will be set by BL616 in companion mode to low -> SPI.
+  jtagseln <= '0' when bl616_JTAGSEL = '1' or (core_release or reset) = '0' else '1';
+  reconfign <= 'Z';
+  -- reconfign <= '0' when bl616_RECONFIGn = '0' else 'Z';
+  twimux <= "100"; -- connect BL616 TWI4 PLL1
+  -- BL616 console to hw pins for external USB-UART adapter
+  bl616_mon_tx <= uart_rx;
 
-  -- map output data onto both spi outputs
-  spi_io_din  <= m0s(1) when spi_ext = '1' else spi_dat;
-  spi_io_ss   <= m0s(2) when spi_ext = '1' else spi_csn;
-  spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
-  spi_dir     <= spi_io_dout;
-  spi_irqn    <= int_out_n;
-  -- external M0S Dock BL616 / PiPico  / ESP32
-  m0s(0)      <= spi_io_dout;
-  m0s(4)      <= int_out_n;
+  somleds(0) <= '1' when (core_release or reset) = '0' else '0';
+  somleds(1) <= not jtagseln;
+
+  spi_io_din <= spi_dat;
+  spi_io_ss  <= spi_csn;
+  spi_io_clk <= spi_sclk;
+  spi_dir    <= spi_io_dout;
+  spi_irqn   <= int_out_n;
 
 gamepad_p1: entity work.dualshock2
     port map (
@@ -1049,6 +1026,7 @@ flashclock: entity work.Gowin_PLL_138k_flash_MOD
 );
 
 leds_n <=  not leds;
+somleds_n <=  not somleds;
 leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
