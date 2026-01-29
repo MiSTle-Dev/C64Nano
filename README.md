@@ -22,7 +22,7 @@ Original C64 core by Peter Wendrich and c1541 by [darfpga](https://github.com/da
 All HID components and MPU firmware by Till Harbaum
 
 Features:
-
+* support of Core load from FLASH or USB pendrive (Console SDcard + USB)
 * PAL 800x576p@50Hz or NTSC 800x480p@60Hz HDMI Video and Audio Output
 * TFT-LCD module 800x600 [SH500Q01Z](https://dl.sipeed.com/Accessories/LCD/500Q01Z-00%20spec.pdf) + Speaker support
 * USB Keyboard
