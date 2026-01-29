@@ -43,11 +43,11 @@ entity c64nano_top is
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
     -- SPI interface external uC
-    m0s0        : out std_logic;
-    m0s1        : in std_logic;
-    m0s2        : in std_logic;
-    m0s3        : in std_logic;
-    m0s4        : out std_logic;
+    --m0s0        : out std_logic;
+    --m0s1        : in std_logic;
+    --m0s2        : in std_logic;
+    --m0s3        : in std_logic;
+    --m0s4        : out std_logic;
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
     spi_csn     : in std_logic;
@@ -609,8 +609,8 @@ end process;
   spi_io_clk <= spi_sclk;
   spi_dir <= spi_io_dout;
   spi_irqn <= int_out_n;
-  m0s0 <= spi_io_dout;
-  m0s4 <= int_out_n;
+  --m0s0 <= spi_io_dout;
+  --m0s4 <= int_out_n;
 
 gamepad_p1: entity work.dualshock2
     port map (
