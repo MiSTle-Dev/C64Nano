@@ -22,12 +22,11 @@ entity c64nano_top is
   port
   (
     bl616_JTAGSEL : in std_logic;
-    bl616_RECONFIGn : in std_logic;
-    jtagseln    : out std_logic;
+    jtagseln    : out std_logic := '0';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
-    reset       : in std_logic; -- S2 button
-    user        : in std_logic; -- S1 button
+    reset       : in std_logic; -- S1 button
+    user        : in std_logic; -- S2 button
     s0_key      : in std_logic; -- S0 button
     som_key     : in std_logic; -- SOM button
     leds_n      : out std_logic_vector(5 downto 0);
@@ -508,9 +507,7 @@ signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
 signal m0s_d, m0s_d1    : std_logic := '1';
 signal clkosc           : std_logic; 
-signal btn_lock         : std_logic := '0';
-signal btn_cnt          : std_logic_vector(23 downto 0) := std_logic_vector(to_unsigned(1666666*8, 24));
-signal core_cnt         : std_logic_vector(23 downto 0) := std_logic_vector(to_unsigned(1666666*3, 24)); 
+signal core_cnt         : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(1666666*8, 32)); 
 signal core_release     : std_logic := '0';
 
 -- 64k core ram                      0x000000
@@ -569,16 +566,8 @@ port map (
 process(clkosc)
   begin
   if rising_edge(clkosc) then
-    if btn_cnt /= 0 then
-      btn_cnt <= btn_cnt - 1;
-      btn_lock <= '0';
-    elsif btn_cnt = 0 then 
-      btn_lock <= '1';
-    end if;
-
     if core_cnt /= 0 then
       core_cnt <= core_cnt - 1;
-      core_release <= '0';
     elsif core_cnt = 0 then 
       core_release <= '1';
     end if;
@@ -587,30 +576,21 @@ end process;
 
   -- bl616_JTAGSEL is by default in PC programmer mode high (uart tx) -> JTAG
   -- and will be set by BL616 in companion mode to low -> SPI.
-  jtagseln <= '0' when bl616_JTAGSEL = '1' or (btn_lock or reset) = '0' or core_release = '0' or s0_key ='0' else '1';
+  jtagseln <= '0' when bl616_JTAGSEL = '1' or (core_release or reset) = '0' else '1';
   reconfign <= 'Z';
---  reconfign <= '0' when bl616_RECONFIGn = '0' else 'Z';
+  -- reconfign <= '0' when bl616_RECONFIGn = '0' else 'Z';
   twimux <= "100"; -- connect BL616 TWI4 PLL1
   -- BL616 console to hw pins for external USB-UART adapter
   bl616_mon_tx <= uart_rx;
 
-  leds(0) <= bl616_JTAGSEL;
-  leds(1) <= reset;
-  leds(2) <= core_release;
-  leds(3) <= btn_lock;
-  leds(4) <= '1' when (btn_lock or reset) = '0' else '0';
-  leds(5) <= user;
-
-  somleds(0) <= reconfign;
-  somleds(1) <= jtagseln;
+  somleds(0) <= '1' when (core_release or reset) = '0' else '0';
+  somleds(1) <= not jtagseln;
 
   spi_io_din <= spi_dat;
-  spi_io_ss <= spi_csn;
+  spi_io_ss  <= spi_csn;
   spi_io_clk <= spi_sclk;
-  spi_dir <= spi_io_dout;
-  spi_irqn <= int_out_n;
-  --m0s0 <= spi_io_dout;
-  --m0s4 <= int_out_n;
+  spi_dir    <= spi_io_dout;
+  spi_irqn   <= int_out_n;
 
 gamepad_p1: entity work.dualshock2
     port map (
@@ -1047,7 +1027,7 @@ flashclock: entity work.Gowin_PLL_138k_flash_MOD
 
 leds_n <=  not leds;
 somleds_n <=  not somleds;
---leds(0) <= led1541;
+leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
@@ -1670,7 +1650,7 @@ port map (
   load_tap          => load_tap,
   load_flt          => load_flt,
   sd_img_size       => sd_img_size,
-  leds              => open, -- leds(5 downto 1),
+  leds              => leds(5 downto 1),
   img_select        => open,
 
   ioctl_download    => ioctl_download,
