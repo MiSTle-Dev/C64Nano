@@ -205,9 +205,10 @@
  <listentry label="On" value="1"/>
       </list>
       <list label="RS232 port:" id="*" default="0">
- <listentry label="Tang USB-C" value="0"/>
- <listentry label="External" value="1"/>
- <listentry label="reserved" value="2"/>
+ <listentry label="BL616 debug" value="0"/>
+ <listentry label="Tang USB-C" value="1"/>
+ <listentry label="UserP Ext" value="2"/>
+ <listentry label="6551 Ext." value="3"/>
       </list>
       <list label="Key modifier:" id="$" default="0">
  <listentry label="L+R Shift" value="0"/>

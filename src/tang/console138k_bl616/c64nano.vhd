@@ -21,27 +21,27 @@ entity c64nano_top is
    );
   port
   (
-    bl616_JTAGSEL : in std_logic;
+    bl616_jtagsel : in std_logic;
     jtagseln    : out std_logic := '0';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
-    reset       : in std_logic; -- S2 button
-    user        : in std_logic; -- S1 button
+    key_reset_n : in std_logic; -- S2 button
+    key_user_n  : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(1 downto 0);
     -- onboard USB-C Tang BL616 UART
-    uart_rx     : in std_logic;
-    --uart_tx     : out std_logic;
+    uart_rx     : in std_logic; 
+  --uart_tx     : out std_logic;
     -- monitor port
     bl616_mon_tx : out std_logic;
     -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
     -- SPI interface external uC
-    --m0s0        : out std_logic;
-    --m0s1        : in std_logic;
-    --m0s2        : in std_logic;
-    --m0s3        : in std_logic;
-    --m0s4        : out std_logic;
+    pmod_companion_din : in std_logic;
+    pmod_companion_dout : out std_logic;
+    pmod_companion_ss : in std_logic;
+    pmod_companion_clk : in std_logic;
+    pmod_companion_intn : out std_logic;
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
     spi_csn     : in std_logic;
@@ -497,12 +497,9 @@ signal shift_mod        : std_logic_vector(1 downto 0);
 signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
-signal int_out_n        : std_logic;
+signal spi_intn         : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d, m0s_d1    : std_logic := '1';
-signal clkosc           : std_logic; 
-signal core_cnt         : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(1666666*8, 32)); 
-signal core_release     : std_logic := '0';
+signal boot_button_detected : std_logic := '1';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -538,51 +535,40 @@ component DCS
     );
  end component;
 
-component OSC
-  generic (
-  FREQ_DIV:integer:=126
-  );
-  port(
-    OSCOUT:OUT STD_LOGIC
-  );
-end component;
-
 begin
 
-osc_inst: OSC
-generic map (
-    FREQ_DIV => 126 -- 1.67MHz
-)
-port map (
-    OSCOUT => clkosc
- );
-
-process(clkosc)
+  process (pll_locked_pal)
   begin
-  if rising_edge(clkosc) then
-    if core_cnt /= 0 then
-      core_cnt <= core_cnt - 1;
-    elsif core_cnt = 0 then 
-      core_release <= '1';
+    if rising_edge(pll_locked_pal) then
+      boot_button_detected <= '1' when key_user_n = '0' or key_reset_n = '0' else '0';
     end if;
-  end if;
-end process;
+  end process;
 
-  -- bl616_JTAGSEL is by default in PC programmer mode high (uart tx) -> JTAG
-  -- and will be set by BL616 in companion mode to low -> SPI.
-  jtagseln <= '0' when bl616_JTAGSEL = '1' or (core_release or reset) = '0' else '1';
-  reconfign <= 'Z';
-  -- reconfign <= '0' when bl616_RECONFIGn = '0' else 'Z';
-
+-- enable JTAG if any button has been pressed during boot and also once
+-- the external FPGA Companion has been seen
+  jtagseln <= '1' when (not pll_locked_pal or boot_button_detected or spi_ext or bl616_jtagsel) = '0' else '0';
+  reconfign <= 'Z';  -- <= '0' when bl616_RECONFIGn = '0' else 'Z';
   -- BL616 console to hw pins for external USB-UART adapter
   bl616_mon_tx <= uart_rx;
 
+  process (clk64_pal)
+  begin
+    if rising_edge(clk64_pal) then
+      if pll_locked_pal = '0' then
+        spi_ext <= '0';
+      elsif pmod_companion_ss = '0' then
+        spi_ext <= '1';
+      end if;
+    end if;
+  end process;
 
-  spi_io_din <= spi_dat;
-  spi_io_ss  <= spi_csn;
-  spi_io_clk <= spi_sclk;
-  spi_dir    <= spi_io_dout;
-  spi_irqn   <= int_out_n;
+  spi_io_din <= pmod_companion_din when spi_ext = '1' else spi_dat;
+  spi_io_ss <= pmod_companion_ss when spi_ext = '1' else spi_csn;
+  spi_io_clk <= pmod_companion_clk when spi_ext = '1' else spi_sclk;
+  spi_dir <= spi_io_dout;
+  spi_irqn <= uart_tx_i when spi_ext = '1' else spi_intn;
+  pmod_companion_dout <= spi_io_dout;
+  pmod_companion_intn <= spi_intn;
 
 gamepad_p1: entity work.dualshock2
     port map (
@@ -1309,11 +1295,11 @@ hid_inst: entity work.hid
   port_in_strobe    => serial_rx_strobe,
   port_in_data      => serial_rx_data,
 
-  int_out_n           => int_out_n,
+  int_out_n           => spi_intn,
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not user & not reset), -- S2 and S1 buttons
+  buttons             => unsigned'(not key_user_n & not key_reset_n), -- S0 and S1 buttons
   leds                => open,
   color               => open
 );
@@ -1923,8 +1909,13 @@ port map (
 );
 
 -- external HW pin UART interface
-uart_rx_muxed <= bl616_JTAGSEL when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
-uart_ext_tx <= uart_tx_i;
+-- 00 BL616 debug UART to ext HW pins
+-- 01 USB-C BL616 UART to Userport UART if ext MPU in use
+-- 10 Userport UART to ext HW pins
+-- 11 6551 UART to ext HW pins 
+-- bl616_jtagsel BL616 USB UART if PMOD MPU in use
+uart_rx_muxed <= bl616_jtagsel when system_uart = "01" else uart_ext_rx when system_uart = "10" else '1';
+uart_ext_tx <= uart_rx when system_uart = "00" else uart_tx_i;
 
 -- UART_RX synchronizer
 process(clk32)
