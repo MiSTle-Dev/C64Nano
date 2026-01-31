@@ -55,7 +55,6 @@ add_file src/video_vicII_656x.vhd
 add_file src/tang/console138k/c64nano.vhd
 add_file src/tang/console138k/gowin_pll_138k_pal_mod.vhd
 add_file src/tang/console138k/gowin_pll_138k_ntsc_mod.vhd
-add_file src/tang/console138k/gowin_pll_138k_flash_mod.vhd
 add_file src/tang/console138k/c64nano.cst
 add_file src/tang/console138k/c64nano.sdc
 add_file src/loader_sd_card.sv

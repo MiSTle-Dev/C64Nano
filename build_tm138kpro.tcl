@@ -55,7 +55,6 @@ add_file src/t65/T65_Pack.vhd
 add_file src/tang/tm138kpro/c64nano.vhd
 add_file src/video_vicII_656x.vhd
 add_file src/tang/tm138kpro/gowin_pll_138k_ntsc_mod.vhd
-add_file src/tang/tm138kpro/gowin_pll_138k_flash_mod.vhd
 add_file src/tang/tm138kpro/gowin_pll_138k_pal_mod.vhd
 add_file src/tang/tm138kpro/c64nano.cst
 add_file src/tang/tm138kpro/c64nano.sdc

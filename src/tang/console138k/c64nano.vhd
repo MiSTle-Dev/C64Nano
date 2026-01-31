@@ -355,8 +355,6 @@ signal key_down2       : std_logic;
 signal key_left2       : std_logic;
 signal key_right2      : std_logic;
 signal audio_div       : unsigned(8 downto 0);
-signal flash_clk       : std_logic;
-signal flash_lock      : std_logic;
 signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(22 downto 0);
@@ -960,7 +958,7 @@ port map (
     clkout0 => open,
     clkout1 => clk_pixel_x5_pal,
     clkout2 => clk64_pal,
-    clkout3 => open, -- 64Mhz 180 deg phase
+    clkout3 => mspi_clk, -- 64Mhz 180 deg phase
     clkin => clk,
     reset => '0',
     icpsel => (others => '0'),
@@ -980,19 +978,6 @@ port map (
     icpsel => (others => '0'),
     lpfres => (others => '0'),
     lpfcap => "00"
-);
-
--- 64.0Mhz for flash controller c1541 ROM
-flashclock: entity work.Gowin_PLL_138k_flash_MOD
-    port map (
-        lock => flash_lock,
-        clkout0 => flash_clk,
-        clkout1 => mspi_clk,
-        clkin => clk,
-        reset => '0',
-        icpsel => (others => '0'),
-        lpfres => (others => '0'),
-        lpfcap => "00"
 );
 
 leds_n(1 downto 0) <= not leds(1 downto 0);
@@ -1509,8 +1494,8 @@ port map(
 -- offset in spi flash TN20K, TP25K $200000, TM138K $A00000, TM60k $700000
 flash_inst: entity work.flash 
 port map(
-    clk       => flash_clk,
-    resetn    => flash_lock and jtagseln,
+    clk       => clk64_pal,
+    resetn    => pll_locked_pal and jtagseln,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),
