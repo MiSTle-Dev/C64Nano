@@ -52,13 +52,13 @@ add_file src/t65/T65.vhd
 add_file src/t65/T65_ALU.vhd
 add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
-add_file src/tang/tm138kpro_bl616/c64nano.vhd
+add_file src/tang/tm138kpro/c64nano.vhd
 add_file src/video_vicII_656x.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_ntsc_mod.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_flash_mod.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_pal_mod.vhd
-add_file src/tang/tm138kpro_bl616/c64nano.cst
-add_file src/tang/tm138kpro_bl616/c64nano.sdc
+add_file src/tang/tm138kpro/gowin_pll_138k_ntsc_mod.vhd
+add_file src/tang/tm138kpro/gowin_pll_138k_flash_mod.vhd
+add_file src/tang/tm138kpro/gowin_pll_138k_pal_mod.vhd
+add_file src/tang/tm138kpro/c64nano.cst
+add_file src/tang/tm138kpro/c64nano.sdc
 add_file src/loader_sd_card.sv
 add_file src/fifo_sc_hs/FIFO_SC_HS_Top_gw5a.vhd
 add_file src/c1530.vhd
@@ -73,7 +73,7 @@ add_file src/uart6551/io_fifo.v
 add_file src/uart6551/uart_6551.v
 
 set_option -synthesis_tool gowinsynthesis
-set_option -output_base_name C64Nano_TM138kPro_bl616
+set_option -output_base_name C64Nano_TM138kPro
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
 set_option -top_module c64nano_top

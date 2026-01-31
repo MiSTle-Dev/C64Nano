@@ -69,7 +69,6 @@ add_file src/misc/c64_xml.hex
 add_file src/gowin_pll/gowin_pll_60k_ntsc.vhd
 add_file src/gowin_pll/gowin_pll_60k_pal.vhd
 add_file src/gowin_pll/gowin_pll_60k_pal_mod.vhd
-add_file src/pll_init.v
 add_file src/tang/tm60k/c64nano.cst
 add_file src/tang/tm60k/c64nano.sdc
 add_file src/tang/tm60k/c64nano.vhd

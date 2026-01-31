@@ -85,7 +85,7 @@ begin
     u_pll_init: PLL_INIT
         generic map (
             CLK_PERIOD => 20,
-            MULTI_FAC => 25
+            MULTI_FAC => 24
         )
         port map (
             I_RST => '0',

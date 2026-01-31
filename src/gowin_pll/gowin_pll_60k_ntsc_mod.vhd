@@ -5,17 +5,16 @@
 --Part Number: GW5AT-LV60PG484AC1/I0
 --Device: GW5AT-60
 --Device Version: B
---Created Time: Sat Jan 31 10:13:01 2026
+--Created Time: Sat Jan 31 10:15:27 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-entity Gowin_PLL_60k_pal_MOD is
+entity Gowin_PLL_60k_ntsc_MOD is
     port (
         lock: out std_logic;
         clkout0: out std_logic;
         clkout1: out std_logic;
-        clkout2: out std_logic;
         mdrdo: out std_logic_vector(7 downto 0);
         clkin: in std_logic;
         reset: in std_logic;
@@ -24,10 +23,11 @@ entity Gowin_PLL_60k_pal_MOD is
         mdainc: in std_logic;
         mdwdi: in std_logic_vector(7 downto 0)
     );
-end Gowin_PLL_60k_pal_MOD;
+end Gowin_PLL_60k_ntsc_MOD;
 
-architecture Behavioral of Gowin_PLL_60k_pal_MOD is
+architecture Behavioral of Gowin_PLL_60k_ntsc_MOD is
 
+    signal clkout2: std_logic;
     signal clkout3: std_logic;
     signal clkout4: std_logic;
     signal clkout5: std_logic;
@@ -162,19 +162,19 @@ begin
             FCLKIN => "50",
             IDIV_SEL => 1,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 7,
-            ODIV1_SEL => 19,
-            ODIV2_SEL => 19,
+            ODIV0_SEL => 8,
+            ODIV1_SEL => 20,
+            ODIV2_SEL => 8,
             ODIV3_SEL => 8,
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
-            MDIV_SEL => 24,
+            MDIV_SEL => 26,
             MDIV_FRAC_SEL => 0,
-            ODIV0_FRAC_SEL => 5,
+            ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
             CLKOUT1_EN => "TRUE",
-            CLKOUT2_EN => "TRUE",
+            CLKOUT2_EN => "FALSE",
             CLKOUT3_EN => "FALSE",
             CLKOUT4_EN => "FALSE",
             CLKOUT5_EN => "FALSE",
@@ -207,8 +207,8 @@ begin
             CLKOUT0_PE_FINE => 0,
             CLKOUT1_PE_COARSE => 0,
             CLKOUT1_PE_FINE => 0,
-            CLKOUT2_PE_COARSE => 7,
-            CLKOUT2_PE_FINE => 1,
+            CLKOUT2_PE_COARSE => 0,
+            CLKOUT2_PE_FINE => 0,
             CLKOUT3_PE_COARSE => 0,
             CLKOUT3_PE_FINE => 0,
             CLKOUT4_PE_COARSE => 0,
@@ -268,4 +268,4 @@ begin
             MDWDI => mdwdi
         );
 
-end Behavioral; --Gowin_PLL_60k_pal_MOD
+end Behavioral; --Gowin_PLL_60k_ntsc_MOD
