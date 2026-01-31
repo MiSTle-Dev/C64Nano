@@ -1,39 +1,42 @@
---Copyright (C)2014-2024 Gowin Semiconductor Corporation.
+--Copyright (C)2014-2025 Gowin Semiconductor Corporation.
 --All rights reserved.
 --File Title: IP file
---Tool Version: V1.9.10.03 (64-bit)
+--Tool Version: V1.9.12 (64-bit)
 --Part Number: GW5A-LV25MG121NC1/I0
 --Device: GW5A-25
 --Device Version: A
---Created Time: Thu Feb  6 22:18:22 2025
+--Created Time: Sat Jan 31 09:43:43 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-entity Gowin_PLL_flash is
+entity Gowin_PLL_ntsc_MOD is
     port (
         lock: out std_logic;
         clkout0: out std_logic;
         clkout1: out std_logic;
-        clkin: in std_logic
+        clkout2: out std_logic;
+        mdrdo: out std_logic_vector(7 downto 0);
+        clkin: in std_logic;
+        reset: in std_logic;
+        mdclk: in std_logic;
+        mdopc: in std_logic_vector(1 downto 0);
+        mdainc: in std_logic;
+        mdwdi: in std_logic_vector(7 downto 0)
     );
-end Gowin_PLL_flash;
+end Gowin_PLL_ntsc_MOD;
 
-architecture Behavioral of Gowin_PLL_flash is
+architecture Behavioral of Gowin_PLL_ntsc_MOD is
 
-    signal clkout2: std_logic;
     signal clkout3: std_logic;
     signal clkout4: std_logic;
     signal clkout5: std_logic;
     signal clkout6: std_logic;
     signal clkfbout: std_logic;
-    signal mdrdo: std_logic_vector(7 downto 0);
     signal gw_gnd: std_logic;
     signal PSSEL_i: std_logic_vector(2 downto 0);
     signal SSCMDSEL_i: std_logic_vector(6 downto 0);
     signal SSCMDSEL_FRAC_i: std_logic_vector(2 downto 0);
-    signal MDOPC_i: std_logic_vector(1 downto 0);
-    signal MDWDI_i: std_logic_vector(7 downto 0);
 
     --component declaration
     component PLLA
@@ -153,27 +156,25 @@ begin
     PSSEL_i <= gw_gnd & gw_gnd & gw_gnd;
     SSCMDSEL_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
     SSCMDSEL_FRAC_i <= gw_gnd & gw_gnd & gw_gnd;
-    MDOPC_i <= gw_gnd & gw_gnd;
-    MDWDI_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
 
     PLLA_inst: PLLA
         generic map (
             FCLKIN => "50",
             IDIV_SEL => 1,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 25,
-            ODIV1_SEL => 25,
-            ODIV2_SEL => 8,
+            ODIV0_SEL => 4,
+            ODIV1_SEL => 8,
+            ODIV2_SEL => 20,
             ODIV3_SEL => 8,
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
-            MDIV_SEL => 32,
+            MDIV_SEL => 26,
             MDIV_FRAC_SEL => 0,
             ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
             CLKOUT1_EN => "TRUE",
-            CLKOUT2_EN => "FALSE",
+            CLKOUT2_EN => "TRUE",
             CLKOUT3_EN => "FALSE",
             CLKOUT4_EN => "FALSE",
             CLKOUT5_EN => "FALSE",
@@ -204,8 +205,8 @@ begin
             DYN_DPA_EN => "FALSE",
             CLKOUT0_PE_COARSE => 0,
             CLKOUT0_PE_FINE => 0,
-            CLKOUT1_PE_COARSE => 9,
-            CLKOUT1_PE_FINE => 3,
+            CLKOUT1_PE_COARSE => 0,
+            CLKOUT1_PE_FINE => 0,
             CLKOUT2_PE_COARSE => 0,
             CLKOUT2_PE_FINE => 0,
             CLKOUT3_PE_COARSE => 0,
@@ -250,7 +251,7 @@ begin
             MDRDO => mdrdo,
             CLKIN => clkin,
             CLKFB => gw_gnd,
-            RESET => gw_gnd,
+            RESET => reset,
             PLLPWD => gw_gnd,
             RESET_I => gw_gnd,
             RESET_O => gw_gnd,
@@ -261,10 +262,10 @@ begin
             SSCON => gw_gnd,
             SSCMDSEL => SSCMDSEL_i,
             SSCMDSEL_FRAC => SSCMDSEL_FRAC_i,
-            MDCLK => gw_gnd,
-            MDOPC => MDOPC_i,
-            MDAINC => gw_gnd,
-            MDWDI => MDWDI_i
+            MDCLK => mdclk,
+            MDOPC => mdopc,
+            MDAINC => mdainc,
+            MDWDI => mdwdi
         );
 
-end Behavioral; --Gowin_PLL_flash
+end Behavioral; --Gowin_PLL_ntsc_MOD
