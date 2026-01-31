@@ -965,9 +965,10 @@ port map(
 mainclock_pal: entity work.Gowin_PLL_60k_pal_MOD
 port map (
     lock => pll_locked_pal,
-    clkout0 => clk_pixel_x5_pal,
-    clkout1 => clk64_pal,
-    clkout2 => mspi_clk,
+    clkout0 => open,
+    clkout1 => clk_pixel_x5_pal,
+    clkout2 => clk64_pal,
+    clkout3 => mspi_clk,
     clkin => clk,
     reset => '0',
     mdrdo => open,
@@ -980,8 +981,9 @@ port map (
 mainclock_ntsc: entity work.Gowin_PLL_60k_ntsc_MOD
 port map (
     lock => pll_locked_ntsc,
-    clkout0 => clk_pixel_x5_ntsc,
-    clkout1 => clk64_ntsc,
+    clkout0 => open,
+    clkout1 => clk_pixel_x5_ntsc,
+    clkout2 => clk64_ntsc,
     clkin => clk,
     reset => '0',
     mdrdo => open,

@@ -8,6 +8,8 @@ entity Gowin_PLL_pal is
         clkout0: out std_logic;
         clkout1: out std_logic;
         clkout2: out std_logic;
+        clkout3: out std_logic;
+        clkout4: out std_logic;
         lock: out std_logic;
         mdclk: in std_logic
     );
@@ -28,6 +30,8 @@ architecture Behavioral of Gowin_PLL_pal is
         port (
             clkout1: out std_logic;
             clkout2: out std_logic;
+            clkout3: out std_logic;
+            clkout4: out std_logic;
             clkout0: out std_logic;
             lock: out std_logic;
             reset: in std_logic;
@@ -70,6 +74,8 @@ begin
         port map (
             clkout1 => clkout1,
             clkout2 => clkout2,
+            clkout3 => clkout3,
+            clkout4 => clkout4,
             clkout0 => clkout0,
             lock => pll_lock,
             mdrdo => wMdQOut,

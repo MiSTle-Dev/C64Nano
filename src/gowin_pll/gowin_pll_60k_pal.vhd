@@ -8,6 +8,7 @@ entity Gowin_PLL_60k_pal is
         clkout0: out std_logic;
         clkout1: out std_logic;
         clkout2: out std_logic;
+        clkout3: out std_logic;
         lock: out std_logic;
         mdclk: in std_logic
     );
@@ -28,6 +29,7 @@ architecture Behavioral of Gowin_PLL_60k_pal is
         port (
             clkout1: out std_logic;
             clkout2: out std_logic;
+            clkout3: out std_logic;
             clkout0: out std_logic;
             lock: out std_logic;
             reset: in std_logic;
@@ -70,6 +72,7 @@ begin
         port map (
             clkout1 => clkout1,
             clkout2 => clkout2,
+            clkout3 => clkout3,
             clkout0 => clkout0,
             lock => pll_lock,
             mdrdo => wMdQOut,
@@ -85,7 +88,7 @@ begin
     u_pll_init: PLL_INIT
         generic map (
             CLK_PERIOD => 20,
-            MULTI_FAC => 24
+            MULTI_FAC => 25
         )
         port map (
             I_RST => '0',

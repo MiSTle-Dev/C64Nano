@@ -7,6 +7,7 @@ entity Gowin_PLL_60k_ntsc is
         clkin: in std_logic;
         clkout0: out std_logic;
         clkout1: out std_logic;
+        clkout2: out std_logic;
         lock: out std_logic;
         mdclk: in std_logic
     );
@@ -26,6 +27,7 @@ architecture Behavioral of Gowin_PLL_60k_ntsc is
     component Gowin_PLL_60k_ntsc_MOD
         port (
             clkout1: out std_logic;
+            clkout2: out std_logic;
             clkout0: out std_logic;
             lock: out std_logic;
             reset: in std_logic;
@@ -67,6 +69,7 @@ begin
     u_pll: Gowin_PLL_60k_ntsc_MOD
         port map (
             clkout1 => clkout1,
+            clkout2 => clkout2,
             clkout0 => clkout0,
             lock => pll_lock,
             mdrdo => wMdQOut,

@@ -5,7 +5,7 @@
 --Part Number: GW5AT-LV60PG484AC1/I0
 --Device: GW5AT-60
 --Device Version: B
---Created Time: Sat Jan 31 10:15:27 2026
+--Created Time: Sat Jan 31 17:48:09 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -15,6 +15,7 @@ entity Gowin_PLL_60k_ntsc_MOD is
         lock: out std_logic;
         clkout0: out std_logic;
         clkout1: out std_logic;
+        clkout2: out std_logic;
         mdrdo: out std_logic_vector(7 downto 0);
         clkin: in std_logic;
         reset: in std_logic;
@@ -27,7 +28,6 @@ end Gowin_PLL_60k_ntsc_MOD;
 
 architecture Behavioral of Gowin_PLL_60k_ntsc_MOD is
 
-    signal clkout2: std_logic;
     signal clkout3: std_logic;
     signal clkout4: std_logic;
     signal clkout5: std_logic;
@@ -162,9 +162,9 @@ begin
             FCLKIN => "50",
             IDIV_SEL => 1,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 8,
-            ODIV1_SEL => 20,
-            ODIV2_SEL => 8,
+            ODIV0_SEL => 4,
+            ODIV1_SEL => 8,
+            ODIV2_SEL => 20,
             ODIV3_SEL => 8,
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
@@ -174,7 +174,7 @@ begin
             ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
             CLKOUT1_EN => "TRUE",
-            CLKOUT2_EN => "FALSE",
+            CLKOUT2_EN => "TRUE",
             CLKOUT3_EN => "FALSE",
             CLKOUT4_EN => "FALSE",
             CLKOUT5_EN => "FALSE",
