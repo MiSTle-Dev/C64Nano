@@ -5,7 +5,7 @@
 --Part Number: GW5A-LV25MG121NC1/I0
 --Device: GW5A-25
 --Device Version: A
---Created Time: Sat Jan 31 20:46:24 2026
+--Created Time: Sun Feb  1 21:38:43 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -17,7 +17,6 @@ entity Gowin_PLL_pal_MOD is
         clkout1: out std_logic;
         clkout2: out std_logic;
         clkout3: out std_logic;
-        clkout4: out std_logic;
         mdrdo: out std_logic_vector(7 downto 0);
         clkin: in std_logic;
         reset: in std_logic;
@@ -30,6 +29,7 @@ end Gowin_PLL_pal_MOD;
 
 architecture Behavioral of Gowin_PLL_pal_MOD is
 
+    signal clkout4: std_logic;
     signal clkout5: std_logic;
     signal clkout6: std_logic;
     signal clkfbout: std_logic;
@@ -166,7 +166,7 @@ begin
             ODIV1_SEL => 8,
             ODIV2_SEL => 20,
             ODIV3_SEL => 20,
-            ODIV4_SEL => 20,
+            ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
             MDIV_SEL => 25,
@@ -176,7 +176,7 @@ begin
             CLKOUT1_EN => "TRUE",
             CLKOUT2_EN => "TRUE",
             CLKOUT3_EN => "TRUE",
-            CLKOUT4_EN => "TRUE",
+            CLKOUT4_EN => "FALSE",
             CLKOUT5_EN => "FALSE",
             CLKOUT6_EN => "FALSE",
             CLKFB_SEL => "INTERNAL",
