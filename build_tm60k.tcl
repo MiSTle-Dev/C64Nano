@@ -52,7 +52,12 @@ add_file src/t65/T65.vhd
 add_file src/t65/T65_ALU.vhd
 add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
+add_file src/tang/tm60k/c64nano.vhd
 add_file src/video_vicII_656x.vhd
+add_file src/gowin_pll/gowin_pll_60k_pal_mod.vhd
+add_file src/gowin_pll/gowin_pll_60k_ntsc_mod.vhd
+add_file src/tang/tm60k/c64nano.cst
+add_file src/tang/tm60k/c64nano.sdc
 add_file src/loader_sd_card.sv
 add_file src/fifo_sc_hs/FIFO_SC_HS_Top_gw5a.vhd
 add_file src/c1530.vhd
@@ -66,12 +71,6 @@ add_file src/uart6551/BaudRate.vhd
 add_file src/uart6551/io_fifo.v
 add_file src/uart6551/uart_6551.v
 add_file src/misc/c64_xml.hex
-add_file src/gowin_pll/gowin_pll_60k_ntsc.vhd
-add_file src/gowin_pll/gowin_pll_60k_pal.vhd
-add_file src/gowin_pll/gowin_pll_60k_pal_mod.vhd
-add_file src/tang/tm60k/c64nano.cst
-add_file src/tang/tm60k/c64nano.sdc
-add_file src/tang/tm60k/c64nano.vhd
 
 set_option -synthesis_tool gowinsynthesis
 set_option -output_base_name C64Nano_TM60k
@@ -107,4 +106,6 @@ set_option -correct_hold_violation 1
 set_option -loading_rate 70.000
 
 #run syn
+#run pnr
 run all
+run close
