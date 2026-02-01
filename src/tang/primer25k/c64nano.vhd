@@ -21,12 +21,12 @@ entity c64nano_top is
    );
   port
   (
-    bl616_JTAGSEL : in std_logic;
-    jtagseln    : out std_logic;
+    bl616_jtagsel : in std_logic;
+    jtagseln    : out std_logic := '0';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
-    reset       : in std_logic; -- S2 button high active
-    user        : in std_logic; -- S1 button high active
+    key_reset   : in std_logic; -- S2 button high active
+    key_user    : in std_logic; -- S1 button high active
     leds_n      : out std_logic_vector(1 downto 0);
     -- onboard USB-C Tang BL616 UART
     --uart_rx     : in std_logic;
@@ -37,8 +37,12 @@ entity c64nano_top is
    -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
-    -- SPI interface Sipeed M0S Dock external BL616 uC
-    m0s         : inout std_logic_vector(4 downto 0) := (others => 'Z');
+    -- SPI interface external uC
+    pmod_companion_din : in std_logic;
+    pmod_companion_dout : out std_logic;
+    pmod_companion_ss : in std_logic;
+    pmod_companion_clk : in std_logic;
+    pmod_companion_intn : out std_logic;
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
     spi_csn     : in std_logic;
@@ -466,11 +470,9 @@ signal shift_mod        : std_logic_vector(1 downto 0);
 signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
-signal int_out_n        : std_logic;
+signal spi_intn         : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d, m0s_d1    : std_logic;
-signal clkosc, btn_lock : std_logic := '0';
-signal btn_cnt          : std_logic_vector(31 downto 0) := x"00D00000"; -- ~5 sec
+signal boot_button_detected : std_logic := '1';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -506,85 +508,38 @@ component DCS
     );
  end component;
 
--- 210MHz oscillator
--- GW5AST138K
-component OSC
-  generic (
-  FREQ_DIV:integer:=126
-  );
-  port(
-    OSCOUT:OUT STD_LOGIC
-  );
-end component;
-
--- 210MHz oscillator
--- GW5AT60 and GW5A25
-component OSCA
-  generic (
-  FREQ_DIV:integer:=126
-  );
-  port(
-    OSCOUT:OUT STD_LOGIC;
-    OSCEN :IN STD_LOGIC
-  );
-end component;
-
 begin
-  -- bl616_JTAGSEL is by default in PC programmer mode high (uart tx) -> JTAG
-  -- and will be set by BL616 in companion mode to low -> SPI
-  jtagseln <= '0' when bl616_JTAGSEL = '1' or (btn_lock or not reset) = '0' else '1';
-  reconfign <= 'Z';
 
-osc_inst: OSCA
-generic map (
-    FREQ_DIV => 126 -- 1.67MHz
-)
-port map (
-    OSCOUT => clkosc,
-    OSCEN  => '1'
- );
-
-process(clkosc)
+  process (pll_locked_pal)
   begin
-  if rising_edge(clkosc) then
-    if btn_cnt /= 0 then
-      btn_cnt <= btn_cnt - 1;
-    elsif btn_cnt = 0 then 
-      btn_lock <= '1';
+    if rising_edge(pll_locked_pal) then
+      boot_button_detected <= '1' when key_user = '1' or key_reset = '1' else '0';
     end if;
-  end if;
-end process;
+  end process;
 
--- ----------------- SPI input parser ----------------------
--- by default the internal SPI is being used. Once there is
--- a select from the external spi, then the connection is being switched
-process (all)
-begin
-  if pll_locked_pal = '0' then
-    spi_ext <= '0';
-    m0s_d <= '1';
-    m0s_d1 <= '1';
-  elsif rising_edge(clk64_pal) then
-    m0s_d <= m0s(2);
-    m0s_d1 <= m0s_d;
-    if m0s_d1 = '1' and m0s_d = '0' then
-      spi_ext <= '1';
+-- enable JTAG if any button has been pressed during boot and also once
+-- the external FPGA Companion has been seen
+  jtagseln <= '1' when (not pll_locked_pal or boot_button_detected or spi_ext or bl616_jtagsel) = '0' else '0';
+  reconfign <= 'Z';  -- <= '0' when bl616_RECONFIGn = '0' else 'Z';
+
+  process (clk64_pal)
+  begin
+    if rising_edge(clk64_pal) then
+      if pll_locked_pal = '0' then
+        spi_ext <= '0';
+      elsif pmod_companion_ss = '0' then
+        spi_ext <= '1';
+      end if;
     end if;
-  end if;
-end process;
+  end process;
 
-  -- map output data onto both spi outputs
-  spi_io_din  <= m0s(1) when spi_ext = '1' else spi_dat;
-  spi_io_ss   <= m0s(2) when spi_ext = '1' else spi_csn;
-  spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
-
-  -- onboard BL616
-  -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
-  spi_dir     <= spi_io_dout;
-  spi_irqn    <= uart_tx_i when spi_ext = '1' else int_out_n;
-  -- external M0S Dock BL616 / PiPico  / ESP32
-  m0s(0)      <= spi_io_dout;
-  m0s(4)      <= int_out_n;
+  spi_io_din <= pmod_companion_din when spi_ext = '1' else spi_dat;
+  spi_io_ss <= pmod_companion_ss when spi_ext = '1' else spi_csn;
+  spi_io_clk <= pmod_companion_clk when spi_ext = '1' else spi_sclk;
+  spi_dir <= spi_io_dout;
+  spi_irqn <= uart_tx_i when spi_ext = '1' else spi_intn;
+  pmod_companion_dout <= spi_io_dout;
+  pmod_companion_intn <= spi_intn;
 
   midi_rx <= uart_ext_rx;
   uart_ext_tx <= midi_tx when midi_en = '1' else uart_tx_i;
@@ -885,24 +840,35 @@ port map(
     CALIB  => '0'
 );
 
-mainclock_pal: entity work.Gowin_PLL_pal
+mainclock_pal: entity work.Gowin_PLL_pal_MOD
 port map (
     lock => pll_locked_pal,
-    clkout0 => clk_pixel_x5_pal,
-    clkout1 => clk64_pal,
-    clkout2 => mspi_clk,
+    clkout0 => open,
+    clkout1 => clk_pixel_x5_pal,
+    clkout2 => clk64_pal,
+    clkout3 => mspi_clk,
     clkin => clk,
-    mdclk => clk
+    reset => '0',
+    mdrdo => open,
+    mdclk => '0',
+    mdopc => "00",
+    mdainc => '0',
+    mdwdi => 0x"00"
 );
 
-mainclock_ntsc: entity work.Gowin_PLL_ntsc
+mainclock_ntsc: entity work.Gowin_PLL_ntsc_MOD
 port map (
     lock => pll_locked_ntsc,
     clkout0 => open,
     clkout1 => clk_pixel_x5_ntsc,
     clkout2 => clk64_ntsc,
-    clkout3 => open,
-    clkin => clk
+    clkin => clk,
+    reset => '0',
+    mdrdo => open,
+    mdclk => '0',
+    mdopc => "00",
+    mdainc => '0',
+    mdwdi => 0x"00"
 );
 
 leds_n <=  leds(1 downto 0);
@@ -1205,11 +1171,11 @@ hid_inst: entity work.hid
   port_in_strobe    => serial_rx_strobe,
   port_in_data      => serial_rx_data,
 
-  int_out_n           => int_out_n,
+  int_out_n           => spi_intn,
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(user & reset), -- S2 and S1 buttons
+  buttons             => unsigned'(key_user & key_reset), -- S2 and S1 buttons
   leds                => open,
   color               => open
 );
@@ -1819,7 +1785,13 @@ port map (
 );
 
 -- external HW pin UART interface
-uart_rx_muxed <= bl616_JTAGSEL when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
+-- 00 BL616 debug UART to ext HW pins
+-- 01 USB-C BL616 UART to Userport UART if ext MPU in use
+-- 10 Userport UART to ext HW pins
+-- 11 6551 UART to ext HW pins 
+-- bl616_jtagsel BL616 USB UART if PMOD MPU in use
+uart_rx_muxed <= bl616_jtagsel when system_uart = "01" else uart_ext_rx when system_uart = "10" else '1';
+--uart_ext_tx <= uart_rx when system_uart = "00" else uart_tx_i;
 
 -- UART_RX synchronizer
 process(clk32)

@@ -1,15 +1,10 @@
 
 @echo off
 set GWSH=C:\Gowin\Gowin_V1.9.12_x64\IDE\bin\gw_sh
-
 echo.
-echo ============ build mega138k pro ===============
+echo ============ build mega138k Pro===============
 echo.
 %GWSH% build_tm138kpro.tcl
-echo.
-echo ============ build mega138k pro bl616 ===============
-echo.
-%GWSH% build_tm138kpro_bl616.tcl
 echo.
 echo ============ build mega 60k  ===============
 echo.
@@ -33,7 +28,7 @@ echo.
 echo.
 echo ============ build console 138k ===============
 echo.
-%GWSH% build_tc138k_bl616.tcl
+%GWSH% build_tc138k.tcl
 echo.
 echo "done."
 dir impl\pnr\*.fs

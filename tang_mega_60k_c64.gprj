@@ -35,7 +35,6 @@
         <File path="src/misc/video_analyzer.v" type="file.verilog" enable="1"/>
         <File path="src/misc/ws2812.v" type="file.verilog" enable="1"/>
         <File path="src/mos6526.v" type="file.verilog" enable="1"/>
-        <File path="src/pll_init.v" type="file.verilog" enable="1"/>
         <File path="src/reu.v" type="file.verilog" enable="1"/>
         <File path="src/sdram.v" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_dac.sv" type="file.verilog" enable="1"/>
@@ -59,8 +58,7 @@
         <File path="src/fpga64_keyboard.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fpga64_rgbcolor.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fpga64_sid_iec.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/gowin_pll/gowin_pll_60k_ntsc.vhd" type="file.vhdl" enable="1"/>
-        <File path="src/gowin_pll/gowin_pll_60k_pal.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/gowin_pll/gowin_pll_60k_ntsc_mod.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_pll/gowin_pll_60k_pal_mod.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_prom/gowin_prom_basic.vhd" type="file.vhdl" enable="1"/>
         <File path="src/gowin_prom/gowin_prom_chargen.vhd" type="file.vhdl" enable="1"/>

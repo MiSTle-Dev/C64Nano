@@ -54,9 +54,8 @@ add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
 add_file src/tang/tm138kpro/c64nano.vhd
 add_file src/video_vicII_656x.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_ntsc_mod.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_flash_mod.vhd
-add_file src/tang/tm138kpro_bl616/gowin_pll_138k_pal_mod.vhd
+add_file src/tang/tm138kpro/gowin_pll_138k_ntsc_mod.vhd
+add_file src/tang/tm138kpro/gowin_pll_138k_pal_mod.vhd
 add_file src/tang/tm138kpro/c64nano.cst
 add_file src/tang/tm138kpro/c64nano.sdc
 add_file src/loader_sd_card.sv
@@ -82,7 +81,7 @@ set_option -use_sspi_as_gpio 1
 set_option -use_done_as_gpio 1
 set_option -use_cpu_as_gpio 1
 set_option -use_ready_as_gpio 1
-set_option -use_jtag_as_gpio 0
+set_option -use_jtag_as_gpio 1
 set_option -use_mode_as_gpio 0
 set_option -use_i2c_as_gpio 0
 set_option -rw_check_on_ram 0

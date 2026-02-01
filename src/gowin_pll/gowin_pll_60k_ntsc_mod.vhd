@@ -2,76 +2,45 @@
 --All rights reserved.
 --File Title: IP file
 --Tool Version: V1.9.12 (64-bit)
---Part Number: GW5AST-LV138FPG676AC1/I0
---Device: GW5AST-138
+--Part Number: GW5AT-LV60PG484AC1/I0
+--Device: GW5AT-60
 --Device Version: B
---Created Time: Fri Jan 23 21:34:46 2026
+--Created Time: Sat Jan 31 17:48:09 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-entity Gowin_PLL_138k_flash_MOD is
+entity Gowin_PLL_60k_ntsc_MOD is
     port (
         lock: out std_logic;
         clkout0: out std_logic;
         clkout1: out std_logic;
+        clkout2: out std_logic;
+        mdrdo: out std_logic_vector(7 downto 0);
         clkin: in std_logic;
         reset: in std_logic;
-        icpsel: in std_logic_vector(5 downto 0);
-        lpfres: in std_logic_vector(2 downto 0);
-        lpfcap: in std_logic_vector(1 downto 0)
+        mdclk: in std_logic;
+        mdopc: in std_logic_vector(1 downto 0);
+        mdainc: in std_logic;
+        mdwdi: in std_logic_vector(7 downto 0)
     );
-end Gowin_PLL_138k_flash_MOD;
+end Gowin_PLL_60k_ntsc_MOD;
 
-architecture Behavioral of Gowin_PLL_138k_flash_MOD is
+architecture Behavioral of Gowin_PLL_60k_ntsc_MOD is
 
-    signal clkout2: std_logic;
     signal clkout3: std_logic;
     signal clkout4: std_logic;
     signal clkout5: std_logic;
     signal clkout6: std_logic;
     signal clkfbout: std_logic;
-    signal gw_vcc: std_logic;
     signal gw_gnd: std_logic;
-    signal FBDSEL_i: std_logic_vector(5 downto 0);
-    signal IDSEL_i: std_logic_vector(5 downto 0);
-    signal MDSEL_i: std_logic_vector(6 downto 0);
-    signal MDSEL_FRAC_i: std_logic_vector(2 downto 0);
-    signal ODSEL0_i: std_logic_vector(6 downto 0);
-    signal ODSEL0_FRAC_i: std_logic_vector(2 downto 0);
-    signal ODSEL1_i: std_logic_vector(6 downto 0);
-    signal ODSEL2_i: std_logic_vector(6 downto 0);
-    signal ODSEL3_i: std_logic_vector(6 downto 0);
-    signal ODSEL4_i: std_logic_vector(6 downto 0);
-    signal ODSEL5_i: std_logic_vector(6 downto 0);
-    signal ODSEL6_i: std_logic_vector(6 downto 0);
-    signal DT0_i: std_logic_vector(3 downto 0);
-    signal DT1_i: std_logic_vector(3 downto 0);
-    signal DT2_i: std_logic_vector(3 downto 0);
-    signal DT3_i: std_logic_vector(3 downto 0);
     signal PSSEL_i: std_logic_vector(2 downto 0);
     signal SSCMDSEL_i: std_logic_vector(6 downto 0);
     signal SSCMDSEL_FRAC_i: std_logic_vector(2 downto 0);
 
     --component declaration
-    component PLL
+    component PLLA
         generic (
-            DYN_IDIV_SEL: string := "FALSE";
-            DYN_FBDIV_SEL: string := "FALSE";
-            DYN_ODIV0_SEL: string := "FALSE";
-            DYN_ODIV1_SEL: string := "FALSE";
-            DYN_ODIV2_SEL: string := "FALSE";
-            DYN_ODIV3_SEL: string := "FALSE";
-            DYN_ODIV4_SEL: string := "FALSE";
-            DYN_ODIV5_SEL: string := "FALSE";
-            DYN_ODIV6_SEL: string := "FALSE";
-            DYN_MDIV_SEL: string := "FALSE";
-            DYN_DT0_SEL: string := "TRUE";
-            DYN_DT1_SEL: string := "FALSE";
-            DYN_DT2_SEL: string := "FALSE";
-            DYN_DT3_SEL: string := "FALSE";
-            DYN_ICP_SEL: string := "FALSE";
-            DYN_LPF_SEL: string := "FALSE";
             FCLKIN: string := "100.0";
             IDIV_SEL: integer := 1;
             FBDIV_SEL: integer := 1;
@@ -161,89 +130,51 @@ architecture Behavioral of Gowin_PLL_138k_flash_MOD is
             CLKOUT5: out std_logic;
             CLKOUT6: out std_logic;
             CLKFBOUT: out std_logic;
+            MDRDO: out std_logic_vector(7 downto 0);
             CLKIN: in std_logic;
             CLKFB: in std_logic;
             RESET: in std_logic;
             PLLPWD: in std_logic;
             RESET_I: in std_logic;
             RESET_O: in std_logic;
-            FBDSEL: in std_logic_vector(5 downto 0);
-            IDSEL: in std_logic_vector(5 downto 0);
-            MDSEL: in std_logic_vector(6 downto 0);
-            MDSEL_FRAC: in std_logic_vector(2 downto 0);
-            ODSEL0: in std_logic_vector(6 downto 0);
-            ODSEL0_FRAC: in std_logic_vector(2 downto 0);
-            ODSEL1: in std_logic_vector(6 downto 0);
-            ODSEL2: in std_logic_vector(6 downto 0);
-            ODSEL3: in std_logic_vector(6 downto 0);
-            ODSEL4: in std_logic_vector(6 downto 0);
-            ODSEL5: in std_logic_vector(6 downto 0);
-            ODSEL6: in std_logic_vector(6 downto 0);
-            DT0: in std_logic_vector(3 downto 0);
-            DT1: in std_logic_vector(3 downto 0);
-            DT2: in std_logic_vector(3 downto 0);
-            DT3: in std_logic_vector(3 downto 0);
-            ICPSEL: in std_logic_vector(5 downto 0);
-            LPFRES: in std_logic_vector(2 downto 0);
-            LPFCAP: in std_logic_vector(1 downto 0);
             PSSEL: in std_logic_vector(2 downto 0);
             PSDIR: in std_logic;
             PSPULSE: in std_logic;
-            ENCLK0: in std_logic;
-            ENCLK1: in std_logic;
-            ENCLK2: in std_logic;
-            ENCLK3: in std_logic;
-            ENCLK4: in std_logic;
-            ENCLK5: in std_logic;
-            ENCLK6: in std_logic;
             SSCPOL: in std_logic;
             SSCON: in std_logic;
             SSCMDSEL: in std_logic_vector(6 downto 0);
-            SSCMDSEL_FRAC: in std_logic_vector(2 downto 0)
+            SSCMDSEL_FRAC: in std_logic_vector(2 downto 0);
+            MDCLK: in std_logic;
+            MDOPC: in std_logic_vector(1 downto 0);
+            MDAINC: in std_logic;
+            MDWDI: in std_logic_vector(7 downto 0)
         );
     end component;
 begin
-    gw_vcc <= '1';
     gw_gnd <= '0';
 
-    FBDSEL_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    IDSEL_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    MDSEL_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    MDSEL_FRAC_i <= gw_gnd & gw_gnd & gw_gnd;
-    ODSEL0_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    ODSEL0_FRAC_i <= gw_gnd & gw_gnd & gw_gnd;
-    ODSEL1_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    ODSEL2_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    ODSEL3_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    ODSEL4_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    ODSEL5_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    ODSEL6_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    DT0_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    DT1_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    DT2_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd;
-    DT3_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd;
     PSSEL_i <= gw_gnd & gw_gnd & gw_gnd;
     SSCMDSEL_i <= gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd & gw_gnd;
     SSCMDSEL_FRAC_i <= gw_gnd & gw_gnd & gw_gnd;
 
-    PLL_inst: PLL
+    PLLA_inst: PLLA
         generic map (
             FCLKIN => "50",
             IDIV_SEL => 1,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 19,
-            ODIV1_SEL => 19,
-            ODIV2_SEL => 8,
+            ODIV0_SEL => 4,
+            ODIV1_SEL => 8,
+            ODIV2_SEL => 20,
             ODIV3_SEL => 8,
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
-            MDIV_SEL => 24,
+            MDIV_SEL => 26,
             MDIV_FRAC_SEL => 0,
             ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
             CLKOUT1_EN => "TRUE",
-            CLKOUT2_EN => "FALSE",
+            CLKOUT2_EN => "TRUE",
             CLKOUT3_EN => "FALSE",
             CLKOUT4_EN => "FALSE",
             CLKOUT5_EN => "FALSE",
@@ -274,8 +205,8 @@ begin
             DYN_DPA_EN => "FALSE",
             CLKOUT0_PE_COARSE => 0,
             CLKOUT0_PE_FINE => 0,
-            CLKOUT1_PE_COARSE => 9,
-            CLKOUT1_PE_FINE => 4,
+            CLKOUT1_PE_COARSE => 0,
+            CLKOUT1_PE_FINE => 0,
             CLKOUT2_PE_COARSE => 0,
             CLKOUT2_PE_FINE => 0,
             CLKOUT3_PE_COARSE => 0,
@@ -305,23 +236,7 @@ begin
             ICP_SEL => "XXXXXX",
             LPF_RES => "XXX",
             LPF_CAP => "00",
-            SSC_EN => "FALSE",
-            DYN_IDIV_SEL => "FALSE",
-            DYN_FBDIV_SEL => "FALSE",
-            DYN_MDIV_SEL => "FALSE",
-            DYN_ODIV0_SEL => "FALSE",
-            DYN_ODIV1_SEL => "FALSE",
-            DYN_ODIV2_SEL => "FALSE",
-            DYN_ODIV3_SEL => "FALSE",
-            DYN_ODIV4_SEL => "FALSE",
-            DYN_ODIV5_SEL => "FALSE",
-            DYN_ODIV6_SEL => "FALSE",
-            DYN_DT0_SEL => "FALSE",
-            DYN_DT1_SEL => "FALSE",
-            DYN_DT2_SEL => "FALSE",
-            DYN_DT3_SEL => "FALSE",
-            DYN_ICP_SEL => "TRUE",
-            DYN_LPF_SEL => "TRUE"
+            SSC_EN => "FALSE"
         )
         port map (
             LOCK => lock,
@@ -333,45 +248,24 @@ begin
             CLKOUT5 => clkout5,
             CLKOUT6 => clkout6,
             CLKFBOUT => clkfbout,
+            MDRDO => mdrdo,
             CLKIN => clkin,
             CLKFB => gw_gnd,
             RESET => reset,
             PLLPWD => gw_gnd,
             RESET_I => gw_gnd,
             RESET_O => gw_gnd,
-            FBDSEL => FBDSEL_i,
-            IDSEL => IDSEL_i,
-            MDSEL => MDSEL_i,
-            MDSEL_FRAC => MDSEL_FRAC_i,
-            ODSEL0 => ODSEL0_i,
-            ODSEL0_FRAC => ODSEL0_FRAC_i,
-            ODSEL1 => ODSEL1_i,
-            ODSEL2 => ODSEL2_i,
-            ODSEL3 => ODSEL3_i,
-            ODSEL4 => ODSEL4_i,
-            ODSEL5 => ODSEL5_i,
-            ODSEL6 => ODSEL6_i,
-            DT0 => DT0_i,
-            DT1 => DT1_i,
-            DT2 => DT2_i,
-            DT3 => DT3_i,
-            ICPSEL => icpsel,
-            LPFRES => lpfres,
-            LPFCAP => lpfcap,
             PSSEL => PSSEL_i,
             PSDIR => gw_gnd,
             PSPULSE => gw_gnd,
-            ENCLK0 => gw_vcc,
-            ENCLK1 => gw_vcc,
-            ENCLK2 => gw_vcc,
-            ENCLK3 => gw_vcc,
-            ENCLK4 => gw_vcc,
-            ENCLK5 => gw_vcc,
-            ENCLK6 => gw_vcc,
             SSCPOL => gw_gnd,
             SSCON => gw_gnd,
             SSCMDSEL => SSCMDSEL_i,
-            SSCMDSEL_FRAC => SSCMDSEL_FRAC_i
+            SSCMDSEL_FRAC => SSCMDSEL_FRAC_i,
+            MDCLK => mdclk,
+            MDOPC => mdopc,
+            MDAINC => mdainc,
+            MDWDI => mdwdi
         );
 
-end Behavioral; --Gowin_PLL_138k_flash_MOD
+end Behavioral; --Gowin_PLL_60k_ntsc_MOD

@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------
---  C64 Top level for Tang Nano Mega 138k Pro
+--  C64 Top level for Tang Console 138k NEO
 --  2025 Stefan Voss
 --  based on the work of many others
 --
@@ -21,62 +21,57 @@ entity c64nano_top is
    );
   port
   (
-    bl616_JTAGSEL : in std_logic;
+    bl616_jtagsel : in std_logic;
     jtagseln    : out std_logic := '0';
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
-    reset       : in std_logic; -- S1 button
-    user        : in std_logic; -- S2 button
-    s0_key      : in std_logic; -- S0 button
-    som_key     : in std_logic; -- SOM button
-    leds_n      : out std_logic_vector(5 downto 0);
-    somleds_n   : out std_logic_vector(1 downto 0);
-    io          : in std_logic_vector(5 downto 0);
-    -- USB-C BL616 UART
-    uart_rx     : in std_logic;
-    --uart_tx     : out std_logic;
+    key_reset_n : in std_logic; -- S2 button
+    key_user_n  : in std_logic; -- S1 button
+    leds_n      : out std_logic_vector(1 downto 0);
+    -- onboard USB-C Tang BL616 UART
+    uart_rx     : in std_logic; 
+  --uart_tx     : out std_logic;
     -- monitor port
-    twimux       : out std_logic_vector(2 downto 0);
     bl616_mon_tx : out std_logic;
-   -- external hw pin UART
+    -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
     -- SPI interface external uC
-    --m0s0        : out std_logic;
-    --m0s1        : in std_logic;
-    --m0s2        : in std_logic;
-    --m0s3        : in std_logic;
-    --m0s4        : out std_logic;
+    pmod_companion_din : in std_logic;
+    pmod_companion_dout : out std_logic;
+    pmod_companion_ss : in std_logic;
+    pmod_companion_clk : in std_logic;
+    pmod_companion_intn : out std_logic;
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
     spi_csn     : in std_logic;
     spi_dir     : out std_logic;
     spi_dat     : in std_logic;
     spi_irqn    : out std_logic;
-    --
-    tmds_clk_n  : out std_logic;
-    tmds_clk_p  : out std_logic;
-    tmds_d_n    : out std_logic_vector( 2 downto 0);
-    tmds_d_p    : out std_logic_vector( 2 downto 0);
     -- internal lcd
-    lcd_clk     : out std_logic; -- lcd is RGB 565
+    lcd_clk     : out std_logic; -- lcd clk
     lcd_hs      : out std_logic; -- lcd horizontal synchronization
     lcd_vs      : out std_logic; -- lcd vertical synchronization        
     lcd_de      : out std_logic; -- lcd data enable     
     lcd_bl      : out std_logic; -- lcd backlight control
-    lcd_r       : out std_logic_vector(5 downto 0);  -- lcd red
-    lcd_g       : out std_logic_vector(5 downto 0);  -- lcd green
-    lcd_b       : out std_logic_vector(5 downto 0);  -- lcd blue
+    lcd_r       : out std_logic_vector(7 downto 0);  -- lcd red
+    lcd_g       : out std_logic_vector(7 downto 0);  -- lcd green
+    lcd_b       : out std_logic_vector(7 downto 0);  -- lcd blue
     -- audio
     hp_bck      : out std_logic;
     hp_ws       : out std_logic;
     hp_din      : out std_logic;
     pa_en       : out std_logic;
+    --
+    tmds_clk_n  : out std_logic;
+    tmds_clk_p  : out std_logic;
+    tmds_d_n    : out std_logic_vector( 2 downto 0);
+    tmds_d_p    : out std_logic_vector( 2 downto 0);
+
     -- sd interface
     sd_clk      : out std_logic;
     sd_cmd      : inout std_logic;
     sd_dat      : inout std_logic_vector(3 downto 0);
-    ws2812      : out std_logic;
     -- MiSTer SDRAM module
     O_sdram_clk     : out std_logic;
     O_sdram_cs_n    : out std_logic; -- chip select
@@ -271,7 +266,6 @@ signal c1541_osd_reset : std_logic;
 signal system_wide_screen : std_logic;
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
-signal somleds        : std_logic_vector(1 downto 0);
 signal led1541        : std_logic;
 signal reu_cfg        : std_logic; 
 signal dma_req        : std_logic;
@@ -361,8 +355,6 @@ signal key_down2       : std_logic;
 signal key_left2       : std_logic;
 signal key_right2      : std_logic;
 signal audio_div       : unsigned(8 downto 0);
-signal flash_clk       : std_logic;
-signal flash_lock      : std_logic;
 signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(22 downto 0);
@@ -503,12 +495,9 @@ signal shift_mod        : std_logic_vector(1 downto 0);
 signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
-signal int_out_n        : std_logic;
+signal spi_intn         : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d, m0s_d1    : std_logic := '1';
-signal clkosc           : std_logic; 
-signal core_cnt         : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(1666666*8, 32)); 
-signal core_release     : std_logic := '0';
+signal boot_button_detected : std_logic := '1';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -544,53 +533,40 @@ component DCS
     );
  end component;
 
-component OSC
-  generic (
-  FREQ_DIV:integer:=126
-  );
-  port(
-    OSCOUT:OUT STD_LOGIC
-  );
-end component;
-
 begin
 
-osc_inst: OSC
-generic map (
-    FREQ_DIV => 126 -- 1.67MHz
-)
-port map (
-    OSCOUT => clkosc
- );
-
-process(clkosc)
+  process (pll_locked_pal)
   begin
-  if rising_edge(clkosc) then
-    if core_cnt /= 0 then
-      core_cnt <= core_cnt - 1;
-    elsif core_cnt = 0 then 
-      core_release <= '1';
+    if rising_edge(pll_locked_pal) then
+      boot_button_detected <= '1' when key_user_n = '0' or key_reset_n = '0' else '0';
     end if;
-  end if;
-end process;
+  end process;
 
-  -- bl616_JTAGSEL is by default in PC programmer mode high (uart tx) -> JTAG
-  -- and will be set by BL616 in companion mode to low -> SPI.
-  jtagseln <= '0' when bl616_JTAGSEL = '1' or (core_release or reset) = '0' else '1';
-  reconfign <= 'Z';
-  -- reconfign <= '0' when bl616_RECONFIGn = '0' else 'Z';
-  twimux <= "100"; -- connect BL616 TWI4 PLL1
+-- enable JTAG if any button has been pressed during boot and also once
+-- the external FPGA Companion has been seen
+  jtagseln <= '1' when (not pll_locked_pal or boot_button_detected or spi_ext or bl616_jtagsel) = '0' else '0';
+  reconfign <= 'Z';  -- <= '0' when bl616_RECONFIGn = '0' else 'Z';
   -- BL616 console to hw pins for external USB-UART adapter
   bl616_mon_tx <= uart_rx;
 
-  somleds(0) <= '1' when (core_release or reset) = '0' else '0';
-  somleds(1) <= not jtagseln;
+  process (clk64_pal)
+  begin
+    if rising_edge(clk64_pal) then
+      if pll_locked_pal = '0' then
+        spi_ext <= '0';
+      elsif pmod_companion_ss = '0' then
+        spi_ext <= '1';
+      end if;
+    end if;
+  end process;
 
-  spi_io_din <= spi_dat;
-  spi_io_ss  <= spi_csn;
-  spi_io_clk <= spi_sclk;
-  spi_dir    <= spi_io_dout;
-  spi_irqn   <= int_out_n;
+  spi_io_din <= pmod_companion_din when spi_ext = '1' else spi_dat;
+  spi_io_ss <= pmod_companion_ss when spi_ext = '1' else spi_csn;
+  spi_io_clk <= pmod_companion_clk when spi_ext = '1' else spi_sclk;
+  spi_dir <= spi_io_dout;
+  spi_irqn <= uart_tx_i when spi_ext = '1' else spi_intn;
+  pmod_companion_dout <= spi_io_dout;
+  pmod_companion_intn <= spi_intn;
 
 gamepad_p1: entity work.dualshock2
     port map (
@@ -660,14 +636,6 @@ gamepad_p2: entity work.dualshock2
     key_rstick    => open,
     debug1        => open,
     debug2        => open
-    );
-
-    led_ws2812: entity work.ws2812
-    port map
-    (
-     clk    => clk32,
-     color  => ws2812_color,
-     data   => ws2812
     );
 
 process(clk32, disk_reset)
@@ -847,7 +815,7 @@ audio_r <= audio_data_r or (5x"00" & cass_snd & 12x"00000");
 video_inst: entity work.video
 generic map
 (
-  STEREO  => true
+  STEREO  => false
 )
 port map(
       pll_lock     => pll_locked, 
@@ -885,9 +853,9 @@ port map(
       lcd_hs_n => lcd_hs,
       lcd_vs_n => lcd_vs,
       lcd_de   => lcd_de,
-      lcd_r(7 downto 2) => lcd_r,
-      lcd_g(7 downto 2) => lcd_g,
-      lcd_b(7 downto 2) => lcd_b,
+      lcd_r    => lcd_r,
+      lcd_g    => lcd_g,
+      lcd_b    => lcd_b,
       lcd_bl   => lcd_bl,
 
       hp_bck   => hp_bck,
@@ -990,7 +958,7 @@ port map (
     clkout0 => open,
     clkout1 => clk_pixel_x5_pal,
     clkout2 => clk64_pal,
-    clkout3 => open, -- 64Mhz 180 deg phase
+    clkout3 => mspi_clk, -- 64Mhz 180 deg phase
     clkin => clk,
     reset => '0',
     icpsel => (others => '0'),
@@ -1012,28 +980,14 @@ port map (
     lpfcap => "00"
 );
 
--- 64.0Mhz for flash controller c1541 ROM
-flashclock: entity work.Gowin_PLL_138k_flash_MOD
-    port map (
-        lock => flash_lock,
-        clkout0 => flash_clk,
-        clkout1 => mspi_clk,
-        clkin => clk,
-        reset => '0',
-        icpsel => (others => '0'),
-        lpfres => (others => '0'),
-        lpfcap => "00"
-);
-
-leds_n <=  not leds;
-somleds_n <=  not somleds;
+leds_n(1 downto 0) <= not leds(1 downto 0);
 leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
 joyDS2_p1  <= key_circle  & key_cross  & key_square  & key_right  & key_left  & key_down  & key_up;
 joyDS2_p2  <= key_circle2 & key_cross2 & key_square2 & key_right2 & key_left2 & key_down2 & key_up2;
-joyDigital0 <= not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
+joyDigital0 <= 7x"00";
 joyDigital1 <= 7x"00";
 joyUsb1    <= joystick1(6 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
 joyUsb2    <= joystick2(6 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
@@ -1045,7 +999,7 @@ joyUsb1A   <= "00" & '0' & joystick1(5) & joystick1(4) & "00"; -- Y,X button
 joyUsb2A   <= "00" & '0' & joystick2(5) & joystick2(4) & "00"; -- Y,X button
 
 -- send external DB9 joystick port to µC
-db9_joy <= not(io(5) & io(0), io(2), io(1), io(4), io(3));
+db9_joy <= 6x"00";
 
 process(clk32)
 begin
@@ -1326,13 +1280,13 @@ hid_inst: entity work.hid
   port_in_strobe    => serial_rx_strobe,
   port_in_data      => serial_rx_data,
 
-  int_out_n           => int_out_n,
+  int_out_n           => spi_intn,
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not user & not reset), -- S0 and S1 buttons
+  buttons             => unsigned'(not key_user_n & not key_reset_n), -- S0 and S1 buttons
   leds                => open,
-  color               => ws2812_color
+  color               => open
 );
 
 process(clk32)
@@ -1540,8 +1494,8 @@ port map(
 -- offset in spi flash TN20K, TP25K $200000, TM138K $A00000, TM60k $700000
 flash_inst: entity work.flash 
 port map(
-    clk       => flash_clk,
-    resetn    => flash_lock and jtagseln,
+    clk       => clk64_pal,
+    resetn    => pll_locked_pal and jtagseln,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),
@@ -1940,8 +1894,13 @@ port map (
 );
 
 -- external HW pin UART interface
-uart_rx_muxed <= bl616_JTAGSEL when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
-uart_ext_tx <= uart_tx_i;
+-- 00 BL616 debug UART to ext HW pins
+-- 01 USB-C BL616 UART to Userport UART if ext MPU in use
+-- 10 Userport UART to ext HW pins
+-- 11 6551 UART to ext HW pins 
+-- bl616_jtagsel BL616 USB UART if PMOD MPU in use
+uart_rx_muxed <= bl616_jtagsel when system_uart = "01" else uart_ext_rx when system_uart = "10" else '1';
+uart_ext_tx <= uart_rx when system_uart = "00" else uart_tx_i;
 
 -- UART_RX synchronizer
 process(clk32)

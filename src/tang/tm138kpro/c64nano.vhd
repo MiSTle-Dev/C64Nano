@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------
 --  C64 Top level for Tang Nano Mega 138k Pro
---  2023 ... 2025 Stefan Voss
+--  2023...2026 Stefan Voss
 --  based on the work of many others
 --
 --  FPGA64 is Copyrighted 2005-2008 by Peter Wendrich (pwsoft@syntiac.com)
@@ -21,19 +21,36 @@ entity c64nano_top is
    );
   port
   (
+    bl616_jtagsel : in std_logic;
+    jtagseln    : out std_logic := '0';
+    reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
-    reset       : in std_logic; -- S2 button
-    user        : in std_logic; -- S1 button
+    key_n       : in std_logic_vector(3 downto 0);
+    key_som_n   : in std_logic; -- SOM button
     leds_n      : out std_logic_vector(5 downto 0);
+    somleds_n   : out std_logic_vector(1 downto 0);
     io          : in std_logic_vector(5 downto 0);
     -- USB-C BL616 UART
     uart_rx     : in std_logic;
-    uart_tx     : out std_logic;
+    --uart_tx     : out std_logic;
+    -- monitor port
+    twimux       : out std_logic_vector(2 downto 0);
+    bl616_mon_tx : out std_logic;
    -- external hw pin UART
     uart_ext_rx : in std_logic;
     uart_ext_tx : out std_logic;
-    -- SPI interface Sipeed M0S Dock external BL616 uC
-    m0s         : inout std_logic_vector(4 downto 0);
+    -- SPI interface external uC
+    pmod_companion_din : in std_logic;
+    pmod_companion_dout : out std_logic;
+    pmod_companion_ss : in std_logic;
+    pmod_companion_clk : in std_logic;
+    pmod_companion_intn : out std_logic;
+    -- SPI connection to onboard BL616
+    spi_sclk    : in std_logic;
+    spi_csn     : in std_logic;
+    spi_dir     : out std_logic;
+    spi_dat     : in std_logic;
+    spi_irqn    : out std_logic;
     --
     tmds_clk_n  : out std_logic;
     tmds_clk_p  : out std_logic;
@@ -252,6 +269,7 @@ signal c1541_osd_reset : std_logic;
 signal system_wide_screen : std_logic;
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
+signal somleds        : std_logic_vector(1 downto 0);
 signal led1541        : std_logic;
 signal reu_cfg        : std_logic; 
 signal dma_req        : std_logic;
@@ -341,8 +359,6 @@ signal key_down2       : std_logic;
 signal key_left2       : std_logic;
 signal key_right2      : std_logic;
 signal audio_div       : unsigned(8 downto 0);
-signal flash_clk       : std_logic;
-signal flash_lock      : std_logic;
 signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(22 downto 0);
@@ -483,9 +499,11 @@ signal shift_mod        : std_logic_vector(1 downto 0);
 signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
-signal int_out_n        : std_logic;
+signal spi_intn         : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d, m0s_d1    : std_logic;
+signal boot_button_detected : std_logic := '1';
+signal key_user_n       : std_logic;
+signal key_reset_n      : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -523,11 +541,45 @@ component DCS
 
 begin
 
-  spi_io_din  <= m0s(1);
-  spi_io_ss   <= m0s(2);
-  spi_io_clk  <= m0s(3);
-  m0s(0)      <= spi_io_dout;
-  m0s(4)      <= int_out_n;
+  key_reset_n <= key_n(0);
+  key_user_n <= key_n(1);
+
+  process (pll_locked_pal)
+  begin
+    if rising_edge(pll_locked_pal) then
+      boot_button_detected <= '1' when key_user_n = '0' or key_reset_n = '0' else '0';
+    end if;
+  end process;
+
+-- enable JTAG if any button has been pressed during boot and also once
+-- the external FPGA Companion has been seen
+  jtagseln <= '1' when (not pll_locked_pal or boot_button_detected or spi_ext or bl616_jtagsel) = '0' else '0';
+  reconfign <= 'Z';  -- <= '0' when bl616_RECONFIGn = '0' else 'Z';
+  twimux <= "100"; -- connect BL616 TWI4 PLL1
+  -- BL616 console to hw pins for external USB-UART adapter
+  bl616_mon_tx <= uart_rx;
+
+  process (clk64_pal)
+  begin
+    if rising_edge(clk64_pal) then
+      if pll_locked_pal = '0' then
+        spi_ext <= '0';
+      elsif pmod_companion_ss = '0' then
+        spi_ext <= '1';
+      end if;
+    end if;
+  end process;
+
+  spi_io_din <= pmod_companion_din when spi_ext = '1' else spi_dat;
+  spi_io_ss <= pmod_companion_ss when spi_ext = '1' else spi_csn;
+  spi_io_clk <= pmod_companion_clk when spi_ext = '1' else spi_sclk;
+  spi_dir <= spi_io_dout;
+  spi_irqn <= uart_tx_i when spi_ext = '1' else spi_intn;
+  pmod_companion_dout <= spi_io_dout;
+  pmod_companion_intn <= spi_intn;
+
+  somleds(0) <= not jtagseln;
+  somleds(1) <= not reconfign;
 
 gamepad_p1: entity work.dualshock2
     port map (
@@ -927,7 +979,7 @@ port map (
     clkout0 => open,
     clkout1 => clk_pixel_x5_pal,
     clkout2 => clk64_pal,
-    clkout3 => open, -- 64Mhz 180 deg phase
+    clkout3 => mspi_clk, -- 64Mhz 180 deg phase
     clkin => clk,
     reset => '0',
     icpsel => (others => '0'),
@@ -949,20 +1001,8 @@ port map (
     lpfcap => "00"
 );
 
--- 64.0Mhz for flash controller c1541 ROM
-flashclock: entity work.Gowin_PLL_138k_flash_MOD
-    port map (
-        lock => flash_lock,
-        clkout0 => flash_clk,
-        clkout1 => mspi_clk,
-        clkin => clk,
-        reset => '0',
-        icpsel => (others => '0'),
-        lpfres => (others => '0'),
-        lpfcap => "00"
-);
-
 leds_n <=  not leds;
+somleds_n <=  not somleds;
 leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
@@ -1262,11 +1302,11 @@ hid_inst: entity work.hid
   port_in_strobe    => serial_rx_strobe,
   port_in_data      => serial_rx_data,
 
-  int_out_n           => int_out_n,
+  int_out_n           => spi_intn,
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not user & not reset), -- S0 and S1 buttons
+  buttons             => unsigned'(not key_user_n & not key_reset_n), -- S0 and S1 buttons
   leds                => open,
   color               => ws2812_color
 );
@@ -1476,8 +1516,8 @@ port map(
 -- offset in spi flash TN20K, TP25K $200000, TM138K $A00000, TM60k $700000
 flash_inst: entity work.flash 
 port map(
-    clk       => flash_clk,
-    resetn    => flash_lock,
+    clk       => clk64_pal,
+    resetn    => pll_locked_pal and jtagseln,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),
@@ -1876,8 +1916,13 @@ port map (
 );
 
 -- external HW pin UART interface
-uart_rx_muxed <= uart_rx when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
-uart_ext_tx <= uart_tx;
+-- 00 BL616 debug UART to ext HW pins
+-- 01 USB-C BL616 UART to Userport UART if ext MPU in use
+-- 10 Userport UART to ext HW pins
+-- 11 6551 UART to ext HW pins 
+-- bl616_jtagsel BL616 USB UART if PMOD MPU in use
+uart_rx_muxed <= bl616_jtagsel when system_uart = "01" else uart_ext_rx when system_uart = "10" else '1';
+uart_ext_tx <= uart_rx when system_uart = "00" else uart_tx_i;
 
 -- UART_RX synchronizer
 process(clk32)
@@ -1900,7 +1945,7 @@ begin
   pb_i <= (others => '1');
   drive_par_i <= (others => '1');
   drive_stb_i <= '1';
-  uart_tx <= '1';
+  uart_tx_i <= '1';
   flag2_n_i <= '1';
   uart_cs <= '0';
   if ext_en = '1' and disk_access = '1' then
@@ -1922,7 +1967,7 @@ begin
     -- PB6 CTS in
     -- PB7 DSR in
     -- PA2 TXD out
-    uart_tx <= pa2_o;
+    uart_tx_i <= pa2_o;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     -- Zeromodem
@@ -1940,18 +1985,18 @@ begin
     -- PB7 to CNT2 
     pb_i(7) <= cnt2_o;
     cnt2_i <= pb_o(7);
-    uart_tx <= pa2_o and sp1_o;
+    uart_tx_i <= pa2_o and sp1_o;
     sp2_i <= uart_rx_filtered;
     flag2_n_i <= uart_rx_filtered;
     pb_i(0) <= uart_rx_filtered;
     elsif system_up9600 = 2 then
-      uart_tx <= tx_6551;
+      uart_tx_i <= tx_6551;
       uart_cs <= IOE;
     elsif system_up9600 = 3 then
-      uart_tx <= tx_6551;
+      uart_tx_i  <= tx_6551;
       uart_cs <= IOF;
     elsif system_up9600 = 4 then
-      uart_tx <= tx_6551;
+      uart_tx_i <= tx_6551;
       uart_cs <= IO7;
   end if;
 end process;
