@@ -55,6 +55,9 @@ add_file src/tang/primer25k/c64nano.vhd
 add_file src/video_vicII_656x.vhd
 add_file src/gowin_pll/gowin_pll_pal.vhd
 add_file src/gowin_pll/gowin_pll_ntsc.vhd
+add_file src/gowin_pll/gowin_pll_pal_mod.vhd
+add_file src/gowin_pll/gowin_pll_ntsc_mod.vhd
+add_file src/tang/primer25k/pll_init.v
 add_file src/tang/primer25k/c64nano.cst
 add_file src/tang/primer25k/c64nano.sdc
 add_file src/loader_sd_card.sv

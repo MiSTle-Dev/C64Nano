@@ -952,35 +952,25 @@ port map(
     CALIB  => '0'
 );
 
-mainclock_pal: entity work.Gowin_PLL_60k_pal_MOD
+mainclock_pal: entity work.Gowin_PLL_60k_pal
 port map (
-    lock => pll_locked_pal,
+    clkin => clk,
     clkout0 => open,
     clkout1 => clk_pixel_x5_pal,
     clkout2 => clk64_pal,
     clkout3 => mspi_clk,
-    clkin => clk,
-    reset => '0',
-    mdrdo => open,
-    mdclk => '0',
-    mdopc => "00",
-    mdainc => '0',
-    mdwdi => 0x"00"
-);
+    lock => pll_locked_pal,
+    mdclk => clk
+    );
 
-mainclock_ntsc: entity work.Gowin_PLL_60k_ntsc_MOD
+mainclock_ntsc: entity work.Gowin_PLL_60k_ntsc
 port map (
-    lock => pll_locked_ntsc,
+    clkin => clk,
     clkout0 => open,
     clkout1 => clk_pixel_x5_ntsc,
     clkout2 => clk64_ntsc,
-    clkin => clk,
-    reset => '0',
-    mdrdo => open,
-    mdclk => '0',
-    mdopc => "00",
-    mdainc => '0',
-    mdwdi => 0x"00"
+    lock => pll_locked_ntsc,
+    mdclk => clk
 );
 
 leds_n(1 downto 0) <= not leds(1 downto 0);
