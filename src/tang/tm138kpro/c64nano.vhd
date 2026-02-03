@@ -973,32 +973,25 @@ port map(
     CALIB  => '0'
 );
 
-mainclock_pal: entity work.Gowin_PLL_138k_pal_MOD
+mainclock_pal: entity work.Gowin_PLL_138k_pal
 port map (
-    lock => pll_locked_pal,
+    clkin => clk,
+    init_clk => clk,
     clkout0 => open,
     clkout1 => clk_pixel_x5_pal,
     clkout2 => clk64_pal,
     clkout3 => mspi_clk, -- 64Mhz 180 deg phase
-    clkin => clk,
-    reset => '0',
-    icpsel => (others => '0'),
-    lpfres => (others => '0'),
-    lpfcap => "00"
+    lock => pll_locked_pal
 );
 
-mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc_MOD
+mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc
 port map (
-    lock => pll_locked_ntsc,
+    clkin => clk,
+    init_clk => clk,
     clkout0 => open,
     clkout1 => clk_pixel_x5_ntsc,
     clkout2 => clk64_ntsc,
-    clkout3 => open,
-    clkin => clk,
-    reset => '0',
-    icpsel => (others => '0'),
-    lpfres => (others => '0'),
-    lpfcap => "00"
+    lock => pll_locked_ntsc
 );
 
 leds_n <=  not leds;

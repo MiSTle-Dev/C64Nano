@@ -1,11 +1,3 @@
---Copyright (C)2014-2025 Gowin Semiconductor Corporation.
---All rights reserved.
---File Title: IP file
---Tool Version: V1.9.12 (64-bit)
---Part Number: GW5AST-LV138PG484AC1/I0
---Device: GW5AST-138
---Device Version: B
---Created Time: Fri Jan 23 21:36:38 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -16,7 +8,6 @@ entity Gowin_PLL_138k_ntsc_MOD is
         clkout0: out std_logic;
         clkout1: out std_logic;
         clkout2: out std_logic;
-        clkout3: out std_logic;
         clkin: in std_logic;
         reset: in std_logic;
         icpsel: in std_logic_vector(5 downto 0);
@@ -27,6 +18,7 @@ end Gowin_PLL_138k_ntsc_MOD;
 
 architecture Behavioral of Gowin_PLL_138k_ntsc_MOD is
 
+    signal clkout3: std_logic;
     signal clkout4: std_logic;
     signal clkout5: std_logic;
     signal clkout6: std_logic;
@@ -234,7 +226,7 @@ begin
             ODIV0_SEL => 3,
             ODIV1_SEL => 6,
             ODIV2_SEL => 15,
-            ODIV3_SEL => 30,
+            ODIV3_SEL => 8,
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
@@ -244,7 +236,7 @@ begin
             CLKOUT0_EN => "TRUE",
             CLKOUT1_EN => "TRUE",
             CLKOUT2_EN => "TRUE",
-            CLKOUT3_EN => "TRUE",
+            CLKOUT3_EN => "FALSE",
             CLKOUT4_EN => "FALSE",
             CLKOUT5_EN => "FALSE",
             CLKOUT6_EN => "FALSE",
