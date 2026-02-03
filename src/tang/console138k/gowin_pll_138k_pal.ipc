@@ -1,6 +1,6 @@
 [General]
-ipc_version=4
 file=gowin_pll_138k_pal
+ipc_version=4
 module=Gowin_PLL_138k_pal
 target_device=gw5ast138b-011
 type=clock_plladv
@@ -9,6 +9,7 @@ version=1.0
 [Config]
 AdvancedMode=false
 ClkfbDivideFactorDynamic=true
+ClkfbDivideFactorDynamicValue=1
 ClkfbDivideFactorStatic=false
 ClkfbDivideFactorStaticValue=1
 ClkfbInternal=true
@@ -161,6 +162,7 @@ GeneralMode=true
 ICPSELDynamic=true
 ICPSELStatic=false
 ICPSELStaticValue=ICP1
+Initialization_Clock_Frequency=50
 LANG=1
 LPFCAPStaticValue=C0
 LPFRESStaticValue=X
@@ -170,5 +172,3 @@ PLLPowerDown=false
 PLLReset=false
 clkfbExternal=false
 clkfbExternalValue=
-ClkfbDivideFactorDynamicValue=1
-Initialization_Clock_Frequency=50

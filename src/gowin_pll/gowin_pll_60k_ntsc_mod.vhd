@@ -1,11 +1,3 @@
---Copyright (C)2014-2025 Gowin Semiconductor Corporation.
---All rights reserved.
---File Title: IP file
---Tool Version: V1.9.12 (64-bit)
---Part Number: GW5AT-LV60PG484AC1/I0
---Device: GW5AT-60
---Device Version: B
---Created Time: Sat Jan 31 17:48:09 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -160,17 +152,17 @@ begin
     PLLA_inst: PLLA
         generic map (
             FCLKIN => "50",
-            IDIV_SEL => 1,
+            IDIV_SEL => 2,
             FBDIV_SEL => 1,
-            ODIV0_SEL => 4,
-            ODIV1_SEL => 8,
-            ODIV2_SEL => 20,
+            ODIV0_SEL => 3,
+            ODIV1_SEL => 6,
+            ODIV2_SEL => 15,
             ODIV3_SEL => 8,
             ODIV4_SEL => 8,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
-            MDIV_SEL => 26,
-            MDIV_FRAC_SEL => 0,
+            MDIV_SEL => 39,
+            MDIV_FRAC_SEL => 2,
             ODIV0_FRAC_SEL => 0,
             CLKOUT0_EN => "TRUE",
             CLKOUT1_EN => "TRUE",

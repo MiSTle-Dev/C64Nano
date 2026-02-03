@@ -22,7 +22,7 @@ entity c64nano_top is
   port
   (
     bl616_jtagsel : in std_logic;
-    jtagseln    : out std_logic := '0';
+    jtagseln    : out std_logic;
     reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     key_reset   : in std_logic; -- S2 button high active
@@ -840,35 +840,25 @@ port map(
     CALIB  => '0'
 );
 
-mainclock_pal: entity work.Gowin_PLL_pal_MOD
-port map (
-    lock => pll_locked_pal,
-    clkout0 => open,
-    clkout1 => clk_pixel_x5_pal,
-    clkout2 => clk64_pal,
-    clkout3 => mspi_clk,
-    clkin => clk,
-    reset => '0',
-    mdrdo => open,
-    mdclk => '0',
-    mdopc => "00",
-    mdainc => '0',
-    mdwdi => 0x"00"
-);
+mainclock_pal: entity work.Gowin_PLL_pal
+    port map (
+        clkin => clk,
+        clkout0 => open,
+        clkout1 => clk_pixel_x5_pal,
+        clkout2 => clk64_pal,
+        clkout3 => mspi_clk,
+        lock => pll_locked_pal,
+        mdclk => clk
+    );
 
-mainclock_ntsc: entity work.Gowin_PLL_ntsc_MOD
+mainclock_ntsc: entity work.Gowin_PLL_ntsc
 port map (
-    lock => pll_locked_ntsc,
+    clkin => clk,
     clkout0 => open,
     clkout1 => clk_pixel_x5_ntsc,
     clkout2 => clk64_ntsc,
-    clkin => clk,
-    reset => '0',
-    mdrdo => open,
-    mdclk => '0',
-    mdopc => "00",
-    mdainc => '0',
-    mdwdi => 0x"00"
+    lock => pll_locked_ntsc,
+    mdclk => clk
 );
 
 leds_n <=  leds(1 downto 0);

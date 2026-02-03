@@ -2,19 +2,20 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 
 
-entity Gowin_PLL_ntsc is
+entity Gowin_PLL_pal is
     port (
         clkin: in std_logic;
         clkout0: out std_logic;
         clkout1: out std_logic;
         clkout2: out std_logic;
+        clkout3: out std_logic;
         lock: out std_logic;
         mdclk: in std_logic
     );
-end Gowin_PLL_ntsc;
+end Gowin_PLL_pal;
 
 
-architecture Behavioral of Gowin_PLL_ntsc is
+architecture Behavioral of Gowin_PLL_pal is
     signal mdrdo: std_logic_vector(7 downto 0);
     signal wMdOpc: std_logic_vector(1 downto 0);
     signal wMdAInc: std_logic;
@@ -24,10 +25,11 @@ architecture Behavioral of Gowin_PLL_ntsc is
     signal pll_rst: std_logic;
 
 
-    component Gowin_PLL_ntsc_MOD
+    component Gowin_PLL_pal_MOD
         port (
             clkout1: out std_logic;
             clkout2: out std_logic;
+            clkout3: out std_logic;
             clkout0: out std_logic;
             lock: out std_logic;
             reset: in std_logic;
@@ -66,10 +68,11 @@ architecture Behavioral of Gowin_PLL_ntsc is
 
 
 begin
-    u_pll: Gowin_PLL_ntsc_MOD
+    u_pll: Gowin_PLL_pal_MOD
         port map (
             clkout1 => clkout1,
             clkout2 => clkout2,
+            clkout3 => clkout3,
             clkout0 => clkout0,
             lock => pll_lock,
             mdrdo => wMdQOut,
@@ -85,7 +88,7 @@ begin
     u_pll_init: PLL_INIT
         generic map (
             CLK_PERIOD => 20,
-            MULTI_FAC => 26
+            MULTI_FAC => 25
         )
         port map (
             I_RST => '0',
@@ -105,4 +108,4 @@ begin
         );
 
 
-end Behavioral; --Gowin_PLL_ntsc
+end Behavioral; --Gowin_PLL_pal

@@ -1,8 +1,8 @@
 [General]
-file=gowin_pll_60k_ntsc
+file=gowin_pll_ntsc
 ipc_version=4
-module=Gowin_PLL_60k_ntsc
-target_device=gw5at60b-002
+module=Gowin_PLL_ntsc
+target_device=gw5a25a-002
 type=clock_plladv
 version=1.0
 
@@ -78,7 +78,7 @@ Clkout3DutyTrimStaticStep=0
 Clkout3ExpectedFrequency=400
 Clkout3PhaseDynamic=false
 Clkout3PhaseStaticValue=0
-Clkout3Tolerance=0.0
+Clkout3Tolerance=2.0
 Clkout3VCODivideFactorStatic=true
 Clkout3VCODivideFactorStaticValue=40
 Clkout4Bypass=false
@@ -135,7 +135,7 @@ EnableMDRP=false
 EnableSsc=false
 GeneralMode=true
 ICPSELStatic=true
-ICPSELStaticValue=ICP1
+ICPSELStaticValue=X
 LANG=1
 LPFCAPStaticValue=C0
 LPFRESStaticValue=X

@@ -54,7 +54,10 @@ add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
 add_file src/tang/tm60k/c64nano.vhd
 add_file src/video_vicII_656x.vhd
+add_file src/gowin_pll/pll_init.v
+add_file src/gowin_pll/gowin_pll_60k_pal.vhd
 add_file src/gowin_pll/gowin_pll_60k_pal_mod.vhd
+add_file src/gowin_pll/gowin_pll_60k_ntsc.vhd
 add_file src/gowin_pll/gowin_pll_60k_ntsc_mod.vhd
 add_file src/tang/tm60k/c64nano.cst
 add_file src/tang/tm60k/c64nano.sdc
