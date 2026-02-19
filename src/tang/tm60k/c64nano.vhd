@@ -30,10 +30,10 @@ entity c64nano_top is
     leds_n      : out std_logic_vector(1 downto 0);
     io          : in std_logic_vector(5 downto 0); -- TR2 TR1 RI LE DN UP
     -- USB-C BL616 UART
-    uart_rx     : in std_logic;
+    --uart_rx     : in std_logic;
     --uart_tx     : out std_logic;
     -- monitor port
-    bl616_mon_tx : out std_logic;
+    --bl616_mon_tx : out std_logic;
     --bl616_mon_rx : in std_logic;
     -- external hw pin UART
     uart_ext_rx : in std_logic;
@@ -549,7 +549,7 @@ begin
   jtagseln <= '1' when (not pll_locked_pal or boot_button_detected or spi_ext or bl616_jtagsel) = '0' else '0';
   reconfign <= 'Z';  -- <= '0' when bl616_RECONFIGn = '0' else 'Z';
   -- BL616 console to hw pins for external USB-UART adapter
-  bl616_mon_tx <= uart_rx;
+  --bl616_mon_tx <= uart_rx;
 
   process (clk64_pal)
   begin
