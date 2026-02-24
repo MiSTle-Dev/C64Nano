@@ -21,7 +21,6 @@ entity c64nano_top is
    );
   port
   (
-    reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
@@ -476,7 +475,6 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal int_out_n        : std_logic;
 signal uart_tx_i        : std_logic;
-signal m0s_d, m0s_d1    : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -544,21 +542,16 @@ end component;
 
 begin
 
-  reconfign <= 'Z';
   bl616_mon_tx <= uart_rx; -- BL616 console debug output
 
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi (M0S Dock) , then the connection is being switched
-process (all)
+process (clk)
 begin
   if flash_lock = '0' then
     spi_ext <= '0';
-    m0s_d <= '1';
-    m0s_d1 <= '1';
-  elsif rising_edge(flash_clk) then
-    m0s_d <= m0s(2);
-    m0s_d1 <= m0s_d;
-    if m0s_d1 = '1' and m0s_d = '0' then
+  elsif rising_edge(clk) then
+    if m0s(2) = '0' then
       spi_ext <= '1';
     end if;
   end if;

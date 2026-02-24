@@ -23,7 +23,6 @@ entity c64nano_top is
   (
     bl616_jtagsel : in std_logic;
     jtagseln    : out std_logic;
-    reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     key_reset   : in std_logic; -- S2 button high active
     key_user    : in std_logic; -- S1 button high active
@@ -520,11 +519,10 @@ begin
 -- enable JTAG if any button has been pressed during boot and also once
 -- the external FPGA Companion has been seen
   jtagseln <= '1' when (not pll_locked_pal or boot_button_detected or spi_ext or bl616_jtagsel) = '0' else '0';
-  reconfign <= 'Z';  -- <= '0' when bl616_RECONFIGn = '0' else 'Z';
 
-  process (clk64_pal)
+  process (clk)
   begin
-    if rising_edge(clk64_pal) then
+    if rising_edge(clk) then
       if pll_locked_pal = '0' then
         spi_ext <= '0';
       elsif pmod_companion_ss = '0' then

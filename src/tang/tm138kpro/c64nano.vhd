@@ -23,7 +23,6 @@ entity c64nano_top is
   (
     bl616_jtagsel : in std_logic;
     jtagseln    : out std_logic := '0';
-    reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     key_n       : in std_logic_vector(3 downto 0);
     key_som_n   : in std_logic; -- SOM button
@@ -554,14 +553,13 @@ begin
 -- enable JTAG if any button has been pressed during boot and also once
 -- the external FPGA Companion has been seen
   jtagseln <= '1' when (not pll_locked_pal or boot_button_detected or spi_ext or bl616_jtagsel) = '0' else '0';
-  reconfign <= 'Z';  -- <= '0' when bl616_RECONFIGn = '0' else 'Z';
   twimux <= "100"; -- connect BL616 TWI4 PLL1
   -- BL616 console to hw pins for external USB-UART adapter
   bl616_mon_tx <= uart_rx;
 
-  process (clk64_pal)
+  process (clk)
   begin
-    if rising_edge(clk64_pal) then
+    if rising_edge(clk) then
       if pll_locked_pal = '0' then
         spi_ext <= '0';
       elsif pmod_companion_ss = '0' then
@@ -579,7 +577,7 @@ begin
   pmod_companion_intn <= spi_intn;
 
   somleds(0) <= not jtagseln;
-  somleds(1) <= not reconfign;
+  somleds(1) <= bl616_jtagsel;
 
 gamepad_p1: entity work.dualshock2
     port map (
