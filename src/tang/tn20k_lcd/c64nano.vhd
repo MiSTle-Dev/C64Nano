@@ -21,7 +21,6 @@ entity c64nano_top is
    );
   port
   (
-    reconfign   : out std_logic := 'Z';
     clk         : in std_logic;
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
@@ -543,7 +542,6 @@ end component;
 
 begin
 
-  reconfign <= 'Z';
   -- onboard BL616
   spi_io_din  <= spi_dat;
   spi_io_ss   <= spi_csn;
