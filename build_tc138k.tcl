@@ -90,7 +90,6 @@ set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -bit_compress 1
 set_option -multi_boot 0
-set_option -mspi_jump 0
 set_option -turn_off_bg 0
 set_option -vccx 1.8
 set_option -vcc 0.9
@@ -101,8 +100,8 @@ set_option -rpt_auto_place_io_info 1
 set_option -convert_sdp32_36_to_sdp16_18 1
 set_option -correct_hold_violation 1
 set_option -loading_rate 70.000
-set_option -place_option 2
-set_option -route_option 1
+#set_option -place_option 2
+#set_option -route_option 1
 set_option -ireg_in_iob 1
 set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1
@@ -118,11 +117,13 @@ set_option -enable_dsrm 0
 set_option -disable_io_insertion 0
 set_option -looplimit 2000
 
-#set_option -multiboot_mode quad
-#set_option -multiboot_address_width 24
+set_option -co-place_io_registers 0
+set_option -replicate_resources 1
+set_option -show_init_in_vo 0
+
+#set_option -mspi_jump 1
+#set_option -mspijump_address_width 24
 #set_option -mspijump_mode quad
-
-#set_option -bit_incl_bsram_init 1
-
+#set_option -merge_jumpbit 1
 
 run all

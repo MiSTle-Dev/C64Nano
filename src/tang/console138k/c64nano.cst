@@ -1,5 +1,6 @@
-//CLOCK_LOC "spi_sclk_d" BUFG = CLK;
+//CLOCK_LOC "spi_sclk_d" BUFG[0] = CLK;
 //CLOCK_LOC "spi_sclk_d" LOCAL_CLOCK;
+CLOCK_LOC "spi_io_clk" BUFG = CLK;
 
 //IO_PORT "reconfign" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 //IO_LOC  "reconfign" N12;
@@ -96,6 +97,15 @@ IO_LOC "mspi_di" P22;
 IO_PORT "mspi_di" PULL_MODE=NONE IO_TYPE=LVCMOS33;
 IO_LOC "mspi_clk" L12;
 IO_PORT "mspi_clk" PULL_MODE=NONE IO_TYPE=LVCMOS33;
+
+//IO_LOC "spi_io[0]" P22;
+//IO_LOC "spi_io[1]" R22;
+//IO_LOC "spi_io[2]" P21;
+//IO_LOC "spi_io[3]" R21;
+//IO_PORT "spi_io[0]" PULL_MODE=NONE IO_TYPE=LVCMOS33;
+//IO_PORT "spi_io[1]" PULL_MODE=NONE IO_TYPE=LVCMOS33;
+//IO_PORT "spi_io[2]" PULL_MODE=NONE IO_TYPE=LVCMOS33;
+//IO_PORT "spi_io[3]" PULL_MODE=NONE IO_TYPE=LVCMOS33;
 
 // DualShock controller on PMOD1
 IO_LOC "ds_clk" E21;
