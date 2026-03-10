@@ -22,7 +22,7 @@ entity c64nano_top is
   port
   (
     bl616_jtagsel : in std_logic;
-    jtagseln    : out std_logic := '0';
+    jtagseln    : out std_logic;
     clk         : in std_logic;
     key_reset_n : in std_logic; -- S2 button
     key_user_n  : in std_logic; -- S1 button
@@ -468,7 +468,6 @@ signal extra_button1   : std_logic_vector(7 downto 0);
 signal system_uart     : std_logic_vector(1 downto 0);
 signal uart_rx_muxed   : std_logic;
 signal joyswap         : std_logic;
-signal user_d          : std_logic := '0';
 signal system_joyswap  : std_logic;
 signal pd1,pd2,pd3,pd4 : std_logic_vector(7 downto 0);
 signal detach_reset_d  : std_logic;
@@ -496,7 +495,7 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal spi_intn         : std_logic;
 signal uart_tx_i        : std_logic;
-signal boot_button_detected : std_logic := '1';
+signal sys_jtagseln     : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -534,22 +533,17 @@ component DCS
 
 begin
 
-  process (pll_locked_pal)
-  begin
-    if rising_edge(pll_locked_pal) then
-      boot_button_detected <= '1' when key_user_n = '0' or key_reset_n = '0' else '0';
-    end if;
-  end process;
-
 -- enable JTAG if any button has been pressed during boot and also once
 -- the external FPGA Companion has been seen
-  jtagseln <= '1' when (not pll_locked_pal or boot_button_detected or spi_ext or bl616_jtagsel) = '0' else '0';
+  jtagseln  <= not bl616_jtagsel; -- or spi_ext
+  sys_jtagseln <= not (not pll_locked_pal or bl616_jtagsel);
+
   -- BL616 console to hw pins for external USB-UART adapter
   bl616_mon_tx <= uart_rx;
 
-  process (clk)
+  process (clk64_pal)
   begin
-    if rising_edge(clk) then
+    if rising_edge(clk64_pal) then
       if pll_locked_pal = '0' then
         spi_ext <= '0';
       elsif pmod_companion_ss = '0' then
@@ -764,10 +758,10 @@ sdc_iack <= int_ack(3);
 
 sd_card_inst: entity work.sd_card
 generic map (
-    CLK_DIV  => 1
+    CLK_DIV  => 0
   )
     port map (
-    rstn            => pll_locked, 
+    rstn            => pll_locked,
     clk             => clk32,
   
     -- SD card signals
@@ -950,25 +944,31 @@ port map(
     CALIB  => '0'
 );
 
-mainclock_pal: entity work.Gowin_PLL_138k_pal
+mainclock_pal: entity work.Gowin_PLL_138k_pal_MOD
 port map (
     clkin => clk,
-    init_clk => clk,
     clkout0 => open,
     clkout1 => clk_pixel_x5_pal,
     clkout2 => clk64_pal,
     clkout3 => mspi_clk, -- 64Mhz 180 deg phase
-    lock => pll_locked_pal
+    lock => pll_locked_pal,
+    reset   => '0',
+    icpsel  => (others => '0'),
+    lpfres  => (others => '0'),
+    lpfcap  => (others => '0')
 );
 
-mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc
+mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc_MOD
 port map (
     clkin => clk,
-    init_clk => clk,
     clkout0 => open,
     clkout1 => clk_pixel_x5_ntsc,
     clkout2 => clk64_ntsc,
-    lock => pll_locked_ntsc
+    lock => pll_locked_ntsc,
+    reset   => '0',
+    icpsel  => (others => '0'),
+    lpfres  => (others => '0'),
+    lpfcap  => (others => '0')
 );
 
 leds_n(1 downto 0) <= not leds(1 downto 0);
@@ -1165,7 +1165,7 @@ end process;
 mcu_spi_inst: entity work.mcu_spi 
 port map (
   clk            => clk32,
-  reset          => not pll_locked,
+  reset          => not sys_jtagseln,
   -- SPI interface to BL616 MCU
   spi_io_ss      => spi_io_ss,      -- SPI CSn
   spi_io_clk     => spi_io_clk,     -- SPI SCLK
@@ -1224,7 +1224,7 @@ hid_inst: entity work.hid
  port map 
  (
   clk                 => clk32,
-  reset               => not pll_locked,
+  reset               => not jtagseln,
 --
   data_in_strobe      => mcu_sys_strobe,
   data_in_start       => mcu_start,
@@ -1486,7 +1486,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => clk64_pal,
-    resetn    => pll_locked_pal and jtagseln,
+    resetn    => sys_jtagseln,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),

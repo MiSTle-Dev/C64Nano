@@ -18,11 +18,11 @@ module flash
  output reg [7:0] dout,
  
  // interface to the chip
- output reg	   mspi_cs,
- inout		   mspi_di, // data in into flash chip
- inout		   mspi_hold,
- inout		   mspi_wp,
- inout		   mspi_do, // data out from flash chip
+ output			mspi_cs,
+ inout			mspi_di, // data in into flash chip
+ inout			mspi_hold,
+ inout			mspi_wp,
+ inout			mspi_do, // data out from flash chip
  
 `ifdef VERILATOR		
  input [1:0]	   mspi_din, 
@@ -34,10 +34,25 @@ module flash
 reg		   dspi_mode;
 
 wire [1:0]	   dspi_out;
-   
+
+reg mspi_cs_i;
 // drive hold and wp to their static default
-assign mspi_hold = 1'b1;
-assign mspi_wp   = 1'b0;
+assign mspi_hold = !resetn?1'bz:1'b1;
+assign mspi_wp   = !resetn?1'bz:1'b1;
+assign mspi_cs   = !resetn?1'bz:mspi_cs_i;
+
+wire [1:0] output_en = { 
+    dspi_mode?(state<=6'd22):1'b0,    // io1 is do in SPI mode and thus never driven
+    dspi_mode?(state<=6'd22):1'b1     // io0 is di in SPI mode and thus always driven
+};
+      
+wire [1:0] data_out = {
+    dspi_mode?dspi_out[1]:1'bx,      // never driven in SPI mode
+    dspi_mode?dspi_out[0]:spi_di       
+};
+
+assign mspi_do   = !resetn?1'bz:output_en[1]?data_out[1]:1'bz;
+assign mspi_di   = !resetn?1'bz:output_en[0]?data_out[0]:1'bz;
 
 // use "fast read dual IO" command
 wire [7:0]   CMD_RD_DIO = 8'hbb;  
@@ -48,24 +63,11 @@ wire [7:0] M = 8'b0010_0000;
 reg [5:0] state;
 reg [4:0] init;
 
-wire [1:0] output_en = { 
-    dspi_mode?(state<=6'd22):1'b0,    // io1 is do in SPI mode and thus never driven
-    dspi_mode?(state<=6'd22):1'b1     // io0 is di in SPI mode and thus always driven
-};
-
 // flash is ready when init phase has ended
 assign ready = (init == 5'd0);  
    
 // send 16 1's during init on IO0 to make sure M4 = 1 and dspi is left
 wire spi_di = (init>1)?1'b1:CMD_RD_DIO[3'd7-state[2:0]];  // the command is sent in spi mode
-  
-wire [1:0] data_out = {
-    dspi_mode?dspi_out[1]:1'bx,      // never driven in SPI mode
-    dspi_mode?dspi_out[0]:spi_di       
-};
-
-assign mspi_do   = output_en[1]?data_out[1]:1'bz;
-assign mspi_di   = output_en[0]?data_out[0]:1'bz;
 assign dspi_out = 
 		  (state==6'd8)?address[23:22]:
 		  (state==6'd9)?address[21:20]:
@@ -97,7 +99,7 @@ always @(posedge clk or negedge resetn) begin
    if(!resetn) begin
       // initially assume regular spi mode
       dspi_mode <= 1'b0;
-      mspi_cs <= 1'b1;      
+      mspi_cs_i <= 1'b1;
       busy <= 1'b0;
       init <= 5'd20;
       csD <= 1'b0;
@@ -107,8 +109,8 @@ always @(posedge clk or negedge resetn) begin
 
       // send 16 1's on IO0 to make sure M4 = 1 and dspi is left and we are in a known state
       if(init != 5'd0) begin
-        if(init == 5'd20) mspi_cs <= 1'b0;  // select flash chip at begin of 16 1's	 
-        if(init == 5'd4)  mspi_cs <= 1'b1;  // de-select flash chip at end of 16 1's
+        if(init == 5'd20) mspi_cs_i <= 1'b0;  // select flash chip at begin of 16 1's	 
+        if(init == 5'd4)  mspi_cs_i <= 1'b1;  // de-select flash chip at end of 16 1's
 	 
         if(init != 5'd1 || !busy)
             init <= init - 5'd1;
@@ -116,7 +118,7 @@ always @(posedge clk or negedge resetn) begin
 	 
       // wait for rising edge of cs or end of init phase
       if((csD && !csD2 && !busy)||(init == 5'd2)) begin
-        mspi_cs <= 1'b0;	  // select flash chip	 
+        mspi_cs_i <= 1'b0;	  // select flash chip	 
         busy <= 1'b1;
 
         // skip sending command if already in DSPI mode and M(5:4) == (1:0) sent
@@ -141,7 +143,7 @@ always @(posedge clk or negedge resetn) begin
         if(state == 6'd27) begin
             state <= 6'd0;	    
             busy <= 1'b0;
-            mspi_cs <= 1'b1;	// deselect flash chip	 
+            mspi_cs_i <= 1'b1;	// deselect flash chip	 
         end
       end
    end
