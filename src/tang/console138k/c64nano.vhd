@@ -535,16 +535,18 @@ begin
 
 -- enable JTAG if any button has been pressed during boot and also once
 -- the external FPGA Companion has been seen
-  jtagseln  <= not bl616_jtagsel; -- or spi_ext
+  jtagseln  <= not bl616_jtagsel or spi_ext;
   sys_jtagseln <= not (not pll_locked_pal or bl616_jtagsel);
 
   -- BL616 console to hw pins for external USB-UART adapter
   bl616_mon_tx <= uart_rx;
 
-  process (clk64_pal)
+  process (clk64_pal, pll_locked_pal)
   begin
-    if rising_edge(clk64_pal) then
-      if pll_locked_pal = '0' then
+    if pll_locked_pal = '0' then
+        spi_ext <= '0';
+    elsif rising_edge(clk64_pal) then
+      if bl616_jtagsel = '1' then
         spi_ext <= '0';
       elsif pmod_companion_ss = '0' then
         spi_ext <= '1';
@@ -761,7 +763,7 @@ generic map (
     CLK_DIV  => 0
   )
     port map (
-    rstn            => pll_locked,
+    rstn            => sys_jtagseln,
     clk             => clk32,
   
     -- SD card signals
@@ -810,7 +812,7 @@ generic map
   STEREO  => false
 )
 port map(
-      pll_lock     => pll_locked, 
+      pll_lock     => sys_jtagseln, 
       clk          => clk32,
       clk_pixel_x5 => clk_pixel_x5,
       audio_div    => audio_div,
@@ -876,7 +878,7 @@ port map(
     sd_cas    => O_sdram_cas_n, -- columns address select
     -- cpu/chipset interface
     clk       => clk64,         -- sdram is accessed at 64MHz
-    reset_n   => pll_locked,    -- init signal after FPGA config to initialize RAM
+    reset_n   => sys_jtagseln,    -- init signal after FPGA config to initialize RAM
     ready     => ram_ready,     -- ram is ready and has been initialized
     refresh   => idle,          -- chipset requests a refresh cycle
     din       => din,           -- data input from chipset/cpu
@@ -1189,7 +1191,7 @@ hid_inst: entity work.hid
  port map 
  (
   clk             => clk32,
-  reset           => not pll_locked,
+  reset           => not sys_jtagseln,
   -- interface to receive user data from MCU (mouse, kbd, ...)
   data_in_strobe  => mcu_hid_strobe,
   data_in_start   => mcu_start,
@@ -1766,7 +1768,7 @@ begin
     end if;
 end process;
 
-por <= system_reset(0) or not pll_locked or not ram_ready;
+por <= system_reset(0) or not sys_jtagseln or not ram_ready;
 
 process(clk32, por)
 variable reset_counter : integer;
