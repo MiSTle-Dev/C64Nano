@@ -763,7 +763,7 @@ generic map (
     CLK_DIV  => 0
   )
     port map (
-    rstn            => sys_jtagseln,
+    rstn            => pll_locked, 
     clk             => clk32,
   
     -- SD card signals
@@ -812,7 +812,7 @@ generic map
   STEREO  => false
 )
 port map(
-      pll_lock     => sys_jtagseln, 
+      pll_lock     => pll_locked, 
       clk          => clk32,
       clk_pixel_x5 => clk_pixel_x5,
       audio_div    => audio_div,
@@ -878,7 +878,7 @@ port map(
     sd_cas    => O_sdram_cas_n, -- columns address select
     -- cpu/chipset interface
     clk       => clk64,         -- sdram is accessed at 64MHz
-    reset_n   => sys_jtagseln,    -- init signal after FPGA config to initialize RAM
+    reset_n   => pll_locked,    -- init signal after FPGA config to initialize RAM
     ready     => ram_ready,     -- ram is ready and has been initialized
     refresh   => idle,          -- chipset requests a refresh cycle
     din       => din,           -- data input from chipset/cpu
@@ -918,7 +918,7 @@ clk_switch_2: DCS
 		CLKOUT   => clk64 -- switched clock
 	);
   
-pll_locked <= pll_locked_pal and pll_locked_ntsc;
+pll_locked <= pll_locked_pal and pll_locked_ntsc and not bl616_jtagsel;
 dcsclksel <= "0001" when ntscMode = '0' else "0010";
 
 clk_switch_1: DCS
@@ -1167,7 +1167,7 @@ end process;
 mcu_spi_inst: entity work.mcu_spi 
 port map (
   clk            => clk32,
-  reset          => not sys_jtagseln,
+  reset          => not pll_locked,
   -- SPI interface to BL616 MCU
   spi_io_ss      => spi_io_ss,      -- SPI CSn
   spi_io_clk     => spi_io_clk,     -- SPI SCLK
@@ -1191,7 +1191,7 @@ hid_inst: entity work.hid
  port map 
  (
   clk             => clk32,
-  reset           => not sys_jtagseln,
+  reset           => not pll_locked,
   -- interface to receive user data from MCU (mouse, kbd, ...)
   data_in_strobe  => mcu_hid_strobe,
   data_in_start   => mcu_start,
@@ -1226,7 +1226,7 @@ hid_inst: entity work.hid
  port map 
  (
   clk                 => clk32,
-  reset               => not jtagseln,
+  reset               => not pll_locked,
 --
   data_in_strobe      => mcu_sys_strobe,
   data_in_start       => mcu_start,
@@ -1768,7 +1768,7 @@ begin
     end if;
 end process;
 
-por <= system_reset(0) or not sys_jtagseln or not ram_ready;
+por <= system_reset(0) or not pll_locked or not ram_ready;
 
 process(clk32, por)
 variable reset_counter : integer;
