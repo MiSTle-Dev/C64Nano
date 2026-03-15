@@ -760,7 +760,7 @@ begin
 end
 endfunction
 
-always begin
+always_comb begin
 	IOE_rd = 0;
 	IOF_rd = 0;
 	IO_data = 8'hFF;
