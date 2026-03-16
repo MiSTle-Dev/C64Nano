@@ -265,7 +265,7 @@ signal disk_g64       : std_logic;
 signal disk_g64_d     : std_logic;
 signal c1541_reset    : std_logic;
 signal c1541_osd_reset : std_logic;
-signal system_wide_screen : std_logic;
+signal system_screen  : std_logic_vector(1 downto 0);
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
 signal somleds        : std_logic_vector(1 downto 0);
@@ -845,6 +845,7 @@ port map(
       ntscmode  => ntscMode,
       hs_in_n   => hsync,
       vs_in_n   => vsync,
+      de_in     => '1',
 
       r_in      => std_logic_vector(r(7 downto 4)),
       g_in      => std_logic_vector(g(7 downto 4)),
@@ -859,7 +860,7 @@ port map(
       mcu_data  => mcu_data_out,
 
       -- values that can be configure by the user via osd
-      system_wide_screen => system_wide_screen,
+      system_screen => system_screen,
       system_scanlines => system_scanlines,
       system_volume => system_volume,
 
@@ -1258,7 +1259,7 @@ hid_inst: entity work.hid
   system_reset        => system_reset,
   system_scanlines    => system_scanlines,
   system_volume       => system_volume,
-  system_wide_screen  => system_wide_screen,
+  system_screen       => system_screen,
   system_floppy_wprot => system_floppy_wprot,
   system_port_1       => port_1_sel,
   system_port_2       => port_2_sel,
