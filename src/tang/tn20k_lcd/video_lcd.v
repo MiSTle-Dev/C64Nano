@@ -29,7 +29,7 @@ module video
    // values that can be configure by the user via osd          
    input [1:0]  system_scanlines,
    input [1:0]  system_volume,
-   input     system_wide_screen,
+   input [1:0]  system_screen,
 
    // digital video out for lcd
    output lcd_clk,
