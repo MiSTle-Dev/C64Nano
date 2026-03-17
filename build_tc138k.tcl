@@ -1,4 +1,4 @@
-set_device GW5AST-LV138PG484AC1/I0 -device_version B
+set_device GW5AST-LV138PG484AC1/I0 -device_version C
 
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
@@ -72,6 +72,7 @@ add_file src/sid/sid_voice.sv
 add_file src/uart6551/BaudRate.vhd
 add_file src/uart6551/io_fifo.v
 add_file src/uart6551/uart_6551.v
+add_file src/misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
 set_option -output_base_name C64Nano_Console138k
@@ -100,8 +101,8 @@ set_option -rpt_auto_place_io_info 1
 set_option -convert_sdp32_36_to_sdp16_18 1
 set_option -correct_hold_violation 1
 set_option -loading_rate 70.000
-#set_option -place_option 2
-#set_option -route_option 1
+set_option -place_option 3
+set_option -route_option 2
 set_option -ireg_in_iob 1
 set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1
@@ -118,7 +119,7 @@ set_option -disable_io_insertion 0
 set_option -looplimit 2000
 
 set_option -co-place_io_registers 0
-set_option -replicate_resources 1
+set_option -replicate_resources 0
 set_option -show_init_in_vo 0
 
 #set_option -mspi_jump 1

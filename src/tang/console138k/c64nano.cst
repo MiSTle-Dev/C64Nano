@@ -32,6 +32,9 @@ IO_PORT "bl616_mon_tx" DRIVE=8 IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 IO_LOC "clk" V22;
 IO_PORT "clk" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=OFF;
 
+IO_LOC "key_som" F4; // daughter board reset
+IO_PORT "key_som" IO_TYPE=LVCMOS15 PULL_MODE=NONE DRIVE=OFF BANK_VCCIO=1.5;
+
 // push button active low
 // EX_KEY0 AA13, EX_KEY1 AB13, EX_KEY2 Y12 (NC)
 // s1

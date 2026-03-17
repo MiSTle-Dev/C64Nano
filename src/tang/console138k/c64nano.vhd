@@ -26,6 +26,7 @@ entity c64nano_top is
     clk         : in std_logic;
     key_reset_n : in std_logic; -- S2 button
     key_user_n  : in std_logic; -- S1 button
+    key_som     : in std_logic; -- SOM button
     leds_n      : out std_logic_vector(1 downto 0);
     -- onboard USB-C Tang BL616 UART
     uart_rx     : in std_logic; 
@@ -495,7 +496,7 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal spi_intn         : std_logic;
 signal uart_tx_i        : std_logic;
-signal sys_jtagseln     : std_logic;
+signal boot_button_detected : std_logic := '1';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -533,20 +534,24 @@ component DCS
 
 begin
 
+  process (pll_locked_pal)
+  begin
+    if rising_edge(pll_locked_pal) then
+      boot_button_detected <= '1' when key_user_n = '0' or key_reset_n = '0' else '0';
+    end if;
+  end process;
+
 -- enable JTAG if any button has been pressed during boot and also once
 -- the external FPGA Companion has been seen
-  jtagseln  <= not bl616_jtagsel or spi_ext;
-  sys_jtagseln <= not (not pll_locked_pal or bl616_jtagsel);
+  jtagseln <= not( not pll_locked_pal or not pll_locked_ntsc or spi_ext or bl616_jtagsel );
 
   -- BL616 console to hw pins for external USB-UART adapter
   bl616_mon_tx <= uart_rx;
 
-  process (clk64_pal, pll_locked_pal)
+  process (clk)
   begin
-    if pll_locked_pal = '0' then
-        spi_ext <= '0';
-    elsif rising_edge(clk64_pal) then
-      if bl616_jtagsel = '1' then
+    if rising_edge(clk) then
+      if pll_locked_pal = '0' then
         spi_ext <= '0';
       elsif pmod_companion_ss = '0' then
         spi_ext <= '1';
@@ -919,7 +924,7 @@ clk_switch_2: DCS
 		CLKOUT   => clk64 -- switched clock
 	);
   
-pll_locked <= pll_locked_pal and pll_locked_ntsc and not bl616_jtagsel;
+pll_locked <= pll_locked_pal and pll_locked_ntsc and (not bl616_jtagsel);
 dcsclksel <= "0001" when ntscMode = '0' else "0010";
 
 clk_switch_1: DCS
@@ -947,31 +952,25 @@ port map(
     CALIB  => '0'
 );
 
-mainclock_pal: entity work.Gowin_PLL_138k_pal_MOD
+mainclock_pal: entity work.Gowin_PLL_138k_pal
 port map (
     clkin => clk,
+    init_clk => clk,
     clkout0 => open,
     clkout1 => clk_pixel_x5_pal,
     clkout2 => clk64_pal,
     clkout3 => mspi_clk, -- 64Mhz 180 deg phase
-    lock => pll_locked_pal,
-    reset   => '0',
-    icpsel  => (others => '0'),
-    lpfres  => (others => '0'),
-    lpfcap  => (others => '0')
+    lock => pll_locked_pal
 );
 
-mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc_MOD
+mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc
 port map (
     clkin => clk,
+    init_clk => clk,
     clkout0 => open,
     clkout1 => clk_pixel_x5_ntsc,
     clkout2 => clk64_ntsc,
-    lock => pll_locked_ntsc,
-    reset   => '0',
-    icpsel  => (others => '0'),
-    lpfres  => (others => '0'),
-    lpfcap  => (others => '0')
+    lock => pll_locked_ntsc
 );
 
 leds_n(1 downto 0) <= not leds(1 downto 0);
@@ -1278,7 +1277,7 @@ hid_inst: entity work.hid
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not key_user_n & not key_reset_n), -- S0 and S1 buttons
+  buttons             => "00", -- not key_reset_n S0 and S1 buttons
   leds                => open,
   color               => open
 );
@@ -1489,7 +1488,7 @@ port map(
 flash_inst: entity work.flash 
 port map(
     clk       => clk64_pal,
-    resetn    => sys_jtagseln,
+    resetn    => pll_locked_pal and not bl616_jtagsel,
     ready     => flash_ready,
     busy      => open,
     address   => (X"7" & "000" & dos_sel & c1541rom_addr),
