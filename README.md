@@ -23,7 +23,7 @@ All HID components and MPU firmware by Till Harbaum
 
 Features:
 * support of Core load from FLASH or USB pendrive (Console SDcard + USB)
-* PAL 800x576p@50Hz or NTSC 800x480p@60Hz HDMI Video and Audio Output
+* PAL 720x576p@50Hz or NTSC 720x480p@60Hz HDMI Video and Audio Output
 * TFT-LCD module 800x600 [SH500Q01Z](https://dl.sipeed.com/Accessories/LCD/500Q01Z-00%20spec.pdf) + Speaker support
 * USB Keyboard
 * [USB Joystick](https://en.wikipedia.org/wiki/Joystick) or [USB Gamepad](https://en.wikipedia.org/wiki/Gamepad)
