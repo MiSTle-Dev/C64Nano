@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------
 --  C64 Top level for Tang Nano 20k
---  2023...2025 Stefan Voss
+--  2023...2026 Stefan Voss
 --  based on the work of many others
 --
 --  FPGA64 is Copyrighted 2005-2008 by Peter Wendrich (pwsoft@syntiac.com)
@@ -32,7 +32,11 @@ entity c64nano_top is
     -- monitor port
     bl616_mon_tx : out std_logic;
     -- SPI interface external uC
-    m0s         : inout std_logic_vector(4 downto 0) := (others => 'Z');
+    pmod_companion_din : in std_logic;
+    pmod_companion_dout : out std_logic;
+    pmod_companion_ss : in std_logic;
+    pmod_companion_clk : in std_logic;
+    pmod_companion_intn : out std_logic;
     -- SPI connection to onboard BL616
     spi_sclk    : in std_logic;
     spi_csn     : in std_logic;
@@ -63,7 +67,7 @@ entity c64nano_top is
     -- Gamepad DualShock /JS 1 misteryshield20k
     ds2_clk       : inout std_logic; -- js1_btn1
     ds2_mosi      : inout std_logic; -- js1_down
-    ds2_miso      : in std_logic;    -- js1_up
+    ds2_miso      : inout std_logic; -- js1_up
     ds2_cs        : inout std_logic; -- js1_right
     js1_left      : in std_logic;    -- js1_left
     js1_btn2      : in std_logic;    -- js1_btn2
@@ -134,14 +138,17 @@ signal cs           : std_logic;
 signal we           : std_logic;
 signal din          : std_logic_vector(7 downto 0);
 signal ds           : std_logic_vector(1 downto 0);
-
 -- IEC
-signal iec_data_o  : std_logic;
-signal iec_data_i  : std_logic;
-signal iec_clk_o   : std_logic;
-signal iec_clk_i   : std_logic;
-signal iec_atn_o   : std_logic;
-
+signal c64_iec_clk      : std_logic;
+signal c64_iec_data     : std_logic;
+signal c64_iec_atn      : std_logic;
+signal ext_iec_en       : std_logic;
+signal ext_iec_clk      : std_logic;
+signal ext_iec_data     : std_logic;
+signal drive_iec_clk    : std_logic;
+signal drive_iec_data   : std_logic;
+signal drive_iec_clk_o  : std_logic;
+signal drive_iec_data_o : std_logic;
   -- keyboard
 signal joyUsb1      : std_logic_vector(6 downto 0);
 signal joyUsb2      : std_logic_vector(6 downto 0);
@@ -151,11 +158,8 @@ signal joyDigital0  : std_logic_vector(6 downto 0);
 signal joyDigital1  : std_logic_vector(6 downto 0);
 signal joyNumpad    : std_logic_vector(6 downto 0);
 signal joyMouse     : std_logic_vector(6 downto 0);
-signal joyDS2A      : std_logic_vector(6 downto 0); 
-signal joyDS2B      : std_logic_vector(6 downto 0); 
 signal numpad       : std_logic_vector(7 downto 0);
 signal numpad_d     : std_logic_vector(7 downto 0);
-signal joyDS2       : std_logic_vector(6 downto 0);
 -- joystick interface
 signal joyA        : std_logic_vector(6 downto 0);
 signal joyB        : std_logic_vector(6 downto 0);
@@ -192,7 +196,6 @@ signal drive_par_i : std_logic_vector(7 downto 0);
 signal drive_par_o : std_logic_vector(7 downto 0);
 signal drive_stb_i : std_logic;
 signal drive_stb_o : std_logic;
-
 -- BL616 interfaces
 signal mcu_start      : std_logic;
 signal mcu_sys_strobe : std_logic;
@@ -254,7 +257,7 @@ signal system_screen  : std_logic_vector(1 downto 0);
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
 signal led1541        : std_logic;
-signal reu_cfg        : std_logic; 
+signal reu_cfg        : std_logic_vector(1 downto 0); 
 signal dma_req        : std_logic;
 signal dma_cycle      : std_logic;
 signal dma_addr       : std_logic_vector(15 downto 0);
@@ -309,22 +312,6 @@ signal midi_nmi_n      : std_logic := '1';
 signal st_midi         : std_logic_vector(2 downto 0);
 signal phi             : std_logic;
 signal system_pause    : std_logic;
-signal paddle_1        : std_logic_vector(7 downto 0);
-signal paddle_2        : std_logic_vector(7 downto 0);
-signal paddle_3        : std_logic_vector(7 downto 0);
-signal paddle_4        : std_logic_vector(7 downto 0);
-signal key_r1          : std_logic;
-signal key_r2          : std_logic;
-signal key_l1          : std_logic;
-signal key_l2          : std_logic;
-signal key_triangle    : std_logic;
-signal key_square      : std_logic;
-signal key_circle      : std_logic;
-signal key_cross       : std_logic;
-signal key_up          : std_logic;
-signal key_down        : std_logic;
-signal key_left        : std_logic;
-signal key_right       : std_logic;
 signal IDSEL           : std_logic_vector(5 downto 0) := "111101";
 signal FBDSEL          : std_logic_vector(5 downto 0) := "011101";
 signal ntscModeD       : std_logic;
@@ -445,7 +432,6 @@ signal extra_button1   : std_logic_vector(7 downto 0);
 signal system_uart     : std_logic_vector(1 downto 0);
 signal uart_rx_muxed   : std_logic;
 signal joyswap         : std_logic;
-signal user_d          : std_logic := '0';
 signal system_joyswap  : std_logic;
 signal pd1,pd2,pd3,pd4 : std_logic_vector(7 downto 0);
 signal detach_reset_d  : std_logic;
@@ -456,8 +442,6 @@ signal disk_pause      : std_logic;
 signal pll_locked_i    : std_logic;
 signal pll_locked_d    : std_logic;
 signal pll_locked_d1   : std_logic;
-signal paddle_analog   : std_logic;
-signal ds2select       : std_logic;
 signal flash_ready      : std_logic;
 signal pll_locked_comb  : std_logic;
 signal rts_cts          : std_logic;
@@ -473,8 +457,9 @@ signal shift_mod        : std_logic_vector(1 downto 0);
 signal usb_key          : std_logic_vector(7 downto 0);
 signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
-signal int_out_n        : std_logic;
+signal spi_intn         : std_logic;
 signal uart_tx_i        : std_logic;
+signal palette          : unsigned(2 downto 0);
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -546,72 +531,43 @@ begin
 
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi (M0S Dock) , then the connection is being switched
-process (clk)
-begin
-  if flash_lock = '0' then
-    spi_ext <= '0';
-  elsif rising_edge(clk) then
-    if m0s(2) = '0' then
-      spi_ext <= '1';
+  process (clk)
+  begin
+    if rising_edge(clk) then
+      if pll_locked = '0' then
+        spi_ext <= '0';
+      elsif pmod_companion_ss = '0' then
+        spi_ext <= '1';
+      end if;
     end if;
-  end if;
-end process;
+  end process;
 
-  -- map output data onto both spi outputs
-  spi_io_din  <= m0s(1) when spi_ext = '1' else spi_dat;
-  spi_io_ss   <= m0s(2) when spi_ext = '1' else spi_csn;
-  spi_io_clk  <= m0s(3) when spi_ext = '1' else spi_sclk;
+  spi_io_din <= pmod_companion_din when spi_ext = '1' else spi_dat;
+  spi_io_ss <= pmod_companion_ss when spi_ext = '1' else spi_csn;
+  spi_io_clk <= pmod_companion_clk when spi_ext = '1' else spi_sclk;
+  spi_dir <= spi_io_dout;
+  spi_irqn <= spi_intn;
+  pmod_companion_dout <= spi_io_dout;
+  pmod_companion_intn <= spi_intn;
 
-  -- onboard BL616
-  -- tristate re-use JTAG pins if V_JTAGSELN is in JTAG mode
-  spi_dir     <= spi_io_dout;
-  spi_irqn    <= uart_tx_i when spi_ext = '1' else int_out_n;
-  -- external M0S Dock BL616 / PiPico  / ESP32
-  m0s(0)      <= spi_io_dout;
-  m0s(4)      <= int_out_n;
+  ext_iec_clk  <= ds2_clk or (not ext_iec_en); -- USER_IN[2]
+  ext_iec_data <= ds2_mosi or (not ext_iec_en); -- USER_IN[4]
 
-gamepad_p2: entity work.dualshock2
-    port map (
-    clk           => clk32,
-    rst           => not reset_n,
-    vsync         => vsync,
-    ds2_dat       => ds2_miso,
-    ds2_cmd       => ds2_mosi_i,
-    ds2_att       => ds2_cs_i,
-    ds2_clk       => ds2_clk_i,
-    ds2_ack       => '0',
-    analog        => paddle_analog,
-    stick_lx      => paddle_1,
-    stick_ly      => paddle_2,
-    stick_rx      => paddle_3,
-    stick_ry      => paddle_4,
-    key_up        => key_up,
-    key_down      => key_down,
-    key_left      => key_left,
-    key_right     => key_right,
-    key_l1        => key_l1,
-    key_l2        => key_l2,
-    key_r1        => key_r1,
-    key_r2        => key_r2,
-    key_triangle  => key_triangle,
-    key_square    => key_square,
-    key_circle    => key_circle,
-    key_cross     => key_cross,
-    key_start     => open,
-    key_select    => open,
-    key_lstick    => open,
-    key_rstick    => open,
-    debug1        => open,
-    debug2        => open
-    );
+  ds2_clk  <= 'Z' when (c64_iec_clk  and drive_iec_clk_o)  or (not ext_iec_en) else '0';-- USER_OUT[2]
+  ds2_miso <= 'Z' when (reset_n and (not c1541_osd_reset)) or (not ext_iec_en) else '0';-- USER_OUT[3] 
+  ds2_mosi <= 'Z' when (c64_iec_data and drive_iec_data_o) or (not ext_iec_en) else '0';-- USER_OUT[4]
+  ds2_cs   <= 'Z' when c64_iec_atn                         or (not ext_iec_en) else '0';-- USER_OUT[5]
 
-    led_ws2812: entity work.ws2812
-    port map
-    (
-     clk    => clk32,
-     color  => ws2812_color,
-     data   => ws2812
-    );
+  drive_iec_clk  <= drive_iec_clk_o  and ext_iec_clk;
+  drive_iec_data <= drive_iec_data_o and ext_iec_data;
+
+  led_ws2812: entity work.ws2812
+  port map
+  (
+    clk    => clk32,
+    color  => ws2812_color,
+    data   => ws2812
+  );
 
 process(clk32, disk_reset)
 variable reset_cnt : integer range 0 to 2147483647;
@@ -703,12 +659,12 @@ port map
     disk_readonly => system_floppy_wprot(0),
     disk_g64      => disk_g64,
 
-    iec_atn_i     => iec_atn_o,
-    iec_data_i    => iec_data_o,
-    iec_clk_i     => iec_clk_o,
+    iec_atn_i     => c64_iec_atn,
+    iec_data_i    => c64_iec_data and ext_iec_data,
+    iec_clk_i     => c64_iec_clk and ext_iec_clk,
 
-    iec_data_o    => iec_data_i,
-    iec_clk_o     => iec_clk_i,
+    iec_data_o    => drive_iec_data_o,
+    iec_clk_o     => drive_iec_clk_o,
 
     -- Userport parallel bus to 1541 disk
     par_data_i    => drive_par_i,
@@ -994,15 +950,12 @@ leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
-joyDS2      <= key_circle & key_cross & key_square & key_right & key_left & key_down & key_up;
 joyDigital0 <= not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
-joyDigital1 <= not('1' & js1_btn2 & ds2_clk & ds2_cs & js1_left & ds2_mosi & ds2_miso);
+joyDigital1 <= 7x"00" when ext_iec_en = '1' else (not('1' & js1_btn2 & ds2_clk & ds2_cs & js1_left & ds2_mosi & ds2_miso));
 joyUsb1     <= joystick1(6 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
 joyUsb2     <= joystick2(6 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
 joyNumpad   <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);
 joyMouse    <= "00" & mouse_btns(0) & "000" & mouse_btns(1);
-joyDS2A     <= "00" & '0' & key_cross & key_square & "00";
-joyDS2B     <= "00" & '0' & key_triangle & key_circle & "00";
 joyUsb1A    <= "00" & '0' & joystick1(5) & joystick1(4) & "00"; -- Y,X button
 joyUsb2A    <= "00" & '0' & joystick2(5) & joystick2(4) & "00"; -- Y,X button
 
@@ -1014,93 +967,29 @@ begin
 	if rising_edge(clk32) then
     case port_1_sel is
       when "0000"  => joyA <= joyDigital0;
-        paddle_analog <= '0';
-        ds2select <= '0';
       when "0001"  => joyA <= joyDigital1;
-        paddle_analog <= '0';
-        ds2select <= '0';   
       when "0010"  => joyA <= joyUsb1;
-        paddle_analog <= '0';
-        ds2select <= '0';
       when "0011"  => joyA <= joyUsb2;
-        paddle_analog <= '0';
-        ds2select <= '0';
-      when "0100"  => joyA <= joyDS2;
-        paddle_analog <= '0';
-        ds2select <= '1';
-      when "0101"  => joyA <= joyDS2;
-        paddle_analog <= '0';
-        ds2select <= '1';
       when "0110"  => joyA <= joyNumpad;
-        paddle_analog <= '0';
-        ds2select <= '0';
       when "0111"  => joyA <= joyMouse;
-        paddle_analog <= '0';
-        ds2select <= '0';
       when "1000"  => joyA <= joyUsb1A;
-        paddle_analog <= '0';
-        ds2select <= '0';
       when "1001"  => joyA <= joyUsb2A;
-        paddle_analog <= '0';
-        ds2select <= '0'; 
-      when "1010"  => joyA <= joyDS2A when port_2_sel = "1010" else joyDS2B;
-        paddle_analog <= '1';
-        ds2select <= '1';
-      when "1011"  => joyA <= joyDS2A when port_2_sel = "1011" else joyDS2B;
-        paddle_analog <= '1';
-        ds2select <= '1';
       when others  => joyA <= (others => '0');
-        paddle_analog <= '0';
-        ds2select <= '1';
-      end case;
+    end case;
 
     case port_2_sel is
-      when "0000" => joyB <= joyDigital0;
-        paddle_analog <= '0';
-        ds2select <= '0';
-      when "0001" => joyB <= joyDigital1;
-        paddle_analog <= '0';
-        ds2select <= '0';
+      when "0000"  => joyB <= joyDigital0;
+      when "0001"  => joyB <= joyDigital1;
       when "0010"  => joyB <= joyUsb1;
-        paddle_analog <= '0';
-        ds2select <= '0';
       when "0011"  => joyB <= joyUsb2;
-        paddle_analog <= '0';
-        ds2select <= '0';
-      when "0100"  => joyB <= joyDS2;
-        paddle_analog <= '0';
-        ds2select <= '1';
-      when "0101"  => joyB <= joyDS2;
-        paddle_analog <= '0';
-        ds2select <= '1';
       when "0110"  => joyB <= joyNumpad;
-        paddle_analog <= '0';
-        ds2select <= '0';
       when "0111"  => joyB <= joyMouse;
-        paddle_analog <= '0';
-        ds2select <= '0';
       when "1000"  => joyB <= joyUsb1A;
-        paddle_analog <= '0';
-        ds2select <= '0';
       when "1001"  => joyB <= joyUsb2A;
-        paddle_analog <= '0';
-        ds2select <= '0'; 
-      when "1010"  => joyB <= joyDS2B when port_1_sel = "1010" else joyDS2A;
-        paddle_analog <= '1';
-        ds2select <= '1';
-      when "1011"  => joyB <= joyDS2B when port_1_sel = "1011" else joyDS2A;
-        paddle_analog <= '1';
-        ds2select <= '1';
       when others  => joyB <= (others => '0');
-        paddle_analog <= '0';
-        ds2select <= '1';
-      end case;
+    end case;
   end if;
 end process;
-
-ds2_clk <= ds2_clk_i when ds2select = '1' else 'Z';
-ds2_mosi <= ds2_mosi_i when ds2select = '1' else 'Z';
-ds2_cs <= ds2_cs_i when ds2select = '1' else 'Z';
 
 -- process to toggle joy A/B port with Keyboard page-up (STRG + CSR UP)
 process(clk32)
@@ -1128,26 +1017,22 @@ pot3 <= pd1 when joyswap = '1' else pd3;
 pot4 <= pd2 when joyswap = '1' else pd4;
 
 -- paddle - mouse - GS controller 2nd button and 3rd button
-pd1 <=    not paddle_1 when port_1_sel = "1010" or port_1_sel = "1011" else
-          joystick1_x_pos(7 downto 0) when port_1_sel = "1000" else
+pd1 <=    joystick1_x_pos(7 downto 0) when port_1_sel = "1000" else
           joystick2_x_pos(7 downto 0) when port_1_sel = "1001" else
           ('0' & std_logic_vector(mouse_x_pos(6 downto 1)) & '0') when port_1_sel = "0111" else
           x"ff" when port_1_sel < 7 and joyA(5) = '1' else x"00";
 
-pd2 <=    not paddle_2 when port_1_sel = "1010" or port_1_sel = "1011" else
-          joystick1_y_pos(7 downto 0) when port_1_sel = "1000" else
+pd2 <=    joystick1_y_pos(7 downto 0) when port_1_sel = "1000" else
           joystick2_y_pos(7 downto 0) when port_1_sel = "1001" else
           ('0' & std_logic_vector(mouse_y_pos(6 downto 1)) & '0') when port_1_sel = "0111" else
           x"ff" when port_1_sel < 7 and joyA(6) = '1' else x"00";
 
-pd3 <=    not paddle_3 when port_2_sel = "1010" or port_2_sel = "1011" else
-          joystick1_x_pos(7 downto 0) when port_2_sel = "1000" else
+pd3 <=    joystick1_x_pos(7 downto 0) when port_2_sel = "1000" else
           joystick2_x_pos(7 downto 0) when port_2_sel = "1001" else
           ('0' & std_logic_vector(mouse_x_pos(6 downto 1)) & '0') when port_2_sel = "0111" else
           x"ff" when port_2_sel < 7 and joyB(5) = '1' else x"00";
 
-pd4 <=    not paddle_4 when port_2_sel = "1010" or port_2_sel = "1011" else
-          joystick1_y_pos(7 downto 0) when port_2_sel = "1000" else
+pd4 <=    joystick1_y_pos(7 downto 0) when port_2_sel = "1000" else
           joystick2_y_pos(7 downto 0) when port_2_sel = "1001" else
           ('0' & std_logic_vector(mouse_y_pos(6 downto 1)) & '0') when port_2_sel = "0111" else
           x"ff" when port_2_sel < 7 and joyB(6) = '1' else x"00";
@@ -1278,6 +1163,8 @@ hid_inst: entity work.hid
   system_joyswap      => system_joyswap,
   system_detach_reset => detach_reset,
   system_shift_mod    => shift_mod,
+  system_palette      => palette,
+  system_ext_iec_en   => ext_iec_en,
 
   -- port io (used to expose rs232)
   port_status       => serial_status,
@@ -1288,7 +1175,7 @@ hid_inst: entity work.hid
   port_in_strobe    => serial_rx_strobe,
   port_in_data      => serial_rx_data,
 
-  int_out_n           => int_out_n,
+  int_out_n           => spi_intn,
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
@@ -1301,12 +1188,13 @@ process(clk32)
 variable toX:	integer;
 begin
   if rising_edge(clk32) then
-    c64_iec_clk_old   <= iec_clk_i;
-    drive_iec_clk_old <= iec_clk_o;
+    c64_iec_clk_old   <= c64_iec_clk;
+    drive_iec_clk_old <= drive_iec_clk;
     drive_stb_i_old   <= drive_stb_i;
     drive_stb_o_old   <= drive_stb_o;
-    if c64_iec_clk_old /= iec_clk_i
-      or drive_iec_clk_old /= iec_clk_o
+
+    if c64_iec_clk_old /= c64_iec_clk
+      or drive_iec_clk_old /= drive_iec_clk
       or ((drive_stb_i_old /= drive_stb_i
       or drive_stb_o_old /= drive_stb_o) and ext_en = '1') then
         disk_access <= '1';
@@ -1363,6 +1251,7 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   ntscMode     => ntscMode,
   hsync        => hsync,
   vsync        => vsync,
+  palette      => palette,
   r            => r,
   g            => g,
   b            => b,
@@ -1439,11 +1328,11 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   cnt1_o       => open,
 
   -- IEC
-  iec_data_o   => iec_data_o,
-  iec_data_i   => iec_data_i,
-  iec_clk_o    => iec_clk_o,
-  iec_clk_i    => iec_clk_i,
-  iec_atn_o    => iec_atn_o,
+  iec_data_o   => c64_iec_data,
+  iec_atn_o    => c64_iec_atn,
+  iec_clk_o    => c64_iec_clk,
+  iec_data_i   => drive_iec_data,
+  iec_clk_i    => drive_iec_clk,
 
   c64rom_addr  => ioctl_addr(13 downto 0),
   c64rom_data  => ioctl_data,
@@ -1462,14 +1351,14 @@ begin
   end if;
 end process;
 
-reu_oe  <= IOF and reu_cfg;
+reu_oe  <= '1' when IOF = '1' and reu_cfg /= 0 else '0';
 reu_ram_ce <= not ext_cycle_d and ext_cycle and dma_req;
 
 reu_inst: entity work.reu
 port map(
     clk       => clk32,
     reset     => not reset_n,
-    cfg       => std_logic_vector(unsigned'( '0' & reu_cfg) ),
+    cfg       => reu_cfg,
   
     dma_req   => dma_req,
     dma_cycle => dma_cycle,

@@ -26,7 +26,7 @@ module sid_voice
 
 localparam        [12:0] WAVEFORM_DC_6581 = 13'h380;         // OSC3 = 'h38 at 5.94V.
 localparam        [12:0] WAVEFORM_DC_8580 = 13'h800;         // No DC offsets in the MOS8580.
-localparam signed [21:0] VOICE_DC_6581    = 22'('h340*'hff); // Measured from samples.
+localparam signed [21:0] VOICE_DC_6581    = 22'sd212160; // 22'('h340*'hff);// Measured from samples.
 localparam signed [21:0] VOICE_DC_8580    = 22'h0;           // No DC offsets in the MOS8580.
 
 localparam WF_0_TTL_6581  = 23'd200000;  // Waveform 0 TTL ~200ms
@@ -77,11 +77,12 @@ assign acc_t = {oscillator[23], oscillator[22:12] ^ {11{~control[5] & ((ringmod_
 reg [11:0] noise;
 reg [11:0] saw_tri;
 reg        pulse;
+reg clk, clk_d;
+reg osc_edge;
+reg [23:0] noise_age;
+reg [22:0] lfsr_noise;
+
 always @(posedge clock) begin
-	reg clk, clk_d;
-	reg osc_edge;
-	reg [23:0] noise_age;
-	reg [22:0] lfsr_noise;
 
 	if (reset) begin
 		saw_tri    <= 0;
@@ -107,7 +108,7 @@ always @(posedge clock) begin
 			end
 			else begin
 				noise_age <= 0;
-            if (clk & ~clk_d) begin
+            if (~clk_d) begin
 					lfsr_noise <= {lfsr_noise[21:0], (reset | test_ctrl | lfsr_noise[22]) ^ lfsr_noise[17]};
 				end
 				else if (control[7] & |control[6:4]) begin
@@ -187,10 +188,6 @@ wire signed [21:0] voice_dc = mode ? VOICE_DC_8580 : VOICE_DC_6581;
 
 always @(posedge clock) begin
     if (ce_1m) begin
-        keep_cnt <= keep_cnt;
-        env_dac  <= env_dac;
-        dac_out  <= dac_out;
-        dca_out  <= dca_out;
 
         if (control[7:4] != 4'b0000) begin
             keep_cnt <= keep_reload;

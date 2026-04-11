@@ -32,9 +32,9 @@ Features:
 * [USB XBOX 360 Controller](https://en.wikipedia.org/wiki/Xbox_360_controller) as Joystick or Paddle
 * 2 x [legacy D9 Joystick](https://en.wikipedia.org/wiki/Atari_CX40_joystick) (Atari / Commodore digital type)
 * Joystick emulation on Keyboard Numpad
-* [Dualshock 2 Controller Gamepad](https://en.wikipedia.org/wiki/DualShock) for [MiSTeryShield20k](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k/README.md) via spare [pinheader](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md). Adapter [venice1200](https://github.com/venice1200)
-* [Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) DPad / left Stick as Joystick
-* [Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) Sticks as [Paddle](https://www.c64-wiki.com/wiki/Paddle) Emulation (analog mode)
+* ~~[Dualshock 2 Controller Gamepad](https://en.wikipedia.org/wiki/DualShock) for [MiSTeryShield20k](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k/README.md) via spare [pinheader](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md). Adapter [venice1200](https://github.com/venice1200)~~
+* ~~[Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) DPad / left Stick as Joystick~~
+* ~~[Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) Sticks as [Paddle](https://www.c64-wiki.com/wiki/Paddle) Emulation (analog mode)~~
 * Emulation of [C64GS Cheetah Annihilator](https://en.wikipedia.org/wiki/Commodore_64_Games_System) Joystick 2nd Trigger Button (Pot X/Y)
 * emulated [1541 Diskdrive](https://en.wikipedia.org/wiki/Commodore_1541) on FAT/extFAT microSD card with parallel bus [Speedloader Dolphin DOS 2](https://rr.pokefinder.org/wiki/Dolphin_DOS). [GER manual](https://www.c64-wiki.de/wiki/Dolphin_DOS)
 * c1541 DOS ROM selection
@@ -51,6 +51,7 @@ Features:
 * RS232 Serial Interface [VIC-1011](http://www.zimmers.net/cbmpics/xother.html) or [UP9600](https://www.pagetable.com/?p=1656) mode to Tang onboard USB-C serial port or external hw pin.
 * Swiftlink-232 [6551](https://en.wikipedia.org/wiki/MOS_Technology_6551) WIFI Modem Interface to FPGA-Companion up to 38400 Baud
 * Freezer support (e.g. Action Replay)
+* external IEC device (C1541 Floppy / IEC Printer etc.)
 
 <img src="./.assets/c64_core.png" alt="image" width="80%" height="auto">
 
@@ -183,6 +184,22 @@ Playing [Sonic the Hedgehog V1.2](https://csdb.dk/release/?id=212523)
 Enable REU, and load the PRG.  
 Playing around with [GEOS](https://en.wikipedia.org/wiki/GEOS_(8-bit_operating_system))
 Enable REU, select c1541 CBM DOS ROM and load the PRG.
+
+## external IEC device
+
+Use of external IEC and support of 2nd D9 Joystick is mutually exclusive.  
+An external IEC device e.g. C1541 can be connected via 5V level shifter / open collector driver to MiSTeryShield spare connector.  
+BiDir level shifter like this: [Converter](https://github.com/venice1200/MiSTer_SNAC2IEC/tree/main/Schematics) based on commercial available I2C level shifter PCBA, Transistor circuit or [TI TXE108E](https://www.ti.com/product/TXS0108E) should be usable.  
+
+> [!IMPORTANT]
+> Connecting a C1541 to the FPGA without level shifter/open drain buffer will for sure damage it.
+
+TN20k  
+Pin Function 2nd Joy IEC  
+73 ds2_clk  BTN1  CLK  
+77 ds2_miso UP    RESET  
+74 ds2_mosi DOWN  DATA  
+31 ds2_cs   RIGHT ATN  
 
 ## Push Button utilization
 
