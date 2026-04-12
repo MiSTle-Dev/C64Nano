@@ -206,13 +206,13 @@ D9 Port **#1**
 | 26   | J4‑11 | io(3)    | 4  | RIGHT       | DS2_CS   | ATN (3)  |
 | 29   | J4‑12 | io(4)    | 3  | LEFT        | –        | –        |
 | 30   | J4‑13 | io(5)    | 9  | BTN2        | –        | –        |
-| --   | J4‑20 | GND      | 8  | GND         | –        | –        |
+| --   | J4‑20 | GND      | 8  | GND         | –        | GND      |
 | --   | J7‑1  | 5V       | 7  | 5V          | –        | –        |
 
 D9 Port **#2** (or spare header J3 MiSTeryShieldPiPico)
 
 > [!IMPORTANT]
-> Connecting a IEC device to spare header J3 without level shifter will for sure damage it!
+> Connecting a IEC device to spare header J3 without level shifter will for sure damage the FPGA!
 
 | FPGA | TN20k | Signal   | D9 |ShieldPico *dual D9*| ShieldPico J3 | DualShock| IEC     |
 |------|-------|----------|----|-------------|-------------|----------|---------|
@@ -222,7 +222,7 @@ D9 Port **#2** (or spare header J3 MiSTeryShieldPiPico)
 | 31   | J4‑14 | spare(3) | 4  | RIGHT       | 4           | DS2_CS   |ATN (3)  |
 | 49   | J7‑12 | spare(4) | 3  | LEFT        | 5           | –        |         |
 | 52   | J7‑20 | spare(5) | 9  | BTN2        | –           | –        | –       |
-| --   | J4‑20 | GND      | 8  | GND         | 6           | –        | –       |
+| --   | J4‑20 | GND      | 8  | GND         | 6           | –        | GND     |
 | --   | J4‑19 | 3V3      | –  | –           | 7           | –        | –       |
 | --   | J7‑1  | 5V       | 7  | 5V          | 8           | –        | –       |
 
