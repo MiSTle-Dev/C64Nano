@@ -25,7 +25,7 @@ entity c64nano_top is
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(5 downto 0);
-    io          : in std_logic_vector(5 downto 0); -- JS0 Joystick D9
+    io          : inout std_logic_vector(5 downto 0); -- JS0 Joystick D9
     -- USB-C BL616 UART
     uart_rx     : in std_logic;
   --uart_tx     : out std_logic; -- is now spi_irqn ! 
@@ -64,13 +64,8 @@ entity c64nano_top is
     O_sdram_addr : out std_logic_vector(10 downto 0);  -- 11 bit multiplexed address bus
     O_sdram_ba   : out std_logic_vector(1 downto 0);     -- two banks
     O_sdram_dqm  : out std_logic_vector(3 downto 0);     -- 32/4
-    -- Gamepad DualShock /JS 1 misteryshield20k
-    ds2_clk       : inout std_logic; -- js1_btn1
-    ds2_mosi      : inout std_logic; -- js1_down
-    ds2_miso      : inout std_logic; -- js1_up
-    ds2_cs        : inout std_logic; -- js1_right
-    js1_left      : in std_logic;    -- js1_left
-    js1_btn2      : in std_logic;    -- js1_btn2
+    -- spare / 2nd D9
+    spare         : inout std_logic_vector(5 downto 0); -- JS1 Joystick D9
     -- MIDI
     midi_rx       : in std_logic;
     midi_tx       : out std_logic;
@@ -96,9 +91,6 @@ type states is (
   FSM_SWITCHED
 );
 
-signal ds2_clk_i : std_logic;
-signal ds2_mosi_i : std_logic;
-signal ds2_cs_i : std_logic;
 signal state          : states := FSM_RESET;
 signal clk64          : std_logic;
 signal clk32          : std_logic;
@@ -142,7 +134,7 @@ signal ds           : std_logic_vector(1 downto 0);
 signal c64_iec_clk      : std_logic;
 signal c64_iec_data     : std_logic;
 signal c64_iec_atn      : std_logic;
-signal ext_iec_en       : std_logic;
+signal ext_iec_en       : std_logic_vector(1 downto 0);
 signal ext_iec_clk      : std_logic;
 signal ext_iec_data     : std_logic;
 signal drive_iec_clk    : std_logic;
@@ -550,13 +542,43 @@ begin
   pmod_companion_dout <= spi_io_dout;
   pmod_companion_intn <= spi_intn;
 
-  ext_iec_clk  <= ds2_clk or (not ext_iec_en); -- USER_IN[2]
-  ext_iec_data <= ds2_mosi or (not ext_iec_en); -- USER_IN[4]
+  ext_iec_clk  <= '1' when ext_iec_en = "00" else  -- USER_IN[2]
+                    io(0) when ext_iec_en = "01" else
+                    spare(0) when ext_iec_en = "10" else
+                    '1';
 
-  ds2_clk  <= 'Z' when (c64_iec_clk  and drive_iec_clk_o)  or (not ext_iec_en) else '0';-- USER_OUT[2]
-  ds2_miso <= 'Z' when (reset_n and (not c1541_osd_reset)) or (not ext_iec_en) else '0';-- USER_OUT[3] 
-  ds2_mosi <= 'Z' when (c64_iec_data and drive_iec_data_o) or (not ext_iec_en) else '0';-- USER_OUT[4]
-  ds2_cs   <= 'Z' when c64_iec_atn                         or (not ext_iec_en) else '0';-- USER_OUT[5]
+  ext_iec_data <= '1' when ext_iec_en = "00" else  -- USER_IN[4]
+                    io(3) when ext_iec_en = "01" else
+                    spare(3) when ext_iec_en = "10" else
+                    '1';
+
+-- Joystick 2 / Spare
+  spare(0) <= 'Z' when ((c64_iec_clk = '1' and drive_iec_clk_o = '1') or (ext_iec_en = "00") or (ext_iec_en = "01"))
+              else '0'; -- USER_OUT[2]
+
+  spare(2) <= 'Z' when ((reset_n = '1' and c1541_osd_reset = '0') or (ext_iec_en = "00") or (ext_iec_en = "01"))
+              else '0'; -- USER_OUT[3] 
+
+  spare(1) <= 'Z' when ((c64_iec_data = '1' and drive_iec_data_o = '1') or (ext_iec_en = "00") or (ext_iec_en = "01"))
+              else '0'; -- USER_OUT[4]
+
+  spare(3) <= 'Z' when (c64_iec_atn = '1') or (ext_iec_en = "00" or (ext_iec_en = "01")) 
+              else '0';-- USER_OUT[5]
+
+  spare(5 downto 4) <= "ZZ"; -- Joystick read
+
+-- Joystick 1
+  io(0) <= 'Z' when ((c64_iec_clk = '1' and drive_iec_clk_o = '1') or (ext_iec_en = "00") or (ext_iec_en = "10"))
+              else '0'; -- USER_OUT[2]
+
+  io(2) <= 'Z' when ((reset_n = '1' and c1541_osd_reset = '0') or (ext_iec_en = "00") or (ext_iec_en = "10"))
+              else '0'; -- USER_OUT[3] 
+
+  io(1) <= 'Z' when ((c64_iec_data = '1' and drive_iec_data_o = '1') or (ext_iec_en = "00") or (ext_iec_en = "10"))
+              else '0'; -- USER_OUT[4]
+
+  io(3) <= 'Z' when (c64_iec_atn = '1') or (ext_iec_en = "00" or (ext_iec_en = "10"))
+              else '0';-- USER_OUT[5]
 
   drive_iec_clk  <= drive_iec_clk_o  and ext_iec_clk;
   drive_iec_data <= drive_iec_data_o and ext_iec_data;
@@ -950,8 +972,8 @@ leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
-joyDigital0 <= not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
-joyDigital1 <= 7x"00" when ext_iec_en = '1' else (not('1' & js1_btn2 & ds2_clk & ds2_cs & js1_left & ds2_mosi & ds2_miso));
+joyDigital0 <= 7x"00" when ext_iec_en = "01" else not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
+joyDigital1 <= 7x"00" when ext_iec_en = "10" else not('1' & spare(5) & spare(0) & spare(3) & spare(4) & spare(1) & spare(2));
 joyUsb1     <= joystick1(6 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
 joyUsb2     <= joystick2(6 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
 joyNumpad   <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);

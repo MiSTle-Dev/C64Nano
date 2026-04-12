@@ -187,19 +187,44 @@ Enable REU, select c1541 CBM DOS ROM and load the PRG.
 
 ## external IEC device
 
-Use of external IEC and support of 2nd D9 Joystick is mutually exclusive.  
-An external IEC device e.g. C1541 can be connected via 5V level shifter / open collector driver to MiSTeryShield spare connector.  
-BiDir level shifter like this: [Converter](https://github.com/venice1200/MiSTer_SNAC2IEC/tree/main/Schematics) based on commercial available I2C level shifter PCBA, Transistor circuit or [TI TXE108E](https://www.ti.com/product/TXS0108E) should be usable.  
+Use of external IEC device e.g. C1541 / Printer and support of a selectable D9 Joystick port for interfacing is mutually exclusive.  
+
+In case MiSTeryShieldRpPico20k **J3 spare** connector is used for interfacing then a 5V level shifter / open collector driver is needed.  
+BiDir level shifter like: [Converter](https://github.com/venice1200/MiSTer_SNAC2IEC/tree/main/Schematics) based on commercial available I2C level shifter PCBA, Transistor circuit or [TI TXE108E](https://www.ti.com/product/TXS0108E) should be usable.  
+
+D9 Joystick port **#1**  
+or on a MiSTeryShieldRpPico20k-dualD9 port **#1** or **#2** can be used.  
+No level shifter is needed as already available on the MiSTeryShield board (for 5V Joystick interfacing).
+
+D9 Port **#1**
+
+| FPGA | TN20k | Signal   | D9 |any ShieldPico| DualShock| IEC      |
+|------|-------|----------|----|-------------|----------|----------|
+| 27   | J4‑8  | io(0)    | 6  | BTN1        | DS2_CLK  | CLK (4)  |
+| 28   | J4‑9  | io(1)    | 2  | DOWN        | DS_MOSI  | DATA (5) |
+| 25   | J4‑10 | io(2)    | 1  | UP          | DS_MISO  | RESET (6)|
+| 26   | J4‑11 | io(3)    | 4  | RIGHT       | DS2_CS   | ATN (3)  |
+| 29   | J4‑12 | io(4)    | 3  | LEFT        | –        | –        |
+| 30   | J4‑13 | io(5)    | 9  | BTN2        | –        | –        |
+| --   | J4‑20 | GND      | 8  | GND         | –        | –        |
+| --   | J7‑1  | 5V       | 7  | 5V          | –        | –        |
+
+D9 Port **#2** (or spare header J3 MiSTeryShieldPiPico)
 
 > [!IMPORTANT]
-> Connecting a C1541 to the FPGA without level shifter/open drain buffer will for sure damage it.
+> Connecting a IEC device to spare header J3 without level shifter will for sure damage it!
 
-TN20k  
-Pin Function 2nd Joy IEC  
-73 ds2_clk  BTN1  CLK  
-77 ds2_miso UP    RESET  
-74 ds2_mosi DOWN  DATA  
-31 ds2_cs   RIGHT ATN  
+| FPGA | TN20k | Signal   | D9 |ShieldPico *dual D9*| ShieldPico J3 | DualShock| IEC     |
+|------|-------|----------|----|-------------|-------------|----------|---------|
+| 73   | J4‑1  | spare(0) | 6  | BTN1        | 1           | DS2_CLK  |CLK (4)  |
+| 74   | J4‑2  | spare(1) | 2  | DOWN        | 2           | DS_MOSI  |DATA (5) |
+| 77   | J4‑5  | spare(2) | 1  | UP          | 3           | DS_MISO  |RESET (6)|
+| 31   | J4‑14 | spare(3) | 4  | RIGHT       | 4           | DS2_CS   |ATN (3)  |
+| 49   | J7‑12 | spare(4) | 3  | LEFT        | 5           | –        |         |
+| 52   | J7‑20 | spare(5) | 9  | BTN2        | –           | –        | –       |
+| --   | J4‑20 | GND      | 8  | GND         | 6           | –        | –       |
+| --   | J4‑19 | 3V3      | –  | –           | 7           | –        | –       |
+| --   | J7‑1  | 5V       | 7  | 5V          | 8           | –        | –       |
 
 ## Push Button utilization
 
