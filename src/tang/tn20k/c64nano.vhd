@@ -565,7 +565,7 @@ begin
   spare(3) <= 'Z' when (c64_iec_atn = '1') or (ext_iec_en = "00" or (ext_iec_en = "01")) 
               else '0';-- USER_OUT[5]
 
-  spare(5 downto 4) <= "ZZ"; -- Joystick read
+  spare(5 downto 4) <= "ZZ";
 
 -- Joystick 1
   io(0) <= 'Z' when ((c64_iec_clk = '1' and drive_iec_clk_o = '1') or (ext_iec_en = "00") or (ext_iec_en = "10"))
@@ -579,6 +579,8 @@ begin
 
   io(3) <= 'Z' when (c64_iec_atn = '1') or (ext_iec_en = "00" or (ext_iec_en = "10"))
               else '0';-- USER_OUT[5]
+
+  io(5 downto 4) <= "ZZ";
 
   drive_iec_clk  <= drive_iec_clk_o  and ext_iec_clk;
   drive_iec_data <= drive_iec_data_o and ext_iec_data;
