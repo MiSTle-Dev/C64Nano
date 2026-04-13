@@ -226,6 +226,19 @@ D9 Port **#2** (or spare header J3 MiSTeryShieldPiPico)
 | --   | J4‑19 | 3V3      | –  | –           | 7           | –        | –       |
 | --   | J7‑1  | 5V       | 7  | 5V          | 8           | –        | –       |
 
+**Cable** side !
+
+| Pin | Name   | Description        |
+|-----|--------|--------------------|
+| 1   | /SRQIN | Serial SRQIN       |
+| 2   | GND    | Ground             |
+| 3   | ATN    | Serial ATN In/Out  |
+| 4   | CLK    | Serial CLK In/Out  |
+| 5   | DATA   | Serial DATA In/Out |
+| 6   | /RESET | Reset              |
+
+ ![Layout](\.assets/conn_din6m.gif)
+
 ## Push Button utilization
 
 * S1 open OSD

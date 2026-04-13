@@ -545,12 +545,12 @@ begin
   ext_iec_clk  <= '1' when ext_iec_en = "00" else  -- USER_IN[2]
                     io(0) when ext_iec_en = "01" else
                     spare(0) when ext_iec_en = "10" else
-                    '1';
+                    '0';
 
   ext_iec_data <= '1' when ext_iec_en = "00" else  -- USER_IN[4]
                     io(3) when ext_iec_en = "01" else
                     spare(3) when ext_iec_en = "10" else
-                    '1';
+                    '0';
 
 -- Joystick 2 / Spare
   spare(0) <= 'Z' when ((c64_iec_clk = '1' and drive_iec_clk_o = '1') or (ext_iec_en = "00") or (ext_iec_en = "01"))
@@ -676,6 +676,7 @@ port map
     reset         => disk_reset,
     pause         => loader_busy,
     ce            => '0',
+    ds            => "00", -- 00 = 8, 01 =9
 
     disk_num      => (others =>'0'),
     disk_change   => sd_change, 
