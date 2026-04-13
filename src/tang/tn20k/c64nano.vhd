@@ -141,6 +141,7 @@ signal drive_iec_clk    : std_logic;
 signal drive_iec_data   : std_logic;
 signal drive_iec_clk_o  : std_logic;
 signal drive_iec_data_o : std_logic;
+signal int_iec_drv      : std_logic_vector(1 downto 0);
   -- keyboard
 signal joyUsb1      : std_logic_vector(6 downto 0);
 signal joyUsb2      : std_logic_vector(6 downto 0);
@@ -548,8 +549,8 @@ begin
                     '0';
 
   ext_iec_data <= '1' when ext_iec_en = "00" else  -- USER_IN[4]
-                    io(3) when ext_iec_en = "01" else
-                    spare(3) when ext_iec_en = "10" else
+                    io(1) when ext_iec_en = "01" else
+                    spare(1) when ext_iec_en = "10" else
                     '0';
 
 -- Joystick 2 / Spare
@@ -676,7 +677,7 @@ port map
     reset         => disk_reset,
     pause         => loader_busy,
     ce            => '0',
-    ds            => "00", -- 00 = 8, 01 =9
+    ds            => int_iec_drv,
 
     disk_num      => (others =>'0'),
     disk_change   => sd_change, 
@@ -1190,6 +1191,7 @@ hid_inst: entity work.hid
   system_shift_mod    => shift_mod,
   system_palette      => palette,
   system_ext_iec_en   => ext_iec_en,
+  system_int_iec_drv  => int_iec_drv,
 
   -- port io (used to expose rs232)
   port_status       => serial_status,

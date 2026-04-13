@@ -190,7 +190,10 @@ Enable REU, select c1541 CBM DOS ROM and load the PRG.
 Use of external IEC device e.g. C1541 / Printer and support of a selectable D9 Joystick port for interfacing is mutually exclusive.  
 
 In case MiSTeryShieldRpPico20k **J3 spare** connector is used for interfacing then a 5V level shifter / open collector driver is needed.  
-BiDir level shifter like: [Converter](https://github.com/venice1200/MiSTer_SNAC2IEC/tree/main/Schematics) based on commercial available I2C level shifter PCBA, Transistor circuit or [TI TXE108E](https://www.ti.com/product/TXS0108E) should be usable.  
+BiDir level shifter like: [Converter](https://github.com/venice1200/MiSTer_SNAC2IEC/tree/main/Schematics) based on commercial available I2C level shifter PCBA, Transistor circuit or [TI TXS104E / TXS108E](https://www.ti.com/product/TXS0108E) should be usable.  
+
+> [!NOTE]
+> C64 stock Kernal has to be loaded.  
 
 D9 Joystick port **#1**  
 or on a MiSTeryShieldRpPico20k-dualD9 port **#1** or **#2** can be used.  

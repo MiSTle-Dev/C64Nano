@@ -218,7 +218,7 @@
  <listentry label="Off" value="3"/>
       </list>
       <list label="Palette:" id="1" default="0">
- <listentry label="Comodore" value="0"/>
+ <listentry label="Commodore" value="0"/>
  <listentry label="Ultimate" value="1"/>
  <listentry label="Pepto-PAL" value="2"/>
  <listentry label="Vice" value="3"/>
@@ -226,6 +226,12 @@
  <listentry label="Vice6569R5" value="5"/>
  <listentry label="Vice8565R2" value="6"/>
  <listentry label="Lemon64" value="7"/>
+      </list>
+      <list label="Internal IEC:" id="3" default="0">
+ <listentry label="8" value="0"/>
+ <listentry label="9" value="1"/>
+ <listentry label="10" value="2"/>
+ <listentry label="11" value="3"/>
       </list>
       <list label="External IEC:" id="2" default="0">
  <listentry label="Off" value="0"/>

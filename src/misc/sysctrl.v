@@ -63,7 +63,8 @@ module sysctrl (
   output reg        system_detach_reset,
   output reg [1:0]  system_shift_mod,
   output reg [2:0]  system_palette,
-  output reg [1:0]  system_ext_iec_en
+  output reg [1:0]  system_ext_iec_en,
+  output reg [1:0]  system_int_iec_drv
 );
 
 reg [3:0] state;
@@ -158,6 +159,7 @@ always @(posedge clk) begin
       system_shift_mod <= 2'b00;
       system_ext_iec_en <= 2'b00;
       system_palette <= 3'd0;
+      system_int_iec_drv <= 2'b00;
    end else begin // if (reset)
       //  bring button state into local clock domain
       buttonsD <= buttons;
@@ -303,8 +305,12 @@ always @(posedge clk) begin
                     if(id == "F") system_detach_reset <= data_in[0];
                     // shift_mod
                     if(id == "$") system_shift_mod <= data_in[1:0];
+                    //
                     if(id == "1") system_palette <= data_in[2:0];
+                    //
                     if(id == "2") system_ext_iec_en <= data_in[1:0];
+                    //
+                    if(id == "3") system_int_iec_drv <= data_in[1:0];
                 end
             end
 
