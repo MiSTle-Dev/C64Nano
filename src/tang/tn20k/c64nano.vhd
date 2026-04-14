@@ -978,8 +978,8 @@ leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
-joyDigital0 <= 7x"00" when ext_iec_en = "01" else not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
-joyDigital1 <= 7x"00" when ext_iec_en = "10" else not('1' & spare(5) & spare(0) & spare(3) & spare(4) & spare(1) & spare(2));
+joyDigital0 <= 7x"00" when (ext_iec_en = "01") or (osd_status = '1') else not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
+joyDigital1 <= 7x"00" when (ext_iec_en = "10") or (osd_status = '1') else not('1' & spare(5) & spare(0) & spare(3) & spare(4) & spare(1) & spare(2));
 joyUsb1     <= joystick1(6 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
 joyUsb2     <= joystick2(6 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
 joyNumpad   <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);
@@ -988,7 +988,7 @@ joyUsb1A    <= "00" & '0' & joystick1(5) & joystick1(4) & "00"; -- Y,X button
 joyUsb2A    <= "00" & '0' & joystick2(5) & joystick2(4) & "00"; -- Y,X button
 
 -- send external DB9 joystick port to µC
-db9_joy <= not(io(5) & io(0), io(2), io(1), io(4), io(3));
+db9_joy <= 6x"00" when ext_iec_en = "01" else not(io(5) & io(0), io(2), io(1), io(4), io(3));
 
 process(clk32)
 begin

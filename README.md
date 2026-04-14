@@ -190,9 +190,7 @@ Enable REU, select c1541 CBM DOS ROM and load the PRG.
 Use of an external IEC device e.g. C1541 / Printer and support of a selectable D9 Joystick port for hw interfacing is mutually exclusive.  
 
 > [!NOTE]
-> Best to use C64 stock Kernal as starting point but also Dolphin DOS was able to read directoy when both drives are active.  
-> Power external drive off and select in OSD e.g. Port #1 as interface and after that power drive on (blocked if done vice versa)  
-> External C1541 is typically factory configured for drive address #8.  
+> Best to use C64 stock Kernal as starting point but also Dolphin DOS was able to read directoy when both drives are active. External C1541 is typically factory configured for drive address #8.  
 > Tang internal C1541 emulation also use by default address #8 so you need to change it via OSD to #9 so that there are no address conflicts. Internal drive becomes now #9 and external one #8.  
 
 In case MiSTeryShieldRpPico20k **J3 spare** connector is used for interfacing then a 5V level shifter / open collector driver is needed.  
