@@ -26,6 +26,7 @@ entity c64nano_top is
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(5 downto 0);
     io          : inout std_logic_vector(5 downto 0); -- JS0 Joystick D9
+    ext_drive_interface : out std_logic;
     -- USB-C BL616 UART
     uart_rx     : in std_logic;
   --uart_tx     : out std_logic; -- is now spi_irqn ! 
@@ -453,6 +454,7 @@ signal kbd_strobe       : std_logic;
 signal spi_intn         : std_logic;
 signal uart_tx_i        : std_logic;
 signal palette          : unsigned(2 downto 0);
+signal reu_wrap         : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -1192,6 +1194,7 @@ hid_inst: entity work.hid
   system_palette      => palette,
   system_ext_iec_en   => ext_iec_en,
   system_int_iec_drv  => int_iec_drv,
+  system_reu_wrap     => reu_wrap,
 
   -- port io (used to expose rs232)
   port_status       => serial_status,
@@ -1210,6 +1213,8 @@ hid_inst: entity work.hid
   leds                => open,
   color               => ws2812_color
 );
+
+ext_drive_interface <= '1' when ext_iec_en /= 0 else '0';
 
 process(clk32)
 variable toX:	integer;
@@ -1386,6 +1391,7 @@ port map(
     clk       => clk32,
     reset     => not reset_n,
     cfg       => reu_cfg,
+    wrap      => reu_wrap,
   
     dma_req   => dma_req,
     dma_cycle => dma_cycle,

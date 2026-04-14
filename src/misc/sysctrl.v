@@ -34,6 +34,7 @@ module sysctrl (
 
   // values that can be configured by the user
   output reg [1:0]  system_reu_cfg,
+  output reg        system_reu_wrap,
   output reg [1:0]  system_reset,
   output reg [1:0]  system_scanlines,
   output reg [1:0]  system_volume,
@@ -131,6 +132,7 @@ always @(posedge clk) begin
       port_out_strobe <= 1'b0;
       port_in_strobe <= 1'b0;
       system_reu_cfg <= 2'b00;
+      system_reu_wrap <= 1'b0;
       system_scanlines <= 2'b00;
       system_volume <= 2'b10;
       system_screen <= 2'b00;
@@ -311,6 +313,8 @@ always @(posedge clk) begin
                     if(id == "2") system_ext_iec_en <= data_in[1:0];
                     //
                     if(id == "3") system_int_iec_drv <= data_in[1:0];
+                    //
+                    if(id == "4") system_reu_wrap <= data_in[0];
                 end
             end
 

@@ -187,16 +187,18 @@ Enable REU, select c1541 CBM DOS ROM and load the PRG.
 
 ## external IEC device
 
-Use of external IEC device e.g. C1541 / Printer and support of a selectable D9 Joystick port for interfacing is mutually exclusive.  
+Use of an external IEC device e.g. C1541 / Printer and support of a selectable D9 Joystick port for hw interfacing is mutually exclusive.  
+
+> [!NOTE]
+> Best to use C64 stock Kernal as starting point but also Dolphin DOS was able to read directoy when both drives are active.  
+> Power external drive off and select in OSD e.g. Port #1 as interface and after that power drive on (blocked if done vice versa)  
+> External C1541 is typically factory configured for drive address #8.  
+> Tang internal C1541 emulation also use by default address #8 so you need to change it via OSD to #9 so that there are no address conflicts. Internal drive becomes now #9 and external one #8.  
 
 In case MiSTeryShieldRpPico20k **J3 spare** connector is used for interfacing then a 5V level shifter / open collector driver is needed.  
 BiDir level shifter like: [Converter](https://github.com/venice1200/MiSTer_SNAC2IEC/tree/main/Schematics) based on commercial available I2C level shifter PCBA, Transistor circuit or [TI TXS104E / TXS108E](https://www.ti.com/product/TXS0108E) should be usable.  
 
-> [!NOTE]
-> C64 stock Kernal has to be loaded.  
-
 D9 Joystick port **#1**  
-or on a MiSTeryShieldRpPico20k-dualD9 port **#1** or **#2** can be used.  
 No level shifter is needed as already available on the MiSTeryShield board (for 5V Joystick interfacing).
 
 D9 Port **#1**
@@ -209,10 +211,11 @@ D9 Port **#1**
 | 26   | J4‑11 | io(3)    | 4  | RIGHT       | DS2_CS   | ATN (3)  |
 | 29   | J4‑12 | io(4)    | 3  | LEFT        | –        | –        |
 | 30   | J4‑13 | io(5)    | 9  | BTN2        | –        | –        |
-| --   | J4‑20 | GND      | 8  | GND         | –        | GND      |
+| --   | J4‑20 | GND      | 8  | GND         | –        | GND (2)  |
 | --   | J7‑1  | 5V       | 7  | 5V          | –        | –        |
 
-D9 Port **#2** (or spare header J3 MiSTeryShieldPiPico)
+D9 Port **#2** (or spare header J3 MiSTeryShieldPiPico)  
+Only MiSTeryShieldRpPico20k-dualD9 port has two D9 ports.  
 
 > [!IMPORTANT]
 > Connecting a IEC device to spare header J3 without level shifter will for sure damage the FPGA!
@@ -225,7 +228,7 @@ D9 Port **#2** (or spare header J3 MiSTeryShieldPiPico)
 | 31   | J4‑14 | spare(3) | 4  | RIGHT       | 4           | DS2_CS   |ATN (3)  |
 | 49   | J7‑12 | spare(4) | 3  | LEFT        | 5           | –        |         |
 | 52   | J7‑20 | spare(5) | 9  | BTN2        | –           | –        | –       |
-| --   | J4‑20 | GND      | 8  | GND         | 6           | –        | GND     |
+| --   | J4‑20 | GND      | 8  | GND         | 6           | –        | GND (2) |
 | --   | J4‑19 | 3V3      | –  | –           | 7           | –        | –       |
 | --   | J7‑1  | 5V       | 7  | 5V          | 8           | –        | –       |
 

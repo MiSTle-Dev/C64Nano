@@ -137,3 +137,6 @@ IO_LOC "spare[4]" 49;
 IO_PORT "spare[4]" PULL_MODE=UP OPEN_DRAIN=ON IO_TYPE=LVCMOS33;
 IO_LOC "spare[5]" 52;
 IO_PORT "spare[5]" PULL_MODE=UP OPEN_DRAIN=ON IO_TYPE=LVCMOS33;
+
+IO_LOC "ext_drive_interface" 53;
+IO_PORT "ext_drive_interface" PULL_MODE=UP IO_TYPE=LVCMOS33;

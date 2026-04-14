@@ -118,7 +118,11 @@
       <list label="REU:" id="V" default="0">
  <listentry label="Off" value="0"/>
  <listentry label="512KB" value="1"/>
- <listentry label="2MB (512KB wrap)" value="2"/>
+ <listentry label="2MB" value="2"/>
+      </list>
+      <list label="REU wrap:" id="4" default="0">
+ <listentry label="512KB" value="0"/>
+ <listentry label="Off" value="1"/>
       </list>
       <list label="C1541 ROM:" id="D" default="0" action="c1541_reset">
  <listentry label="Dolphin DOS" value="0"/>
@@ -242,7 +246,7 @@
  <button label="Cold Boot" action="cold_reset_hide"/>
     </menu>
     <menu label="Storage">
-      <fileselector label="Floppy 8:" ext="d64;g64" index="0" default="disk8.d64"/>
+      <fileselector label="Floppy:" ext="d64;g64" index="0" default="disk8.d64"/>
       <fileselector label="CRT ROM:" ext="crt" index="1" default="c64crt.crt"/>
       <fileselector label="PRG BASIC:" ext="prg" index="2" default="c64prg.prg"/>
       <fileselector label="C64 KERNAL:" ext="bin" index="3" default="c64kernal.bin"/>
