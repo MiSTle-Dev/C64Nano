@@ -115,9 +115,14 @@
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
       </list>
-      <list label="REU 1750:" id="V" default="0">
+      <list label="REU:" id="V" default="0">
  <listentry label="Off" value="0"/>
- <listentry label="On" value="1"/>
+ <listentry label="512KB" value="1"/>
+ <listentry label="2MB" value="2"/>
+      </list>
+      <list label="REU wrap:" id="4" default="0">
+ <listentry label="512KB" value="0"/>
+ <listentry label="Off" value="1"/>
       </list>
       <list label="C1541 ROM:" id="D" default="0" action="c1541_reset">
  <listentry label="Dolphin DOS" value="0"/>
@@ -216,11 +221,32 @@
  <listentry label="R Shift" value="2"/>
  <listentry label="Off" value="3"/>
       </list>
+      <list label="Palette:" id="1" default="0">
+ <listentry label="Commodore" value="0"/>
+ <listentry label="Ultimate" value="1"/>
+ <listentry label="Pepto-PAL" value="2"/>
+ <listentry label="Vice" value="3"/>
+ <listentry label="Vice6569R1" value="4"/>
+ <listentry label="Vice6569R5" value="5"/>
+ <listentry label="Vice8565R2" value="6"/>
+ <listentry label="Lemon64" value="7"/>
+      </list>
+      <list label="Internal IEC:" id="3" default="0">
+ <listentry label="8" value="0"/>
+ <listentry label="9" value="1"/>
+ <listentry label="10" value="2"/>
+ <listentry label="11" value="3"/>
+      </list>
+      <list label="External IEC:" id="2" default="0">
+ <listentry label="Off" value="0"/>
+ <listentry label="D9 #1" value="1"/>
+ <listentry label="D9 #2/spare" value="2"/>
+      </list>
  <button label="C1541 Reset" action="c1541_reset_hide"/>
  <button label="Cold Boot" action="cold_reset_hide"/>
     </menu>
     <menu label="Storage">
-      <fileselector label="Floppy 8:" ext="d64;g64" index="0" default="disk8.d64"/>
+      <fileselector label="Floppy:" ext="d64;g64" index="0" default="disk8.d64"/>
       <fileselector label="CRT ROM:" ext="crt" index="1" default="c64crt.crt"/>
       <fileselector label="PRG BASIC:" ext="prg" index="2" default="c64prg.prg"/>
       <fileselector label="C64 KERNAL:" ext="bin" index="3" default="c64kernal.bin"/>

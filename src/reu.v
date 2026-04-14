@@ -9,7 +9,8 @@ module reu
 (
 	input             clk,
 	input             reset,
-	input       [1:0] cfg, //none, 512K, 2MB (512KB wrap), 16MB
+	input       [1:0] cfg,  // none, 512K, 2MB, 16MB
+	input             wrap, // 0: no wrap, 1: 512KB wrap
 
 	output reg        dma_req,
 
@@ -77,7 +78,7 @@ always @(posedge clk) begin
 
 	error = !op_act[0] && data[0] != data[1];
 //	addr_mask = ((cfg == 1) ? 24'h7FFFF : (cfg == 2) ? 24'h1FFFFF : 24'hFFFFFF);
-	addr_mask = 24'h7FFFF; // limit to 512k size
+	addr_mask = ((cfg == 1) ? 24'h7FFFF : (cfg == 2) ? 24'h1FFFFF : 24'h1FFFFF);
 
 	old_cs <= cpu_cs;
 
@@ -103,13 +104,13 @@ always @(posedge clk) begin
 			if(cpu_we) begin
 				case(cpu_addr[4:0])
 					 1:       cmd             <= cpu_dout;
-					 2: begin addr_c64[7:0]   <= cpu_dout; addr_c64_r[7:0]   <= cpu_dout; end
-					 3: begin addr_c64[15:8]  <= cpu_dout; addr_c64_r[15:8]  <= cpu_dout; end
-					 4: begin addr_ram[7:0]   <= cpu_dout; addr_ram_r[7:0]   <= cpu_dout; end
-					 5: begin addr_ram[15:8]  <= cpu_dout; addr_ram_r[15:8]  <= cpu_dout; end
-					 6: begin addr_ram[23:16] <= cpu_dout; addr_ram_r[23:16] <= cpu_dout; end
-					 7: begin length[7:0]     <= cpu_dout; length_r[7:0]     <= cpu_dout; end
-					 8: begin length[15:8]    <= cpu_dout; length_r[15:8]    <= cpu_dout; end
+					 2: begin addr_c64        <= {addr_c64_r[15:8], cpu_dout}; addr_c64_r[7:0]   <= cpu_dout; end
+					 3: begin addr_c64        <= {cpu_dout, addr_c64_r[7:0]};  addr_c64_r[15:8]  <= cpu_dout; end
+					 4: begin addr_ram[15:0]  <= {addr_ram_r[15:8], cpu_dout}; addr_ram_r[7:0]   <= cpu_dout; end
+					 5: begin addr_ram[15:0]  <= {cpu_dout, addr_ram_r[7:0]};  addr_ram_r[15:8]  <= cpu_dout; end
+					 6: begin addr_ram[23:16] <= cpu_dout;                     addr_ram_r[23:16] <= cpu_dout; end
+					 7: begin length          <= {length_r[15:8], cpu_dout};   length_r[7:0]     <= cpu_dout; end
+					 8: begin length          <= {cpu_dout, length_r[7:0]};    length_r[15:8]    <= cpu_dout; end
 					 9:       intr            <= cpu_dout;
 					10:       ctl             <= cpu_dout;
 				endcase
@@ -122,7 +123,7 @@ always @(posedge clk) begin
 					 3: cpu_din <= addr_c64[15:8];
 					 4: cpu_din <= addr_ram[7:0];
 					 5: cpu_din <= addr_ram[15:8];
-					 6: cpu_din <= addr_ram[23:16] | ~addr_mask[23:16];
+					 6: cpu_din <= addr_ram[23:16] | (wrap ? 8'hF8 : ~addr_mask[23:16]);
 					 7: cpu_din <= length[7:0];
 					 8: cpu_din <= length[15:8];
 					 9: cpu_din <= {intr[7:5],5'h1F};
@@ -153,7 +154,7 @@ always @(posedge clk) begin
 					cnt <= 0;
 					if(op_act[1]) begin
 						if(~ctl[7]) addr_c64 <= addr_c64 + 1'd1;
-						if(~ctl[6]) addr_ram <= (cfg == 2) ? {addr_ram[20:19], addr_ram[18:0] + 1'd1} : ((addr_ram + 1'd1) & addr_mask);
+						if(~ctl[6]) addr_ram <= (wrap ? {addr_ram[23:19], addr_ram[18:0] + 1'd1} : (addr_ram + 1'd1)) & addr_mask;
 						stage <= 0;
 						if(length == 1 || error) begin
 							if(cmd[5]) begin

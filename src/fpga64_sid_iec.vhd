@@ -78,6 +78,7 @@ port  (
 	ntscMode    : in  std_logic;
 	hsync       : out std_logic;
 	vsync       : out std_logic;
+	palette     : in  unsigned(2 downto 0);
 	r           : out unsigned(7 downto 0);
 	g           : out unsigned(7 downto 0);
 	b           : out unsigned(7 downto 0);
@@ -240,6 +241,7 @@ signal systemWe     : std_logic;
 signal pulseWr_io   : std_logic;
 signal systemAddr   : unsigned(15 downto 0);
 
+signal cs_io        : std_logic;
 signal cs_vic       : std_logic;
 signal cs_sid       : std_logic;
 signal cs_color     : std_logic;
@@ -501,6 +503,7 @@ port map (
 IO7 <= io7_i;
 IOE <= ioe_i;
 IOF <= iof_i;
+cs_io <= cs_vic or cs_sid or cs_color or cs_cia1 or cs_cia2 or ioe_i or iof_i or io7_i;
 
 process(clk32)
 begin
@@ -586,6 +589,7 @@ port map (
 
 c64colors: entity work.fpga64_rgbcolor
 port map (
+	palette => palette,
 	index => vicColorIndex,
 	r => r,
 	g => g,
@@ -899,7 +903,7 @@ begin
 			dma_active <= dma_req;
 			turbo_en <= turbo_mode(0);
 			turbo_m <= "000";
-			if dma_req = '0' and ((turbo_mode(0) and turbo_state) = '1' or turbo_mode(1) = '1') then
+			if cs_io = '0' and dma_req = '0' and ((turbo_mode(0) and turbo_state) = '1' or turbo_mode(1) = '1') then
 				case turbo_speed is
 					when "00" => turbo_m <= "010";
 					when "01" => turbo_m <= "110";

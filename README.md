@@ -32,9 +32,9 @@ Features:
 * [USB XBOX 360 Controller](https://en.wikipedia.org/wiki/Xbox_360_controller) as Joystick or Paddle
 * 2 x [legacy D9 Joystick](https://en.wikipedia.org/wiki/Atari_CX40_joystick) (Atari / Commodore digital type)
 * Joystick emulation on Keyboard Numpad
-* [Dualshock 2 Controller Gamepad](https://en.wikipedia.org/wiki/DualShock) for [MiSTeryShield20k](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k/README.md) via spare [pinheader](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md). Adapter [venice1200](https://github.com/venice1200)
-* [Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) DPad / left Stick as Joystick
-* [Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) Sticks as [Paddle](https://www.c64-wiki.com/wiki/Paddle) Emulation (analog mode)
+* ~~[Dualshock 2 Controller Gamepad](https://en.wikipedia.org/wiki/DualShock) for [MiSTeryShield20k](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k/README.md) via spare [pinheader](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md). Adapter [venice1200](https://github.com/venice1200)~~
+* ~~[Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) DPad / left Stick as Joystick~~
+* ~~[Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) Sticks as [Paddle](https://www.c64-wiki.com/wiki/Paddle) Emulation (analog mode)~~
 * Emulation of [C64GS Cheetah Annihilator](https://en.wikipedia.org/wiki/Commodore_64_Games_System) Joystick 2nd Trigger Button (Pot X/Y)
 * emulated [1541 Diskdrive](https://en.wikipedia.org/wiki/Commodore_1541) on FAT/extFAT microSD card with parallel bus [Speedloader Dolphin DOS 2](https://rr.pokefinder.org/wiki/Dolphin_DOS). [GER manual](https://www.c64-wiki.de/wiki/Dolphin_DOS)
 * c1541 DOS ROM selection
@@ -51,6 +51,7 @@ Features:
 * RS232 Serial Interface [VIC-1011](http://www.zimmers.net/cbmpics/xother.html) or [UP9600](https://www.pagetable.com/?p=1656) mode to Tang onboard USB-C serial port or external hw pin.
 * Swiftlink-232 [6551](https://en.wikipedia.org/wiki/MOS_Technology_6551) WIFI Modem Interface to FPGA-Companion up to 38400 Baud
 * Freezer support (e.g. Action Replay)
+* external IEC device (C1541 Floppy / IEC Printer etc.)
 
 <img src="./.assets/c64_core.png" alt="image" width="80%" height="auto">
 
@@ -183,6 +184,66 @@ Playing [Sonic the Hedgehog V1.2](https://csdb.dk/release/?id=212523)
 Enable REU, and load the PRG.  
 Playing around with [GEOS](https://en.wikipedia.org/wiki/GEOS_(8-bit_operating_system))
 Enable REU, select c1541 CBM DOS ROM and load the PRG.
+
+## external IEC device
+
+Use of an external IEC device e.g. C1541 / Printer and support of a selectable D9 Joystick port for hw interfacing is mutually exclusive.  
+
+> [!NOTE]
+> Best to use C64 stock Kernal as starting point but also Dolphin DOS was able to read directoy when both drives are active.  
+> Power external drive off and select in OSD e.g. Port #1 as interface and after that power drive on (blocked if done vice versa)  
+> External C1541 is typically factory configured for drive address #8.  
+> Tang internal C1541 emulation also use by default address #8 so you need to change it via OSD to #9 so that there are no address conflicts. Internal drive becomes now #9 and external one #8.  
+
+In case MiSTeryShieldRpPico20k **J3 spare** connector is used for interfacing then a 5V level shifter / open collector driver is needed.  
+BiDir level shifter like: [Converter](https://github.com/venice1200/MiSTer_SNAC2IEC/tree/main/Schematics) based on commercial available I2C level shifter PCBA, Transistor circuit or [TI TXS104E / TXS108E](https://www.ti.com/product/TXS0108E) should be usable.  
+
+D9 Joystick port **#1**  
+No level shifter is needed as already available on the MiSTeryShield board (for 5V Joystick interfacing).
+
+D9 Port **#1**
+
+| FPGA | TN20k | Signal   | D9 |any ShieldPico| DualShock| IEC      |
+|------|-------|----------|----|-------------|----------|----------|
+| 27   | J4‑8  | io(0)    | 6  | BTN1        | DS2_CLK  | CLK (4)  |
+| 28   | J4‑9  | io(1)    | 2  | DOWN        | DS_MOSI  | DATA (5) |
+| 25   | J4‑10 | io(2)    | 1  | UP          | DS_MISO  | RESET (6)|
+| 26   | J4‑11 | io(3)    | 4  | RIGHT       | DS2_CS   | ATN (3)  |
+| 29   | J4‑12 | io(4)    | 3  | LEFT        | –        | –        |
+| 30   | J4‑13 | io(5)    | 9  | BTN2        | –        | –        |
+| --   | J4‑20 | GND      | 8  | GND         | –        | GND (2)  |
+| --   | J7‑1  | 5V       | 7  | 5V          | –        | –        |
+
+D9 Port **#2** (or spare header J3 MiSTeryShieldPiPico)  
+Only MiSTeryShieldRpPico20k-dualD9 port has two D9 ports.  
+
+> [!IMPORTANT]
+> Connecting a IEC device to spare header J3 without level shifter will for sure damage the FPGA!
+
+| FPGA | TN20k | Signal   | D9 |ShieldPico *dual D9*| ShieldPico J3 | DualShock| IEC     |
+|------|-------|----------|----|-------------|-------------|----------|---------|
+| 73   | J4‑1  | spare(0) | 6  | BTN1        | 1           | DS2_CLK  |CLK (4)  |
+| 74   | J4‑2  | spare(1) | 2  | DOWN        | 2           | DS_MOSI  |DATA (5) |
+| 77   | J4‑5  | spare(2) | 1  | UP          | 3           | DS_MISO  |RESET (6)|
+| 31   | J4‑14 | spare(3) | 4  | RIGHT       | 4           | DS2_CS   |ATN (3)  |
+| 49   | J7‑12 | spare(4) | 3  | LEFT        | 5           | –        |         |
+| 52   | J7‑20 | spare(5) | 9  | BTN2        | –           | –        | –       |
+| --   | J4‑20 | GND      | 8  | GND         | 6           | –        | GND (2) |
+| --   | J4‑19 | 3V3      | –  | –           | 7           | –        | –       |
+| --   | J7‑1  | 5V       | 7  | 5V          | 8           | –        | –       |
+
+**Cable** side !
+
+| Pin | Name   | Description        |
+|-----|--------|--------------------|
+| 1   | /SRQIN | Serial SRQIN       |
+| 2   | GND    | Ground             |
+| 3   | ATN    | Serial ATN In/Out  |
+| 4   | CLK    | Serial CLK In/Out  |
+| 5   | DATA   | Serial DATA In/Out |
+| 6   | /RESET | Reset              |
+
+ ![Layout](\.assets/conn_din6m.gif)
 
 ## Push Button utilization
 

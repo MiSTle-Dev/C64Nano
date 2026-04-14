@@ -31,7 +31,7 @@ port(
 	reset : in std_logic;
     pause : in std_logic;
     ce    : in std_logic;
-
+	ds    : in std_logic_vector(1 downto 0) := "00";
 	
 	disk_num : in std_logic_vector(9 downto 0);
 	disk_change : in std_logic;
@@ -139,7 +139,7 @@ tr00_sense_n <='0' when new_track_num_dbl = 7x"00" else '1';
     par_stb_o  => par_stb_o,
 
 	-- drive-side interface
-    ds              => "00",     -- device select
+    ds              => ds,        -- device select
     di              => c1541_logic_din,  -- data read 
     do              => c1541_logic_dout, -- data to write
     mode            => mode,     -- read/write

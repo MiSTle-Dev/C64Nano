@@ -58,7 +58,7 @@ module sid_dac #(
     logic [MSB:0] bitval[BITS];
 
     logic [MSB:0] bitsum[BITS];
-	 logic [BITS-1:0] bit1 = 1;
+	localparam logic [BITS-1:0] bit1 = 1;
 
 	 generate 
 		 // Sum values for all set bits, adding 0.5 for rounding by truncation.

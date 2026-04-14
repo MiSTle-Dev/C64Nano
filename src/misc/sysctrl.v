@@ -33,7 +33,8 @@ module sysctrl (
   output reg [7:0]  port_in_data,
 
   // values that can be configured by the user
-  output reg        system_reu_cfg,
+  output reg [1:0]  system_reu_cfg,
+  output reg        system_reu_wrap,
   output reg [1:0]  system_reset,
   output reg [1:0]  system_scanlines,
   output reg [1:0]  system_volume,
@@ -61,7 +62,10 @@ module sysctrl (
   output reg [1:0]  system_uart,
   output reg        system_joyswap,
   output reg        system_detach_reset,
-  output reg [1:0]  system_shift_mod
+  output reg [1:0]  system_shift_mod,
+  output reg [2:0]  system_palette,
+  output reg [1:0]  system_ext_iec_en,
+  output reg [1:0]  system_int_iec_drv
 );
 
 reg [3:0] state;
@@ -127,7 +131,8 @@ always @(posedge clk) begin
       sys_int = 1'b1;       // coldboot interrupt
       port_out_strobe <= 1'b0;
       port_in_strobe <= 1'b0;
-      system_reu_cfg <= 1'b0;
+      system_reu_cfg <= 2'b00;
+      system_reu_wrap <= 1'b0;
       system_scanlines <= 2'b00;
       system_volume <= 2'b10;
       system_screen <= 2'b00;
@@ -154,6 +159,9 @@ always @(posedge clk) begin
       system_joyswap <= 1'b0;
       system_detach_reset <= 1'b0;
       system_shift_mod <= 2'b00;
+      system_ext_iec_en <= 2'b00;
+      system_palette <= 3'd0;
+      system_int_iec_drv <= 2'b00;
    end else begin // if (reset)
       //  bring button state into local clock domain
       buttonsD <= buttons;
@@ -238,7 +246,7 @@ always @(posedge clk) begin
 
                 if(state == 4'd1) begin
                     // Value "V": REU cfg: off, on
-                    if(id == "V") system_reu_cfg <= data_in[0];
+                    if(id == "V") system_reu_cfg <= data_in[1:0];
                     // Value "R": coldboot(3), reset(1) or run(0)
                     if(id == "R") begin 
                         main_reset <= data_in[1:0];
@@ -299,6 +307,14 @@ always @(posedge clk) begin
                     if(id == "F") system_detach_reset <= data_in[0];
                     // shift_mod
                     if(id == "$") system_shift_mod <= data_in[1:0];
+                    //
+                    if(id == "1") system_palette <= data_in[2:0];
+                    //
+                    if(id == "2") system_ext_iec_en <= data_in[1:0];
+                    //
+                    if(id == "3") system_int_iec_drv <= data_in[1:0];
+                    //
+                    if(id == "4") system_reu_wrap <= data_in[0];
                 end
             end
 

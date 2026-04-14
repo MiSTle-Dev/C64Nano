@@ -7,7 +7,6 @@
     <FileList>
         <File path="src/c1541/mist_sd_card.sv" type="file.verilog" enable="1"/>
         <File path="src/cartridge.v" type="file.verilog" enable="1"/>
-        <File path="src/dualshock2.v" type="file.verilog" enable="1"/>
         <File path="src/gen_uart.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_dpb/gowin_dpb_track_buffer_b.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_dpb/gowin_dpb_trkbuf.v" type="file.verilog" enable="1"/>
