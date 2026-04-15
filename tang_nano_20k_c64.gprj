@@ -73,5 +73,6 @@
         <File path="src/video_vicII_656x.vhd" type="file.vhdl" enable="1"/>
         <File path="src/tang/tn20k/c64nano.cst" type="file.cst" enable="1"/>
         <File path="src/tang/tn20k/c64nano.sdc" type="file.sdc" enable="1"/>
+        <File path="src/misc/c64_xml.hex" type="file.other" enable="1"/>
     </FileList>
 </Project>

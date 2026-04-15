@@ -53,7 +53,7 @@
     <action name="c1541_reset">
       <!-- trigger a cold system reset -->
       <set id="Z" value="1"/>
-      <delay ms="10"/>
+      <delay ms="200"/>
       <set id="Z" value="0"/>
     </action>
 
@@ -237,9 +237,9 @@
  <listentry label="10" value="2"/>
  <listentry label="11" value="3"/>
       </list>
-      <list label="External IEC:" id="2" default="0">
+      <list label="External IEC:" id="2" default="0" action="c1541_reset">
  <listentry label="Off" value="0"/>
- <listentry label="D9 #1" value="1"/>
+ <listentry label="Retro D9 #1" value="1"/>
  <listentry label="D9 #2/spare" value="2"/>
       </list>
  <button label="C1541 Reset" action="c1541_reset_hide"/>

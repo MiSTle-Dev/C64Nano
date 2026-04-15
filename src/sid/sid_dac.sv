@@ -45,83 +45,76 @@
 
 
 module sid_dac #(
-    parameter  BITS       = 12,
-    parameter  _2R_DIV_R  = 2.20,
-    parameter  TERM       = 0
+    parameter int  BITS       = 12,
+    parameter real _2R_DIV_R  = 2.20,
+    parameter int  TERM       = 0
 )(
     input  logic [BITS-1:0] vin,
     output logic [BITS-1:0] vout
 );
-    localparam SCALEBITS  = 4;
-    localparam MSB        = BITS+SCALEBITS-1;
+    localparam int SCALEBITS = 4;
+    localparam int MSB       = BITS + SCALEBITS - 1;
 
-    logic [MSB:0] bitval[BITS];
-
-    logic [MSB:0] bitsum[BITS];
-	localparam logic [BITS-1:0] bit1 = 1;
-
-	 generate 
-		 // Sum values for all set bits, adding 0.5 for rounding by truncation.
-		 /* verilator lint_off ALWCOMBORDER */
-		 genvar i;
-		 for (i = 0; i < BITS; i++) begin :init
-			  always_comb begin
-					bitsum[i] =
-						 (i == 0 ? bit1 << (SCALEBITS - 1) : bitsum[i-1]) +
-						 (vin[i] ? bitval[i] : 1'd0);
-			  end
-		 end
-		 /* verilator lint_on ALWCOMBORDER */
-	 endgenerate
+    logic [MSB:0] bitval [0:BITS-1];
+    logic [MSB:0] bitsum;
 
     always_comb begin
-        vout = bitsum[BITS-1][MSB-:BITS];
+        bitsum = logic'(1) << (SCALEBITS - 1);
+
+        for (int i = 0; i < BITS; i++) begin
+            bitsum += (vin[i] ? bitval[i] : '0);
+        end
+
+        vout = bitsum[MSB -: BITS];
     end
 
-    initial begin
+    always_comb begin
+        for (int i = 0; i < BITS; i++)
+            bitval[i] = '0;
+
         if (_2R_DIV_R == 2.20 && TERM == 0 && SCALEBITS == 4) begin
             case (BITS)
-              12: begin
-							//$readmemh("dac_6581_waveform.hex", bitval);
-							bitval[0]  = 'h21;
-							bitval[1]  = 'h30;
-							bitval[2]  = 'h55;
-							bitval[3]  = 'ha0;
-							bitval[4]  = 'h135;
-							bitval[5]  = 'h256;
-							bitval[6]  = 'h486;
-							bitval[7]  = 'h8c6;
-							bitval[8]  = 'h1102;
-							bitval[9]  = 'h20f8;
-							bitval[10] = 'h3fec;
-							bitval[11] = 'h7bed;
-						end
-               8: begin
-							//$readmemh("dac_6581_envelope.hex", bitval);
-							bitval[0]  = 'h1d;
-							bitval[1]  = 'h2a;
-							bitval[2]  = 'h4b;
-							bitval[3]  = 'h8d;
-							bitval[4]  = 'h110;
-							bitval[5]  = 'h20e;
-							bitval[6]  = 'h3fb;
-							bitval[7]  = 'h7b8;
-						end
-              11: begin
-							//$readmemh("dac_6581_cutoff.hex", bitval);
-							bitval[0]  = 'h20;
-							bitval[1]  = 'h2f;
-							bitval[2]  = 'h52;
-							bitval[3]  = 'h9c;
-							bitval[4]  = 'h12b;
-							bitval[5]  = 'h243;
-							bitval[6]  = 'h463;
-							bitval[7]  = 'h880;
-							bitval[8]  = 'h107b;
-							bitval[9]  = 'h1ff4;
-							bitval[10] = 'h3df3;
-						end
+                12: begin
+                    bitval[0]  = 'h0021;
+                    bitval[1]  = 'h0030;
+                    bitval[2]  = 'h0055;
+                    bitval[3]  = 'h00A0;
+                    bitval[4]  = 'h0135;
+                    bitval[5]  = 'h0256;
+                    bitval[6]  = 'h0486;
+                    bitval[7]  = 'h08C6;
+                    bitval[8]  = 'h1102;
+                    bitval[9]  = 'h20F8;
+                    bitval[10] = 'h3FEC;
+                    bitval[11] = 'h7BED;
+                end
+
+                11: begin
+                    bitval[0]  = 'h0020;
+                    bitval[1]  = 'h002F;
+                    bitval[2]  = 'h0052;
+                    bitval[3]  = 'h009C;
+                    bitval[4]  = 'h012B;
+                    bitval[5]  = 'h0243;
+                    bitval[6]  = 'h0463;
+                    bitval[7]  = 'h0880;
+                    bitval[8]  = 'h107B;
+                    bitval[9]  = 'h1FF4;
+                    bitval[10] = 'h3DF3;
+                end
+
+                8: begin
+                    bitval[0]  = 'h001D;
+                    bitval[1]  = 'h002A;
+                    bitval[2]  = 'h004B;
+                    bitval[3]  = 'h008D;
+                    bitval[4]  = 'h0110;
+                    bitval[5]  = 'h020E;
+                    bitval[6]  = 'h03FB;
+                    bitval[7]  = 'h07B8;
+                end
             endcase
         end
     end
 endmodule
+
