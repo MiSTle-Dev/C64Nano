@@ -177,7 +177,8 @@ always @(posedge clk) begin
         if(q == STATE_CMD_CONT) begin
             if(wr) sd_data_out <= {wrdata, wrdata, wrdata, wrdata};
             sd_cmd  <= wr ? CMD_WRITE : CMD_READ;
-            sd_addr <= {1'b1, addr[7:0], bt};
+          //sd_addr <= {1'b1, addr[7:0], bt};
+            sd_addr <= { 1'b1,bt,addr[7:0]};
         end
     end
 end
