@@ -21,47 +21,45 @@
 //
 
 // adapted for TN20k internal 64mbit sdram 32 bit wide
-// 2024 Stefan Voss
-
+// 2026 Stefan Voss
+// 512K x32 bits, 2,048 rows x 256 columns x 32 bits
 module sdram8 (
 
+    output              sd_clk,
+    output              sd_cke,
+    inout  [31:0]       sd_data,
+    output reg [10:0]   sd_addr,
+    output      [3:0]   sd_dqm,
+    output reg  [1:0]   sd_ba,
+    output              sd_cs,
+    output              sd_we,
+    output              sd_ras,
+    output              sd_cas,
 
-    output              sd_clk, // sd clock
-    output              sd_cke, // clock enable
-    inout [31:0]        sd_data,// 32 bit bidirectional data bus
-    output reg [10:0]   sd_addr,// 11 bit multiplexed address bus
-    output 		[3:0]   sd_dqm, // two byte masks
-    output reg [ 1:0]   sd_ba,  // two banks
-    output              sd_cs,  // a single chip select
-    output              sd_we,  // write enable
-    output              sd_ras, // row address select
-    output              sd_cas, // columns address select
+    input               clk,
+    input               reset_n,
 
-	// cpu/chipset interface
-    input               clk,    // sdram is accessed up to 65MHz
-    input               reset_n,// init signal after FPGA config to initialize RAM
-
-    output              ready,  // ram is ready and has been initialized
-    input               refresh,// refresh cycle
-    input      [ 7:0]   din,
-    output     [ 7:0]   dout,
-    input      [22:0]   addr,   // 23 bit word address
-    input      [1:0]    ds,     // unused
-    input               cs,     // cpu/chipset requests read/write
-    input               we      // cpu/chipset requests write
+    output              ready,
+    input               refresh,
+    input      [7:0]    din,
+    output     [7:0]    dout,
+    input      [22:0]   addr,
+    input      [1:0]    ds,
+    input               cs,
+    input               we
 );
 
 assign sd_clk = clk;
 assign sd_cke = 1'b1;
-localparam RASCAS_DELAY   = 3'd2;   // tRCD>=20ns -> 2 cycles@64MHz
-localparam BURST_LENGTH   = 3'b000; // 000=none, 001=2, 010=4, 011=8
-localparam ACCESS_TYPE    = 1'b0;   // 0=sequential, 1=interleaved
-localparam CAS_LATENCY    = 3'd2;   // 2/3 allowed
-localparam OP_MODE        = 2'b00;  // only 00 (standard operation) allowed
-localparam NO_WRITE_BURST = 1'b1;   // 0= write burst enabled, 1=only single access write
+localparam RASCAS_DELAY   = 3'd2;
+localparam BURST_LENGTH   = 3'b000;
+localparam ACCESS_TYPE    = 1'b0;
+localparam CAS_LATENCY    = 3'd2;
+localparam OP_MODE        = 2'b00;
+localparam NO_WRITE_BURST = 1'b1;
 
-localparam MODE = {
-    3'b000,
+localparam [10:0] MODE = {
+    1'b0,
     NO_WRITE_BURST,
     OP_MODE,
     CAS_LATENCY,
@@ -98,8 +96,10 @@ end
 // ---------------------------------------------------------------------
 
 always @(posedge clk) begin
-    if(!reset_n) reset <= 5'h1f;
-    else if((q == STATE_LAST) && (reset != 0)) reset <= reset - 5'd1;
+    if(!reset_n)
+        reset <= 5'h1f;
+    else if((q == STATE_LAST) && (reset != 0))
+        reset <= reset - 5'd1;
 end
 
 assign ready = !(|reset);
@@ -124,8 +124,11 @@ assign sd_ras = sd_cmd[2];
 assign sd_cas = sd_cmd[1];
 assign sd_we  = sd_cmd[0];
 
-assign sd_data = (cs && we) ? { din, din, din, din } : 32'bz;
-assign sd_dqm = !we ? 4'b0000 :
+// Drive write data during CAS phase AND the following data cycle
+wire drive_write = wr && ((q == STATE_CMD_CONT) || (q == STATE_CMD_CONT + 3'd1));
+assign sd_data = drive_write ? sd_data_out : 32'hZZZZ_ZZZZ;
+
+assign sd_dqm = !wr ? 4'b0000 :
                 (bt == 2'd0) ? 4'b0111 :
                 (bt == 2'd1) ? 4'b1011 :
                 (bt == 2'd2) ? 4'b1101 :
@@ -135,13 +138,18 @@ assign dout = (bt == 2'd0) ? dout_r[31:24] :
               (bt == 2'd2) ? dout_r[15:8]  :
                              dout_r[7:0];
 
+reg [7:0] wrdata;
+reg wr;
+reg  [31:0] sd_data_out;
+
 always @(posedge clk) begin
     sd_cmd <= CMD_NOP;
 
     if(q == STATE_READ) dout_r <= sd_data;
 
     if(reset) begin
-        sd_ba <= 0;
+        wr <= 1'b0;
+        sd_ba <= 2'b00;
         if(q == STATE_CMD_START) begin
             if(reset == 5'd13) begin
                 sd_cmd <= CMD_PRECHARGE;
@@ -159,14 +167,17 @@ always @(posedge clk) begin
 
         if(cs && !last_ce) begin
             sd_cmd  <= CMD_ACTIVE;
-            sd_addr <= addr[18:8];
-            sd_ba   <= addr[20:19];
-            bt      <= addr[22:21];
+            sd_addr <= addr[18:8];      // 11‑bit row address
+            sd_ba   <= addr[20:19];     // bank
+            bt      <= addr[22:21];     // byte select
+            wr      <= we;
+            wrdata  <= din;
         end
         // CAS phase 
         if(q == STATE_CMD_CONT) begin
-            sd_cmd  <= we ? CMD_WRITE : CMD_READ;
-            sd_addr <={3'b100, addr[7:0] };
+            if(wr) sd_data_out <= {wrdata, wrdata, wrdata, wrdata};
+            sd_cmd  <= wr ? CMD_WRITE : CMD_READ;
+            sd_addr <= {1'b1, addr[7:0], bt};
         end
     end
 end
