@@ -1585,7 +1585,7 @@ port map (
   ioctl_addr        => ioctl_addr,
   ioctl_data        => ioctl_data,
   ioctl_wr          => ioctl_wr,
-  ioctl_wait        => ioctl_req_wr or reset_wait
+  ioctl_wait        => ioctl_req_wr or reset_wait or ioctl_req_rd
 );
 
 process(clk_sys)

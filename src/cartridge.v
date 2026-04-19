@@ -13,10 +13,10 @@ module cartridge
 	input       [7:0] cart_id,					// cart ID or cart type
 	input             cart_exrom,				// CRT file EXROM status
 	input             cart_game,				// CRT file GAME status
-	input             cart_bank_hi,		   // bank is high
+	input             cart_bank_hi,				// bank is high
 	input             cart_bank_16k,
 	input       [7:0] cart_bank_num,
-	input       [7:0] cart_bank_addr,		// chip packet address
+	input       [7:0] cart_bank_addr,			// chip packet address
 	input             cart_bank_wr,
 	input             cart_boot,
 
@@ -25,27 +25,26 @@ module cartridge
 
 	input             romL,						// romL signal in
 	input             romH,						// romH signal in
-	input             UMAXromH,				// romH VIC II address signal
+	input             UMAXromH,					// romH VIC II address signal
 	input             IOE,						// IOE control signal
 	input             IOF,						// IOF control signal
 	input             mem_write,				// memory write active
 	input             mem_ce,
-
 	output            mem_ce_out,
 	output reg        mem_write_out,
 	input       [7:0] mem_in,
 	output      [7:0] mem_out,
-	output     [24:0] mem_addr, 	         // translated address output
+	output     [24:0] mem_addr, 				// translated address output
 	output            mem_req,
 	input             mem_cycle,
 
 	output            IO_rom,					// FLAG to enable IOE/IOF address relocation
 	output            IO_rd,
 	output reg  [7:0] IO_data,
-	input      [15:0] addr_in,             // address from cpu
-	input       [7:0] data_in,  			   // data from cpu going to sdram
+	input      [15:0] addr_in,					// address from cpu
+	input       [7:0] data_in,					// data from cpu going to sdram
 	output      [7:0] data_out,
-	
+
 	input             freeze_key,
 	input             mod_key,
 	output reg        nmi,
@@ -136,7 +135,8 @@ reg  reu_map;
 reg  clock_port;
 reg  rom_kbb;
 reg  force_ultimax;
-reg  init_n = 1;
+reg  ezrom_en;
+reg  init_n = 0;
 reg  allow_freeze = 0;
 reg  saved_d6 = 0;
 
@@ -181,10 +181,11 @@ always @(posedge clk32) begin
 		game_overide <= 1;
 		rom_kbb <= 0;
 		geo_bank <= 0;
-		mf_porta <= 0;
-		mf_portb <= 0;
-		mf_cra2  <= 0;
-		mf_crb2  <= 0;
+		ezrom_en <= 0;
+	//	mf_porta <= 0;
+	//	mf_portb <= 0;
+	//	mf_cra2  <= 0;
+	//	mf_crb2  <= 0;
 	end
 	else
 	case(cart_id)
@@ -466,6 +467,58 @@ always @(posedge clk32) begin
 				end
 			end
 
+		// Magic Formel - (ULTIMAX mode, up to 8x8k ROM banks, 8K RAM in 32 pages)
+		// MC6821 PIA at IOF ($DF00-$DFFF): RS via A7:A6, data encoded in A5:A0 (D7=A1)
+		//   $DF00-$DF3F  RS={0,0}  Port A / DDRA  => ROM bank[2:0], RAM enable (bit4)
+		//   $DF40-$DF7F  RS={0,1}  CRA             => bit2 selects DDR vs Data
+		//   $DF80-$DFBF  RS={1,0}  Port B / DDRB   => RAM page[4:0], ROM enable (bit7)
+		//   $DFC0-$DFFF  RS={1,1}  CRB             => bit2 selects DDR vs Data
+		// RAM at IOE ($DE00-$DEFF): 32 pages of 256 bytes = 8K, page via mf_portb[4:0]
+//		14: begin
+//				if(!init_n) begin
+//					exrom_overide <= 1'b1;   // ULTIMAX: exrom=1, game=0
+//					game_overide  <= 1'b0;
+//					bank_lo       <= lobanks[0];
+//					bank_hi       <= hibanks[0];
+//					IOE_ena       <= 1'b1;   // RAM readable at $DE00
+//					IOE_wr_ena    <= 1'b1;   // RAM writable at $DE00
+//					mf_cra2       <= 1'b0;
+//					mf_crb2       <= 1'b0;
+//					mf_porta      <= 8'd0;
+//					mf_portb      <= 8'd0;
+//				end
+//				else begin
+					// Handle IOF writes to MC6821 PIA
+					// Data encoding: D[5:0] = addr_in[5:0], D7 = addr_in[1]
+//					if(iof_wr) begin
+//						case(addr_in[7:6])  // RS1=A7, RS0=A6
+//							2'b00: begin  // Port A / DDRA
+//								if(mf_cra2) begin
+									// Port A data: ROM bank[2:0], RAM enable (bit4)
+//									mf_porta <= {addr_in[1], 1'b0, addr_in[5:0]};
+//									bank_lo  <= lobanks[addr_in[2:0]];
+//									bank_hi  <= hibanks[addr_in[2:0]];
+//								end
+								// else: DDRA write (direction setup, ignored in FPGA)
+//							end
+//							2'b01: begin  // CRA
+//								mf_cra2 <= addr_in[2];  // D2=A2 selects DDR/Data
+//							end
+//							2'b10: begin  // Port B / DDRB
+//								if(mf_crb2) begin
+									// Port B data: RAM page[4:0], ROM enable (bit7)
+//									mf_portb <= {addr_in[1], 1'b0, addr_in[5:0]};
+//								end
+								// else: DDRB write (direction setup, ignored in FPGA)
+//							end
+//							2'b11: begin  // CRB
+//								mf_crb2 <= addr_in[2];  // D2=A2 selects DDR/Data
+//							end
+//						endcase
+//					end
+//				end
+//			end
+
 		// C64GS - (game=1, exrom=0, 64 banks by 8k)
 		// 8k config
 		// Reading from IOE ($DE00 $DEFF) switches to bank 0
@@ -603,10 +656,11 @@ always @(posedge clk32) begin
 					IOF_ena <= 1;
 					IOF_wr_ena <= 1;
 					exrom_overide <= (cart_id==32);
-					game_overide  <= 1'b0; // ~cart_boot;
+					game_overide  <= 0; // ~cart_boot;
 					bank_lo <= lobanks[0];
 					bank_hi <= hibanks[0];
 					bank_no = 0;
+					ezrom_en <= 1;
 				end
 
 				if(ioe_wr) begin
@@ -784,9 +838,18 @@ always @(posedge clk32) begin
 	endcase
 end
 
-assign mem_req = 1'b0;
+assign mem_req = 0;
+
+wire ezrom_ce = mem_ce & (romH|romL);
+wire ezrom_we = 0;
+wire [19:0] ezrom_addr = {romH, bank_no, addr_in[12:0]};
+
+wire [20:0] ezmem_addr = {1'b1, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
+wire        ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
+
 assign mem_addr = addr_out;
 assign mem_out  = data_in;
+
 assign data_out = mem_in;
 
 
@@ -797,7 +860,7 @@ assign data_out = mem_in;
 wire cs_ioe = IOE && (mem_write ? IOE_wr_ena : IOE_ena);
 wire cs_iof = IOF && (mem_write ? IOF_wr_ena : IOF_ena);
 
-assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof);
+assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof) | ezrom_ce;
 
 //RAM banks are mapped to 0x010000 (64K max)
 //ROM banks are mapped to 0x200000 (2MB max)
@@ -818,13 +881,13 @@ always_comb begin
 	force_ultimax = 0;
 
 	//prohibit to write in ultimax mode into underlaying (actually non-existent) RAM
-	mem_write_out = (~(((romL & ~romL_we) | (romH & ~romH_we)) & exrom_overide & ~game_overide) & mem_write);
+	mem_write_out = (~(((romL & ~romL_we) | (romH & ~romH_we)) & exrom_overide & ~game_overide) & mem_write) | ezmem_we;
 	addr_out = addr_in;
 
 	if(reset_n) begin
 		if(romH & (romH_we | ~mem_write)) addr_out[24:13] =  get_bank(bank_hi, romH_we);
 		if(romL & (romL_we | ~mem_write)) addr_out        = {get_bank(bank_lo, romL_we), addr_in[12:0] & mask_lo};
-		
+
 		if(cs_ioe) addr_out[24:13] = get_bank(IOE_bank, IOE_wr_ena); // read/write to DExx
 		if(cs_iof) addr_out[24:13] = get_bank(IOF_bank, IOF_wr_ena); // read/write to DFxx
 
@@ -840,8 +903,13 @@ always_comb begin
 					force_ultimax = 1;
 					addr_out[24:13] = get_bank(2, 0);
 				end
+			// Magic Formel: RAM paging at IOE ($DE00-$DEFF)
+			// 32 pages x 256 bytes = 8K RAM, stored at SDRAM 0x010000-0x011FFF, addr_out[16]=1 (RAM base), [12:8]=page, [7:0]=byte offset within page
+		//	14: if(cs_ioe) begin
+		//			addr_out[24:0] = {8'b00000000, 1'b1, 3'b000, mf_portb[4:0], addr_in[7:0]};// 8+1+3+5+8
+		//		end
 			99: if(IOE) begin
-					addr_out[24:8] <= {3'b001, geo_bank};  // -> 4M
+					addr_out[24:8] = {3'b001, geo_bank};  // -> 4M
 				end
 		default:;
 		endcase
