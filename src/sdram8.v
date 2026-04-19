@@ -22,7 +22,7 @@
 
 // adapted for TN20k internal 64mbit sdram 32 bit wide
 // 2026 Stefan Voss
-// 512K x32 bits, 2,048 rows x 256 columns x 32 bits
+// 512K x32 bits, 2,048 rows x 256 columns x 32 bits  R:11 C:8
 module sdram8 (
 
     output              sd_clk,
@@ -51,6 +51,7 @@ module sdram8 (
 
 assign sd_clk = clk;
 assign sd_cke = 1'b1;
+
 localparam RASCAS_DELAY   = 3'd2;
 localparam BURST_LENGTH   = 3'b000;
 localparam ACCESS_TYPE    = 1'b0;
@@ -124,23 +125,24 @@ assign sd_ras = sd_cmd[2];
 assign sd_cas = sd_cmd[1];
 assign sd_we  = sd_cmd[0];
 
-// Drive write data during CAS phase AND the following data cycle
 wire drive_write = wr && ((q == STATE_CMD_CONT) || (q == STATE_CMD_CONT + 3'd1));
 assign sd_data = drive_write ? sd_data_out : 32'hZZZZ_ZZZZ;
 
 assign sd_dqm = !wr ? 4'b0000 :
-                (bt == 2'd0) ? 4'b0111 :
-                (bt == 2'd1) ? 4'b1011 :
-                (bt == 2'd2) ? 4'b1101 :
-                               4'b1110;
-assign dout = (bt == 2'd0) ? dout_r[31:24] :
-              (bt == 2'd1) ? dout_r[23:16] :
-              (bt == 2'd2) ? dout_r[15:8]  :
-                             dout_r[7:0];
+                (bt == 2'd0) ? 4'b1110 :
+                (bt == 2'd1) ? 4'b1101 :
+                (bt == 2'd2) ? 4'b1011 :
+                               4'b0111;
+
+assign dout = (bt == 2'd0) ? dout_r[7:0] :
+              (bt == 2'd1) ? dout_r[15:8] :
+              (bt == 2'd2) ? dout_r[23:16] :
+                             dout_r[31:24];
 
 reg [7:0] wrdata;
-reg wr;
-reg  [31:0] sd_data_out;
+reg [7:0] caddr;
+reg wr = 1'b0;
+reg [31:0] sd_data_out;
 
 always @(posedge clk) begin
     sd_cmd <= CMD_NOP;
@@ -164,21 +166,19 @@ always @(posedge clk) begin
     else begin
         if(refresh && !last_refresh && q == STATE_CMD_START)
             sd_cmd <= CMD_AUTO_REFRESH;
-
         if(cs && !last_ce) begin
             sd_cmd  <= CMD_ACTIVE;
-            sd_addr <= addr[18:8];      // 11‑bit row address
-            sd_ba   <= addr[20:19];     // bank
-            bt      <= addr[22:21];     // byte select
+            sd_ba   <= addr[22:21];     // bank
+            sd_addr <= addr[20:10];     // 11‑bit row address
+            caddr   <= addr[9:2];       // 8-bit column address
+            bt      <= addr[1:0];       // byte select
             wr      <= we;
             wrdata  <= din;
         end
-        // CAS phase 
         if(q == STATE_CMD_CONT) begin
             if(wr) sd_data_out <= {wrdata, wrdata, wrdata, wrdata};
             sd_cmd  <= wr ? CMD_WRITE : CMD_READ;
-          //sd_addr <= {1'b1, addr[7:0], bt};
-            sd_addr <= { 1'b1,bt,addr[7:0]};
+            sd_addr <= {3'b100, caddr};
         end
     end
 end

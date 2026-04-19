@@ -467,10 +467,11 @@ signal start_strk       : std_logic :='0';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
--- cartridge ROM banks are mapped to 0x100000, needed 25'h0200000;
+-- cartridge ROM banks are mapped to 0x100000
 constant CRT_ADDR      : std_logic_vector(22 downto 0) := 23x"200000";
 constant TAP_ADDR      : std_logic_vector(22 downto 0) := 23x"400000";
-constant REU_ADDR      : std_logic_vector(22 downto 0) := 23x"600000";
+-- REU overlap with TAP load due to TN20k DRAM constrain
+constant REU_ADDR      : std_logic_vector(22 downto 0) := 23x"400000";
 
 component CLKDIV
     generic (
@@ -1492,7 +1493,7 @@ port map
     cart_bank_num   => cart_bank_num,
     cart_bank_addr  => ioctl_load_addr(20 downto 13),
     cart_bank_wr    => cart_hdr_wr,
-    cart_boot       => ntscMode, -- '1',
+    cart_boot       => '0',
 
     exrom           => exrom,
     game            => game,
