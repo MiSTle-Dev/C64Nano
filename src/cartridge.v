@@ -141,10 +141,10 @@ reg  allow_freeze = 0;
 reg  saved_d6 = 0;
 
 // Magic Formel (type 14) - MC6821 PIA state
-reg  [7:0] mf_porta;   // PIA Port A output (ROM bank + RAM enable)
-reg  [7:0] mf_portb;   // PIA Port B output (RAM page + ROM enable)
-reg        mf_cra2;    // CRA bit2: 0=DDRA access, 1=Port A data access
-reg        mf_crb2;    // CRB bit2: 0=DDRB access, 1=Port B data access
+//reg  [7:0] mf_porta;   // PIA Port A output (ROM bank + RAM enable)
+//reg  [7:0] mf_portb;   // PIA Port B output (RAM page + ROM enable)
+//reg        mf_cra2;    // CRA bit2: 0=DDRA access, 1=Port A data access
+//reg        mf_crb2;    // CRB bit2: 0=DDRB access, 1=Port B data access
 
 // 0018 - EXROM line status
 // 0019 - GAME line status
@@ -838,20 +838,16 @@ always @(posedge clk32) begin
 	endcase
 end
 
-assign mem_req = 0;
-
 wire ezrom_ce = mem_ce & (romH|romL);
 wire ezrom_we = 0;
 wire [19:0] ezrom_addr = {romH, bank_no, addr_in[12:0]};
-
 wire [20:0] ezmem_addr = {1'b1, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
 wire        ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
 
+assign mem_req = 0;
 assign mem_addr = addr_out;
 assign mem_out  = data_in;
-
 assign data_out = mem_in;
-
 
 // ************************************************************************************************************
 // ****** Address handling - Redirection to SDRAM CRT file
@@ -905,9 +901,9 @@ always_comb begin
 				end
 			// Magic Formel: RAM paging at IOE ($DE00-$DEFF)
 			// 32 pages x 256 bytes = 8K RAM, stored at SDRAM 0x010000-0x011FFF, addr_out[16]=1 (RAM base), [12:8]=page, [7:0]=byte offset within page
-		//	14: if(cs_ioe) begin
-		//			addr_out[24:0] = {8'b00000000, 1'b1, 3'b000, mf_portb[4:0], addr_in[7:0]};// 8+1+3+5+8
-		//		end
+	//		14: if(cs_ioe) begin
+	//				addr_out[24:0] = {8'd0, 1'b1, 3'b000, mf_portb[4:0], addr_in[7:0]};
+	//			end
 			99: if(IOE) begin
 					addr_out[24:8] = {3'b001, geo_bank};  // -> 4M
 				end

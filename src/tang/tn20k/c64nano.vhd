@@ -467,10 +467,9 @@ signal start_strk       : std_logic :='0';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
--- cartridge ROM banks are mapped to 0x100000
 constant CRT_ADDR      : std_logic_vector(22 downto 0) := 23x"200000";
 constant TAP_ADDR      : std_logic_vector(22 downto 0) := 23x"400000";
--- REU overlap with TAP load due to TN20k DRAM constrain
+-- TAP, REU and GEORAM and overlap with TAP load due to TN20k DRAM constrains (mutual exclusive)
 constant REU_ADDR      : std_logic_vector(22 downto 0) := 23x"400000";
 
 component CLKDIV
