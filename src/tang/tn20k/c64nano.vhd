@@ -464,6 +464,11 @@ signal ioctl_req_rd     : std_logic := '0';
 signal ioctl_rd         : std_logic := '0';
 signal ioctl_din        : std_logic_vector(7 downto 0);
 signal start_strk       : std_logic :='0';
+signal key              : std_logic_vector(7 downto 0) := (others => '0');
+signal key_strobe       : std_logic := '0';
+signal act              : unsigned(3 downto 0) := (others => '0');
+signal to_cnt           : integer range 0 to 2_000_000 := 0;
+signal run_prg          : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -1232,6 +1237,7 @@ hid_inst: entity work.hid
   system_ext_iec_en   => ext_iec_en,
   system_int_iec_drv  => int_iec_drv,
   system_reu_wrap     => reu_wrap,
+  system_run_prg      => run_prg,
 
   -- port io (used to expose rs232)
   port_status       => serial_status,
@@ -1297,8 +1303,8 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   pause        => '0',
   pause_out    => c64_pause,
 
-  usb_key      => usb_key,
-  kbd_strobe   => kbd_strobe,
+  usb_key      => key, -- usb_key,
+  kbd_strobe   => key_strobe, -- ,kbd_strobe,
   kbd_reset    => not reset_n,
   shift_mod    => not shift_mod,
 
@@ -2002,5 +2008,53 @@ else generate
   uart_data <= x"FF";
   uart_irq <= '1';
 end generate yes_uart;
+
+process(clk_sys)
+begin
+  if rising_edge(clk_sys) then
+    if reset_n = '0' then
+      act <= (others => '0');
+      key <= (others => '0');
+      key_strobe <= kbd_strobe;
+    end if;
+
+    if act /= 0 then
+      to_cnt <= to_cnt + 1;
+
+      if to_cnt > 1280000 then
+        to_cnt <= 0;
+        act <= act + 1;
+
+        case to_integer(act) is
+          when 1  => key <= 8X"15"; -- R
+          when 3  => key <= 8X"18"; -- U
+          when 5  => key <= 8X"11"; -- N
+          when 7  => key <= 8X"28"; -- RETURN
+          when 9  => key <= (others => '0');
+          when 10 => act <= (others => '0');
+          when others => null;
+        end case;
+
+        key(7) <= act(0);-- press/release
+
+        if act >= 9 then
+          key_strobe <= kbd_strobe;
+        else
+          key_strobe <= not key_strobe;
+        end if;
+      end if;
+    else
+      to_cnt <= 0;
+      key <= usb_key;
+      key_strobe <= not kbd_strobe;
+    end if;
+
+    if (start_strk = '1') and (run_prg = '1') then
+      act <= to_unsigned(1, act'length);
+      key <= (others => '0');
+      key_strobe <= '0';
+    end if;
+  end if;
+end process;
 
 end Behavioral_top;

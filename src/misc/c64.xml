@@ -242,6 +242,10 @@
  <listentry label="Retro D9 #1" value="1"/>
  <listentry label="D9 #2/spare" value="2"/>
       </list>
+      <list label="Reset&amp;Run PRG:" id="5" default="1">
+ <listentry label="Off" value="0"/>
+ <listentry label="On" value="1"/>
+      </list>
  <button label="C1541 Reset" action="c1541_reset_hide"/>
  <button label="Cold Boot" action="cold_reset_hide"/>
     </menu>
