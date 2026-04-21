@@ -1514,7 +1514,8 @@ port map
     mem_write_out => cart_we,
     mem_in      => sdram_data,
     mem_out     => cart_wrdata,
-    mem_addr(22 downto 0)=> cart_addr,
+    mem_addr(22 downto 0) => cart_addr,
+    mem_addr(24 downto 23)=> open,
     mem_req     => cart_mem_req,
     mem_cycle   => io_cycle,
     IO_rom      => io_rom,
@@ -2026,11 +2027,12 @@ begin
         act <= act + 1;
 
         case to_integer(act) is
-          when 1  => key <= 8X"15"; -- R
-          when 3  => key <= 8X"18"; -- U
-          when 5  => key <= 8X"11"; -- N
-          when 7  => key <= 8X"28"; -- RETURN
-          when 9  => key <= (others => '0');
+          when 1  => key(6 downto 0) <= 7X"15"; -- R
+          when 3  => key(6 downto 0) <= 7X"18"; -- U
+          when 5  => key(6 downto 0) <= 7X"11"; -- N
+          when 7  => key(6 downto 0) <= 7X"28"; -- <RETURN>
+          when 9  => key(7 downto 0) <= (others => '0');
+                     key_strobe <= '0';
           when 10 => act <= (others => '0');
           when others => null;
         end case;
@@ -2046,7 +2048,7 @@ begin
     else
       to_cnt <= 0;
       key <= usb_key;
-      key_strobe <= not kbd_strobe;
+      key_strobe <= kbd_strobe;
     end if;
 
     if (start_strk = '1') and (run_prg = '1') then
