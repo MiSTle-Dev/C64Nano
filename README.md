@@ -52,6 +52,7 @@ Features:
 * Swiftlink-232 [6551](https://en.wikipedia.org/wiki/MOS_Technology_6551) WIFI Modem Interface to FPGA-Companion up to 38400 Baud
 * Freezer support (e.g. Action Replay)
 * external IEC device (C1541 Floppy / IEC Printer etc.)
+* REU (*.reu) loader
 
 <img src="./.assets/c64_core.png" alt="image" width="80%" height="auto">
 
@@ -83,8 +84,7 @@ See [Tang Nano LCD](TANG_NANO_20k_LCD.md)
 ## emulated Diskdrive c1541
 
 Emulated 1541 on a regular FAT/exFAT formatted microSD card including parallel bus Speedloader Dolphin DOS 2.0.
-Copy a D64 Disk image to your sdcard and rename it to **disk8.d64** as default boot image.
-Add further D64 or G64 images as you like and insert card in TN slot. LED 0 acts as Drive activity indicator.
+Add D64 or G64 images as you like and insert card in TN slot. LED 0 acts as Drive activity indicator.
 
 > [!TIP]
 > Disk directory listing: [(or F7 keypress)](https://project64.c64.org/hw/dolphindos.txt)  
@@ -101,8 +101,7 @@ In case a program don't load correctly select via OSD the factory default CBM DO
 ## Cartridge ROM Loader (.CRT)
 
 Cartridge ROM can be loaded via OSD file selection.
-Copy a *.CRT to your sdcard and rename it to **c64crt.crt** as default boot cartridge ROM.
-Prevent the cartridge load at boot by OSD CRT selection **No Disk** , **Save settings** and System **Cold Boot**.
+
 > [!TIP]
 > **Detach Cartridge** by OSD:
 > ```temporary``` **Cartridge unload & Reset** ```permanent``` **No Disk**, **Save settings** and System **Cold Boot**
@@ -112,13 +111,7 @@ Prevent the cartridge load at boot by OSD CRT selection **No Disk** , **Save set
 
 ## BASIC Program Loader (.PRG)
 
-A BASIC Program *.PRG file can be loaded via OSD file selection.
-Copy a .PRG to your sdcard and rename it to **c64prg.prg** as default boot basic program. Prevent the PRG load at boot by OSD PRG selection **No Disk** , **Save settings** and **Reset** or System **Cold Boot**.
-> [!TIP]
-> Check loaded file by command: **LIST**
-
-> [!IMPORTANT]
-> command: **RUN**
+A BASIC Program *.PRG file can be loaded via OSD file selection.  Auto RUN after load can be disabled via OSD.
 
 ## Tape Image Loader (*.TAP)
 
@@ -132,7 +125,6 @@ In order to start a tape download choose C64 CBM Kernal (mandatory as Dolphin DO
 
 The file is loaded automatically as soon as TAP file selected via OSD (no need to press PLAY TAPE button) in case ***no** TAP had been previously selected*.
 As mentioned screen will blank for several seconds and then display briefly the filename of the to be loaded file. It will blank shortly afterwards again till load completed and take a lot of time...
-Copy a *.TAP to your sdcard and rename it to **c64tap.tap** as default tape mountpoint.
 For **Tape unload** use OSD TAP selection **No Disk** and **Reset** or System **Cold Boot**
 > [!WARNING]
 > After board power-up or coldboot a TAP file will **not autoloaded** even if TAP file selection had been saved or c64tap.tap mountpoint available !
@@ -150,8 +142,6 @@ For **Tape unload** use OSD TAP selection **No Disk** and **Reset** or System **
 ## Kernal Loader (.BIN)
 
 The build-in Dolphin Kernal is the power-up default C64 Kernal with an excellent C1541 speedloader.
-> [!TIP]
-> If you are fine with that then there is no need to load another Kernal via OSD and just select OSD Kernal BIN selection **No Disk** and **Save settings**!
 
 In general Kernal ROM files *.BIN can be loaded via OSD selection.
 Copy a 8K C64 Kernal ROM .BIN to your sdcard and rename it to **c64kernal.bin** as default boot Kernal.
@@ -253,26 +243,6 @@ Only MiSTeryShieldRpPico20k-dualD9 port has two D9 ports.
 
 invoke by F12 keypress
 
-* Reset
-* Cold Reset + memory scrubbing
-* Audio Volume + / -
-* Scanlines effect %
-* Widescreen activation
-* HID device selection for Joystick Port 1 and Port 2
-* REU activation
-* c1541 Drive disk image selection
-* c1541 Disk write protetcion
-* c1541 Reset
-* c1541 DOS ROM selection
-* MIDI configuration
-* PAL / NTSC Video mode
-* VIC-II revision, 6526 / 8521 and SID 6561/8580 selection
-* SID Filter selection
-* geoRAM activation
-* Loader (CRT/PRG/BIN/TAP/FLT) file selection
-* Joystick Port Swap
-* Cartridge unload
-
 ## Gamecontrol support
 
 <u>legacy D9 Digital Joystick.</u>  
@@ -289,9 +259,9 @@ Don't configure e.g. [ArcadeR](https://retroradionics.com) for C64 mode rather t
 OSD: **USB #1 Joy** or **USB #2 Joy**
 Also [RII Mini Keyboard i8](http://www.riitek.com/product/220.html) left Multimedia Keys are active if **USB #1 Joy** selected.
 
-<u>Dualshock 2 Gamepad Stick or Dpad as Joystick.</u>.  
+~~<u>Dualshock 2 Gamepad Stick or Dpad as Joystick.</u>.  
 OSD: **DS #1 Joy** or **DS #2 Joy**
-At the moment Dpad only for original Pad. Some clone devices support at the same time Dpad and left stick simultaniously. ```circle and cross``` Buttons as Trigger:
+At the moment Dpad only for original Pad. Some clone devices support at the same time Dpad and left stick simultaniously. ```circle and cross``` Buttons as Trigger:~~
 
 > [!NOTE]
 > TN20k: You have to select OSD **DS2 #2 Joy** or **DS #2 Paddle** for a ``MiSTeryShield20k`` configuration.
@@ -311,10 +281,11 @@ OSD: **Numpad**
 OSD: **Mouse**
 USB Mouse as c1351 Mouse emulation.
 
-<u>Dualshock 2 Gamepad</u> as Paddle  
+~~<u>Dualshock 2 Gamepad</u> as Paddle  
 OSD: **DS #1 Paddle** or **DS #2 Paddle**
 Dualshock left Stick in analog mode as VC-1312 Paddle emulation.
-ANALOG Paddle mode will be indicated by DS 2 red light indicator.
+ANALOG Paddle mode will be indicated by DS 2 red light indicator.~~
+
 > [!NOTE]
 > TN20k:
 > single Dualshock support only

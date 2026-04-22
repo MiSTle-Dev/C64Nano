@@ -242,7 +242,7 @@
  <listentry label="Retro D9 #1" value="1"/>
  <listentry label="D9 #2/spare" value="2"/>
       </list>
-      <list label="Reset&amp;Run PRG:" id="5" default="1">
+      <list label="Run PRG:" id="5" default="1">
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
       </list>

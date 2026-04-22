@@ -1515,7 +1515,6 @@ port map
     mem_in      => sdram_data,
     mem_out     => cart_wrdata,
     mem_addr(22 downto 0) => cart_addr,
-    mem_addr(24 downto 23)=> open,
     mem_req     => cart_mem_req,
     mem_cycle   => io_cycle,
     IO_rom      => io_rom,
@@ -1767,6 +1766,55 @@ begin
   end if;
 end process;
 
+process(clk_sys)
+begin
+  if rising_edge(clk_sys) then
+    if reset_n = '0' then
+      act <= (others => '0');
+      key <= (others => '0');
+      key_strobe <= kbd_strobe;
+    end if;
+
+    if act /= 0 then
+      to_cnt <= to_cnt + 1;
+
+      if to_cnt > 1280000 then
+        to_cnt <= 0;
+        act <= act + 1;
+
+        case to_integer(act) is
+          when 1  => key(6 downto 0) <= 7X"15"; -- R
+          when 3  => key(6 downto 0) <= 7X"18"; -- U
+          when 5  => key(6 downto 0) <= 7X"11"; -- N
+          when 7  => key(6 downto 0) <= 7X"28"; -- <RETURN>
+          when 9  => key(7 downto 0) <= (others => '0');
+          when 10 => act <= (others => '0');
+          when others => null;
+        end case;
+
+        key(7) <= not act(0);-- press/release
+
+        if act >= 9 then
+          key_strobe <= kbd_strobe;
+        else
+          key_strobe <= not key_strobe;
+        end if;
+
+      end if;
+    else
+      to_cnt <= 0;
+      key <= usb_key;
+      key_strobe <= kbd_strobe;
+    end if;
+
+    if (start_strk = '1') and (run_prg = '1') then
+      act <= to_unsigned(1, act'length);
+      key <= (others => '0');
+      key_strobe <= '0';
+    end if;
+  end if;
+end process;
+
 por <= system_reset(0) or not pll_locked or not ram_ready;
 
 process(clk_sys, por)
@@ -2009,54 +2057,5 @@ else generate
   uart_data <= x"FF";
   uart_irq <= '1';
 end generate yes_uart;
-
-process(clk_sys)
-begin
-  if rising_edge(clk_sys) then
-    if reset_n = '0' then
-      act <= (others => '0');
-      key <= (others => '0');
-      key_strobe <= kbd_strobe;
-    end if;
-
-    if act /= 0 then
-      to_cnt <= to_cnt + 1;
-
-      if to_cnt > 1280000 then
-        to_cnt <= 0;
-        act <= act + 1;
-
-        case to_integer(act) is
-          when 1  => key(6 downto 0) <= 7X"15"; -- R
-          when 3  => key(6 downto 0) <= 7X"18"; -- U
-          when 5  => key(6 downto 0) <= 7X"11"; -- N
-          when 7  => key(6 downto 0) <= 7X"28"; -- <RETURN>
-          when 9  => key(7 downto 0) <= (others => '0');
-                     key_strobe <= '0';
-          when 10 => act <= (others => '0');
-          when others => null;
-        end case;
-
-        key(7) <= act(0);-- press/release
-
-        if act >= 9 then
-          key_strobe <= kbd_strobe;
-        else
-          key_strobe <= not key_strobe;
-        end if;
-      end if;
-    else
-      to_cnt <= 0;
-      key <= usb_key;
-      key_strobe <= kbd_strobe;
-    end if;
-
-    if (start_strk = '1') and (run_prg = '1') then
-      act <= to_unsigned(1, act'length);
-      key <= (others => '0');
-      key_strobe <= '0';
-    end if;
-  end if;
-end process;
 
 end Behavioral_top;
