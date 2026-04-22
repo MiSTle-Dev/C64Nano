@@ -163,14 +163,14 @@ always @(posedge clk) begin
 			endcase
 			// speed zones
 			if ({rel_lba, sd_buff_addr} >= 14'h15c && {rel_lba, sd_buff_addr} <= 14'h2ab && sd_buff_addr[1:0] == 0)
-				freq_table[{rel_lba, sd_buff_addr[8:2]} - 8'h55] <= sd_buff_dout[1:0];
+				freq_table[{rel_lba, sd_buff_addr[8:2]} - 12'h055] <= sd_buff_dout[1:0];
 		end
 		// G64 track length
 		if(raw && cur_track != 'b1111111 && !saving && sd_buff_wr) begin
 			if ({rel_lba, sd_buff_addr} == sector_offset) g64_tlen_lo[7:0] <= sd_buff_dout;
 			if ({rel_lba, sd_buff_addr} == sector_offset + 1'd1) begin
 				raw_track_len <= {sd_buff_dout, g64_tlen_lo};
-				track_lbas <= 5'((sector_offset + 2'd2 + {sd_buff_dout, g64_tlen_lo} + 9'd511) >> 4'd9);
+				track_lbas <= (sector_offset + 2 + {sd_buff_dout, g64_tlen_lo} + 511) >> 9;
 			end
 		end
 
@@ -193,7 +193,7 @@ always @(posedge clk) begin
 				else begin
 					sector_offset <= { start_sectors[track[6:1]][0], 8'd0 } ;
 					lba <= start_sectors[track[6:1]][9:1];
-					track_lbas <= 5'((start_sectors[track[6:1]+1'd1] - start_sectors[track[6:1]] + 1'd1) >> 1'd1);
+					track_lbas <= (start_sectors[track[6:1] +1 ] - start_sectors[track[6:1]] + 1) >> 1;
 					sd_rd <= 1;
 				end
 			end
@@ -241,7 +241,7 @@ always @(posedge clk) begin
 			else begin
 				sector_offset <= { start_sectors[new_track[6:1]][0], 8'd0 } ;
 				lba <= start_sectors[new_track[6:1]][9:1];
-				track_lbas <= 5'((start_sectors[new_track[6:1]+1'd1] - start_sectors[new_track[6:1]] + 1'd1) >> 1'd1);
+				track_lbas <= (start_sectors[new_track[6:1] + 1] - start_sectors[new_track[6:1]] + 1) >> 1;
 				sd_rd <= 1;
 				busy <= 1;
 			end
