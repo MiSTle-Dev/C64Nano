@@ -543,7 +543,7 @@ begin
   process (clk)
   begin
     if rising_edge(clk) then
-      if pll_locked = '0' then
+      if flash_lock = '0' then
         spi_ext <= '0';
       elsif pmod_companion_ss = '0' then
         spi_ext <= '1';
