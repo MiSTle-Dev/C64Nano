@@ -1020,11 +1020,11 @@ leds(0) <= led1541;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
--- 2nd and 3rd button of GS controller are triggerd also by extra buttons start/back mapped Joysticks
+-- 3rd button of GS controller are triggerd also by extra buttons mapped Joysticks
 joyDigital0 <= 7x"00" when (ext_iec_en = "01") or (osd_status = '1') else not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
 joyDigital1 <= 7x"00" when (ext_iec_en = "10") or (osd_status = '1') else not('1' & spare(5) & spare(0) & spare(3) & spare(4) & spare(1) & spare(2));
-joyUsb1     <= (joystick1(6 downto 5) or extra_button1(1 downto 0)) & joystick1(4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
-joyUsb2     <= (joystick2(6 downto 5) or extra_button2(1 downto 0)) & joystick2(4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
+joyUsb1     <= (joystick1(6) or extra_button1(0)) & joystick1(5 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
+joyUsb2     <= (joystick2(6) or extra_button2(0)) & joystick2(5 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
 joyNumpad   <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);
 joyMouse    <= "00" & mouse_btns(0) & "000" & mouse_btns(1);
 joyUsb1A    <= "00" & '0' & joystick1(5) & joystick1(4) & "00"; -- Y,X button
