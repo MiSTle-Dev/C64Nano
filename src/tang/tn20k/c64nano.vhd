@@ -1023,8 +1023,8 @@ leds(0) <= led1541;
 -- 3rd button of GS controller are triggerd also by extra buttons mapped Joysticks
 joyDigital0 <= 7x"00" when (ext_iec_en = "01") or (osd_status = '1') else not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
 joyDigital1 <= 7x"00" when (ext_iec_en = "10") or (osd_status = '1') else not('1' & spare(5) & spare(0) & spare(3) & spare(4) & spare(1) & spare(2));
-joyUsb1     <= (joystick1(6) or extra_button1(0)) & joystick1(5 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
-joyUsb2     <= (joystick2(6) or extra_button2(0)) & joystick2(5 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
+joyUsb1     <= (joystick1(6) or extra_button1(2)) & joystick1(5 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
+joyUsb2     <= (joystick2(6) or extra_button2(2)) & joystick2(5 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
 joyNumpad   <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);
 joyMouse    <= "00" & mouse_btns(0) & "000" & mouse_btns(1);
 joyUsb1A    <= "00" & '0' & joystick1(5) & joystick1(4) & "00"; -- Y,X button
@@ -1670,12 +1670,12 @@ begin
           cart_hdr_cnt <= (others => '0');
         end if;
 
-        if(ioctl_addr = x"16") then cart_id_hi <= ioctl_data; end if;
-        if(ioctl_addr = x"17") then cart_id <= x"FF" when cart_id_hi /= 0 else ioctl_data; end if;
-        if(ioctl_addr = x"18") then cart_exrom <= ioctl_data(0); end if;
-        if(ioctl_addr = x"19") then cart_game <= ioctl_data(0); end if;
+        if(ioctl_addr = 23x"00016") then cart_id_hi <= ioctl_data; end if;
+        if(ioctl_addr = 23x"00017") then cart_id <= x"FF" when cart_id_hi /= 0 else ioctl_data; end if;
+        if(ioctl_addr = 23x"00018") then cart_exrom <= ioctl_data(0); end if;
+        if(ioctl_addr = 23x"00019") then cart_game <= ioctl_data(0); end if;
 
-        if(ioctl_addr >= x"40") then
+        if(ioctl_addr >= 23x"00040") then
           if (unsigned(cart_blk_len) = 0) or (unsigned(cart_hdr_cnt) /= 0) then
               cart_hdr_cnt <= cart_hdr_cnt +1;
               if(cart_hdr_cnt = 6)  then cart_blk_len <= ioctl_data & x"00"; end if;
