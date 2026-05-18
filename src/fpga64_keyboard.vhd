@@ -152,7 +152,14 @@ architecture rtl of fpga64_keyboard is
 	signal delay_cnt : integer range 0 to 300000;
 	signal delay_end : std_logic;
 	signal ps2_stb   : std_logic;
-	signal key_8s : std_logic := '0';
+	signal key_8s    : std_logic := '0';
+
+	-- Used to remap shift + number:
+	signal phys_6: std_logic := '0';
+	signal phys_7: std_logic := '0';
+	signal phys_8: std_logic := '0';
+	signal phys_9: std_logic := '0';
+	signal phys_0: std_logic := '0';
 
 begin
 
@@ -369,24 +376,19 @@ begin
 				when 7X"0B" => key_H <= pressed;
 				when 7X"0A" => key_G <= pressed;
 				when 7X"1C" => key_Y <= pressed;
-				when 7X"23" => key_7 <= pressed and key_shift;
-							key_6 <= pressed and not key_shift;
+				when 7X"23" => phys_6 <= pressed;
 				when 7X"10" => key_M <= pressed;
 				when 7X"0D" => key_J <= pressed;
 				when 7X"18" => key_U <= pressed;
-				when 7X"24" => key_6 <= pressed and     key_shift;
-							key_7 <= pressed and not key_shift;
-				when 7X"25" => key_8s <= pressed and key_shift;
-							key_8 <= pressed and not key_shift;
-							delay_cnt <= 300000;
+				when 7X"24" => phys_7 <= pressed;
+				when 7X"25" => phys_8 <= pressed;
+								delay_cnt <= 300000;
 				when 7X"36" => key_comma <= pressed;  -- , (Comma)
 				when 7X"0E" => key_K <= pressed;
 				when 7X"0C" => key_I <= pressed;
 				when 7X"12" => key_O <= pressed;
-				when 7X"27" => key_9 <= pressed and     key_shift;
-							key_0 <= pressed and not key_shift;
-				when 7X"26" => key_8 <= pressed and     key_shift;
-					  		key_9 <= pressed and not key_shift;
+				when 7X"27" => phys_0 <= pressed;
+				when 7X"26" => phys_9 <= pressed;
 				when 7X"37" => key_dot <= pressed;    -- . (Period)
 				when 7X"38" => key_slash <= pressed;  -- / (Slash)
 				when 7X"0F" => key_L <= pressed;
@@ -426,7 +428,20 @@ begin
 --				7X"53" -- 53: Num Lock and Clear
 --				7X"64" -- 64: EUR-2
 				end case;
-			end if;	
+			end if;
+			
+			-- Remap without dropping keystrokes:
+			-- shift-7 to shift-6
+			key_6  <= (phys_6 and not key_shift) or (phys_7 and key_shift);
+			-- shift-6 to shift-7
+			key_7  <= (phys_7 and not key_shift) or (phys_6 and key_shift);
+			-- shift-8 to * (uses delay_cnt so shift is suppressed for * register)
+			key_8s <=  phys_8 and key_shift;
+			-- shift 9 to shift-8
+			key_8  <= (phys_8 and not key_shift) or (phys_9 and key_shift);
+			-- shift-0 to shift-9
+		    key_9  <= (phys_9 and not key_shift) or (phys_0 and key_shift);
+			key_0  <=  phys_0 and not key_shift;
 
 			if reset = '1' then
 					key_F1        <= '0';
@@ -480,6 +495,11 @@ begin
 					key_8s        <= '0';
 					key_9         <= '0';
 					key_0         <= '0';
+					phys_6        <= '0';
+					phys_7        <= '0';
+					phys_8        <= '0';
+					phys_9        <= '0';
+					phys_0        <= '0';
 					key_Q         <= '0'; 
 					key_Z         <= '0'; 
 					key_S         <= '0'; 
