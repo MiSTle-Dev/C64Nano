@@ -136,15 +136,15 @@ reg  clock_port;
 reg  rom_kbb;
 reg  force_ultimax;
 reg  ezrom_en;
-reg  init_n = 0;
-reg  allow_freeze = 0;
-reg  saved_d6 = 0;
+reg  init_n = 1'b0;
+reg  allow_freeze = 1'b0;
+reg  saved_d6 = 1'b0;
 
 // Magic Formel (type 14) - MC6821 PIA state
-//reg  [7:0] mf_porta;   // PIA Port A output (ROM bank + RAM enable)
-//reg  [7:0] mf_portb;   // PIA Port B output (RAM page + ROM enable)
-//reg        mf_cra2;    // CRA bit2: 0=DDRA access, 1=Port A data access
-//reg        mf_crb2;    // CRB bit2: 0=DDRB access, 1=Port B data access
+reg  [7:0] mf_porta;   // PIA Port A output (ROM bank + RAM enable)
+reg  [7:0] mf_portb;   // PIA Port B output (RAM page + ROM enable)
+reg        mf_cra2;    // CRA bit2: 0=DDRA access, 1=Port A data access
+reg        mf_crb2;    // CRB bit2: 0=DDRB access, 1=Port B data access
 
 // 0018 - EXROM line status
 // 0019 - GAME line status
@@ -152,6 +152,10 @@ always @(posedge clk32) begin
 	reg [15:0] count;
 	reg        count_ena;
 	reg [15:0] old_id;
+
+	init_n <= 1'b0;
+	allow_freeze <= 1'b0;
+	saved_d6 <= 1'b0;
 
 	old_freeze <= freeze_key;
 	if(freeze_req & (allow_freeze | mod_key)) nmi <= 1;
@@ -182,10 +186,10 @@ always @(posedge clk32) begin
 		rom_kbb <= 0;
 		geo_bank <= 0;
 		ezrom_en <= 0;
-	//	mf_porta <= 0;
-	//	mf_portb <= 0;
-	//	mf_cra2  <= 0;
-	//	mf_crb2  <= 0;
+		mf_porta <= 8'd0;
+		mf_portb <= 8'd0;
+		mf_cra2  <= 0;
+		mf_crb2  <= 0;
 	end
 	else
 	case(cart_id)
@@ -656,7 +660,7 @@ always @(posedge clk32) begin
 					IOF_ena <= 1;
 					IOF_wr_ena <= 1;
 					exrom_overide <= (cart_id==32);
-					game_overide  <= 0; // ~cart_boot;
+					game_overide  <= ~cart_boot;
 					bank_lo <= lobanks[0];
 					bank_hi <= hibanks[0];
 					bank_no = 0;

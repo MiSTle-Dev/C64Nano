@@ -1499,7 +1499,7 @@ port map
     cart_bank_num   => cart_bank_num,
     cart_bank_addr  => ioctl_load_addr(20 downto 13),
     cart_bank_wr    => cart_hdr_wr,
-    cart_boot       => '0',
+    cart_boot       => '1',
 
     exrom           => exrom,
     game            => game,
