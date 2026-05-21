@@ -103,7 +103,7 @@ signal spi_io_clk     : std_logic;
 signal flash_clk      : std_logic;
 attribute syn_keep : integer;
 attribute syn_keep of clk64         : signal is 1;
-attribute syn_keep of clk_sys         : signal is 1;
+attribute syn_keep of clk_sys       : signal is 1;
 attribute syn_keep of clk_pixel_x10 : signal is 1;
 attribute syn_keep of clk_pixel_x5  : signal is 1;
 attribute syn_keep of spi_io_clk    : signal is 1;
@@ -330,7 +330,7 @@ signal io_cycle_we     : std_logic;
 signal io_cycle_addr   : std_logic_vector(22 downto 0);
 signal io_cycle_data   : std_logic_vector(7 downto 0);
 signal load_crt        : std_logic := '0';
-signal old_download    : std_logic;
+signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
 signal ioctl_data      : std_logic_vector(7 downto 0);
@@ -344,7 +344,7 @@ signal inj_end         : std_logic_vector(15 downto 0);
 signal inj_meminit_data : std_logic_vector(7 downto 0);
 signal force_erase     : std_logic := '0';
 signal erasing         : std_logic := '0';
-signal do_erase        : std_logic;
+signal do_erase        : std_logic := '1';
 signal inj_meminit     : std_logic := '0';
 signal load_prg        : std_logic := '0';
 signal load_rom        : std_logic := '0';
@@ -427,8 +427,6 @@ signal system_joyswap  : std_logic;
 signal pd1,pd2,pd3,pd4 : std_logic_vector(7 downto 0);
 signal detach_reset_d  : std_logic;
 signal detach_reset    : std_logic;
-signal detach          : std_logic;
-signal detach_d        : std_logic;
 signal disk_pause      : std_logic;
 signal pll_locked_i    : std_logic;
 signal pll_locked_d    : std_logic;
@@ -469,6 +467,7 @@ signal key_strobe       : std_logic := '0';
 signal act              : unsigned(3 downto 0) := (others => '0');
 signal to_cnt           : integer range 0 to 2_000_000 := 0;
 signal run_prg          : std_logic;
+signal reset_counter    : integer range 0 to 100000 := 0;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -1600,6 +1599,7 @@ begin
     old_download <= ioctl_download;
     io_cycleD <= io_cycle;
     cart_hdr_wr <= '0';
+    detach_reset_d <= detach_reset;
 
     if io_cycle = '0' and io_cycleD = '1' then
       io_cycle_ce <= '1';
@@ -1741,7 +1741,7 @@ begin
     old_meminit <= inj_meminit;
     start_strk  <= '1' when old_meminit = '1' and inj_meminit = '0' else '0';
 
-    if detach_d = '0' and detach = '1' then
+    if detach_reset_d = '0' and detach_reset = '1' then
       cart_attached <= '0';
     end if;
 
@@ -1818,53 +1818,41 @@ end process;
 
 por <= system_reset(0) or not pll_locked or not ram_ready;
 
-process(clk_sys, por)
-variable reset_counter : integer;
+process(clk_sys)
   begin
-    if por = '1' then
-      reset_counter := 0;
-      do_erase <= '0';
-      reset_n <= '0';
-      reset_wait <= '0';
-      force_erase <= '0';
-      detach <= '0';
-    elsif rising_edge(clk_sys) then
-      detach_reset_d <= detach_reset;
+    if rising_edge(clk_sys) then
       old_download_r <= ioctl_download;
 
-      if system_reset(1) = '1' then
-        reset_counter := 100000;
-        do_erase <= '1';
+      if reset_counter = 0 then
+        reset_n <= '1';
+      else
         reset_n <= '0';
-        reset_wait <= '0';
-        force_erase <= '0';
-        detach <= '0';
+      end if;
+
+      if por = '1' or detach_reset = '1' then
+        if por = '1' then
+          do_erase <= '1';
+        end if;
+      reset_counter <= 100000;
       elsif old_download_r = '0' and ioctl_download = '1' and load_prg = '1' then
         do_erase <= '1';
         reset_wait <= '1';
-        reset_counter := 255;
-      elsif ioctl_download = '1' and (load_crt or load_rom) = '1' then
+        reset_counter <= 255;
+      elsif ioctl_download = '1' and ((load_crt = '1') or (load_rom = '1')) then
         do_erase <= '1';
-        reset_counter := 255;
-      elsif detach_reset_d = '0' and detach_reset = '1' then
-        do_erase <= '1';
-        reset_counter := 255;
-        detach <= '1';
+        reset_counter <= 255;
       elsif erasing = '1' then 
         force_erase <= '0';
       elsif reset_counter = 0 then
-        reset_n <= '1'; 
         do_erase <= '0';
-        detach <= '0';
         if reset_wait = '1' and c64_addr = X"FFCF" then reset_wait <= '0'; end if;
       else
-        reset_n <= '0';
-        reset_counter := reset_counter - 1;
+        reset_counter <= reset_counter - 1;
         if reset_counter = 100 and do_erase = '1' then 
           force_erase <= '1'; 
         end if;
       end if;
-  end if;
+    end if;
 end process;
 
 process(clk_sys)

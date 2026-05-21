@@ -338,7 +338,7 @@ signal io_cycle_we     : std_logic;
 signal io_cycle_addr   : std_logic_vector(22 downto 0);
 signal io_cycle_data   : std_logic_vector(7 downto 0);
 signal load_crt        : std_logic := '0';
-signal old_download    : std_logic;
+signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
 signal ioctl_data      : std_logic_vector(7 downto 0);
@@ -352,7 +352,7 @@ signal inj_end         : std_logic_vector(15 downto 0);
 signal inj_meminit_data : std_logic_vector(7 downto 0);
 signal force_erase     : std_logic := '0';
 signal erasing         : std_logic := '0';
-signal do_erase        : std_logic;
+signal do_erase        : std_logic := '1';
 signal inj_meminit     : std_logic := '0';
 signal load_prg        : std_logic := '0';
 signal load_rom        : std_logic := '0';
@@ -435,8 +435,6 @@ signal system_joyswap  : std_logic;
 signal pd1,pd2,pd3,pd4 : std_logic_vector(7 downto 0);
 signal detach_reset_d  : std_logic;
 signal detach_reset    : std_logic;
-signal detach          : std_logic;
-signal detach_d        : std_logic;
 signal disk_pause      : std_logic;
 signal pll_locked_i    : std_logic;
 signal pll_locked_d    : std_logic;
@@ -479,6 +477,7 @@ signal key_strobe       : std_logic := '0';
 signal act              : unsigned(3 downto 0) := (others => '0');
 signal to_cnt           : integer range 0 to 2_000_000 := 0;
 signal run_prg          : std_logic;
+signal reset_counter    : integer range 0 to 100000 := 0;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -579,13 +578,13 @@ begin
   drive_iec_clk  <= drive_iec_clk_o  and ext_iec_clk;
   drive_iec_data <= drive_iec_data_o and ext_iec_data;
 
-    led_ws2812: entity work.ws2812
-    port map
-    (
-     clk    => clk_sys,
-     color  => ws2812_color,
-     data   => ws2812
-    );
+  led_ws2812: entity work.ws2812
+  port map
+  (
+    clk    => clk_sys,
+    color  => ws2812_color,
+    data   => ws2812
+  );
 
 process(clk_sys, disk_reset)
 variable reset_cnt : integer range 0 to 2147483647;
@@ -1034,7 +1033,7 @@ begin
       when "1000"  => joyA <= joyUsb1A;
       when "1001"  => joyA <= joyUsb2A;
       when others  => joyA <= (others => '0');
-      end case;
+    end case;
 
     case port_2_sel is
       when "0000"  => joyB <= joyDigital0;
@@ -1046,7 +1045,7 @@ begin
       when "1000"  => joyB <= joyUsb1A;
       when "1001"  => joyB <= joyUsb2A;
       when others  => joyB <= (others => '0');
-      end case;
+    end case;
   end if;
 end process;
 
@@ -1488,10 +1487,10 @@ port map
     cart_bank_addr  => ioctl_load_addr(20 downto 13),
     cart_bank_wr    => cart_hdr_wr,
     cart_boot       => '1',
-  
+
     exrom           => exrom,
     game            => game,
-  
+
     romL        => romL,
     romH        => romH,
     UMAXromH    => UMAXromH,
@@ -1588,6 +1587,7 @@ begin
     old_download <= ioctl_download;
     io_cycleD <= io_cycle;
     cart_hdr_wr <= '0';
+    detach_reset_d <= detach_reset;
 
     if io_cycle = '0' and io_cycleD = '1' then
       io_cycle_ce <= '1';
@@ -1605,13 +1605,13 @@ begin
         else 
           io_cycle_data <= ioctl_data;
         end if;
-       end if;
+      end if;
 
       if ioctl_req_rd = '1' then
         io_cycle_addr <= ioctl_load_addr;
         ioctl_rd_en <= '1';
       end if;
-      end if;
+    end if;
 
     if io_cycle = '1' then
       io_cycle_ce <= '0';
@@ -1671,12 +1671,12 @@ begin
               if(cart_hdr_cnt = 12) then cart_bank_hi <= '1' when ioctl_data > x"80" else '0'; end if;
               if(cart_hdr_cnt = 14) then cart_bank_16k <= '1' when ioctl_data > x"20" else '0'; end if;
               if(cart_hdr_cnt = 15) then cart_hdr_wr <= '1'; end if;
-        else
+          else
               cart_blk_len <= cart_blk_len - 1;
               ioctl_req_wr <= '1';
-              end if;
-       end if;
-     end if;
+          end if;
+        end if;
+      end if;
 
       if load_tap = '1' then
         if ioctl_addr = 0  then ioctl_load_addr <= TAP_ADDR; end if;
@@ -1689,70 +1689,70 @@ begin
         ioctl_req_wr <= '1';
       end if;
 
-  end if;
+    end if;
 
-      -- cart added
-      if old_download /= ioctl_download and load_crt = '1' then
-        cart_attached <= old_download;
-        erase_cram <= '1';
-      end if;
+    -- cart added
+    if old_download /= ioctl_download and load_crt = '1' then
+      cart_attached <= old_download;
+      erase_cram <= '1';
+    end if;
 
-     -- meminit for RAM injection
-        if old_download /= ioctl_download and load_prg = '1' and inj_meminit = '0' then
-          inj_meminit <= '1';
-          ioctl_load_addr <= (others => '0');
-        end if;
+    -- meminit for RAM injection
+    if old_download /= ioctl_download and load_prg = '1' and inj_meminit = '0' then
+      inj_meminit <= '1';
+      ioctl_load_addr <= (others => '0');
+    end if;
 
-        if inj_meminit = '1' and ioctl_req_wr = '0' then
-                -- finish at $100
-                if ioctl_load_addr(15 downto 0) = x"0100" then 
-                    inj_meminit <= '0'; 
-                end if;
-               -- Initialize BASIC pointers to simulate the BASIC LOAD command
-               case ioctl_load_addr(7 downto 0) is
-                -- TXT (2B-2C)
-                -- Set these two bytes to $01, $08 just as they would be on reset (the BASIC LOAD command does not alter these)
-                when x"2b" => inj_meminit_data <= X"01";ioctl_req_wr <= '1';
-                when x"2c" => inj_meminit_data <= X"08";ioctl_req_wr <= '1';
-                -- SAVE_START (AC-AD)
-                -- Set these two bytes to zero just as they would be on reset (the BASIC LOAD command does not alter these)
-                when x"ac"|x"ad" => inj_meminit_data <= X"00";ioctl_req_wr <= '1';
-                -- VAR (2D-2E), ARY (2F-30), STR (31-32), LOAD_END (AE-AF)
-                -- Set these just as they would be with the BASIC LOAD command (essentially they are all set to the load end address)
-                when x"2d"|x"2f"|x"31"|x"ae" => inj_meminit_data <= inj_end(7 downto 0);ioctl_req_wr <= '1';
-                when x"2e"|x"30"|x"32"|x"af" => inj_meminit_data <= inj_end(15 downto 8);ioctl_req_wr <= '1';
-                  -- advance the address
-                when others => ioctl_load_addr <= ioctl_load_addr + 1;
-             end case;
-        end if;
+    if inj_meminit = '1' and ioctl_req_wr = '0' then
+            -- finish at $100
+            if ioctl_load_addr(15 downto 0) = x"0100" then 
+                inj_meminit <= '0'; 
+            end if;
+            -- Initialize BASIC pointers to simulate the BASIC LOAD command
+            case ioctl_load_addr(7 downto 0) is
+            -- TXT (2B-2C)
+            -- Set these two bytes to $01, $08 just as they would be on reset (the BASIC LOAD command does not alter these)
+            when x"2b" => inj_meminit_data <= X"01";ioctl_req_wr <= '1';
+            when x"2c" => inj_meminit_data <= X"08";ioctl_req_wr <= '1';
+            -- SAVE_START (AC-AD)
+            -- Set these two bytes to zero just as they would be on reset (the BASIC LOAD command does not alter these)
+            when x"ac"|x"ad" => inj_meminit_data <= X"00";ioctl_req_wr <= '1';
+            -- VAR (2D-2E), ARY (2F-30), STR (31-32), LOAD_END (AE-AF)
+            -- Set these just as they would be with the BASIC LOAD command (essentially they are all set to the load end address)
+            when x"2d"|x"2f"|x"31"|x"ae" => inj_meminit_data <= inj_end(7 downto 0);ioctl_req_wr <= '1';
+            when x"2e"|x"30"|x"32"|x"af" => inj_meminit_data <= inj_end(15 downto 8);ioctl_req_wr <= '1';
+              -- advance the address
+            when others => ioctl_load_addr <= ioctl_load_addr + 1;
+          end case;
+    end if;
 
-      old_meminit <= inj_meminit;
+    old_meminit <= inj_meminit;
     start_strk  <= '1' when old_meminit = '1' and inj_meminit = '0' else '0';
 
-      if detach_d = '0' and detach = '1' then
-        cart_attached <= '0';
-      end if;
-
-      -- start RAM erasing
-      if erasing = '0' and force_erase ='1' then
-        erasing <= '1';
-        ioctl_load_addr <= (others => '0');
-      end if;
-
-      -- RAM erasing control
-      if erasing = '1' and ioctl_req_wr = '0' then
-        erase_to <= erase_to + 1;
-        if erase_to = "11111" then
-            if ioctl_load_addr(16 downto 0) < (erase_cram & x"FFFF") then 
-              ioctl_req_wr <= '1';
-            else
-              erasing <= '0';
-              erase_cram <= '0';
-            end if;
-        end if;
-     	end if;
-
+    if detach_reset_d = '0' and detach_reset = '1' then
+      cart_attached <= '0';
     end if;
+
+    -- start RAM erasing
+    if erasing = '0' and force_erase ='1' then
+      erasing <= '1';
+      ioctl_load_addr <= (others => '0');
+    end if;
+
+    -- RAM erasing control
+    if erasing = '1' and ioctl_req_wr = '0' then
+      erase_to <= erase_to + 1;
+      if erase_to = "11111" then
+          if ioctl_load_addr(16 downto 0) < (erase_cram & x"FFFF") then 
+            ioctl_req_wr <= '1';
+          else
+            erasing <= '0';
+            erase_cram <= '0';
+          end if;
+      end if;
+    end if;
+
+  end if;
 end process;
 
 process(clk_sys)
@@ -1806,53 +1806,41 @@ end process;
 
 por <= system_reset(0) or not pll_locked or not ram_ready;
 
-process(clk_sys, por)
-variable reset_counter : integer;
+process(clk_sys)
   begin
-    if por = '1' then
-      reset_counter := 0;
-      do_erase <= '0';
-      reset_n <= '0';
-      reset_wait <= '0';
-      force_erase <= '0';
-      detach <= '0';
-    elsif rising_edge(clk_sys) then
-      detach_reset_d <= detach_reset;
+    if rising_edge(clk_sys) then
       old_download_r <= ioctl_download;
 
-      if system_reset(1) = '1' then
-        reset_counter := 100000;
-        do_erase <= '1';
+      if reset_counter = 0 then
+        reset_n <= '1';
+      else
         reset_n <= '0';
-        reset_wait <= '0';
-        force_erase <= '0';
-        detach <= '0';
+      end if;
+
+      if por = '1' or detach_reset = '1' then
+        if por = '1' then
+          do_erase <= '1';
+        end if;
+      reset_counter <= 100000;
       elsif old_download_r = '0' and ioctl_download = '1' and load_prg = '1' then
         do_erase <= '1';
         reset_wait <= '1';
-        reset_counter := 255;
-      elsif ioctl_download = '1' and (load_crt or load_rom) = '1' then
+        reset_counter <= 255;
+      elsif ioctl_download = '1' and ((load_crt = '1') or (load_rom = '1')) then
         do_erase <= '1';
-        reset_counter := 255;
-      elsif detach_reset_d = '0' and detach_reset = '1' then
-        do_erase <= '1';
-        reset_counter := 255;
-        detach <= '1';
+        reset_counter <= 255;
       elsif erasing = '1' then 
         force_erase <= '0';
       elsif reset_counter = 0 then
-        reset_n <= '1'; 
         do_erase <= '0';
-        detach <= '0';
         if reset_wait = '1' and c64_addr = X"FFCF" then reset_wait <= '0'; end if;
       else
-        reset_n <= '0';
-        reset_counter := reset_counter - 1;
+        reset_counter <= reset_counter - 1;
         if reset_counter = 100 and do_erase = '1' then 
           force_erase <= '1'; 
         end if;
       end if;
-  end if;
+    end if;
 end process;
 
 process(clk_sys)
