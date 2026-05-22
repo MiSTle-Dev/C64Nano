@@ -478,50 +478,50 @@ always @(posedge clk32) begin
 		//   $DF80-$DFBF  RS={1,0}  Port B / DDRB   => RAM page[4:0], ROM enable (bit7)
 		//   $DFC0-$DFFF  RS={1,1}  CRB             => bit2 selects DDR vs Data
 		// RAM at IOE ($DE00-$DEFF): 32 pages of 256 bytes = 8K, page via mf_portb[4:0]
-		14: begin
-				if(!init_n) begin
-					exrom_overide <= 1'b1;   // ULTIMAX: exrom=1, game=0
-					game_overide  <= 1'b0;
-					bank_lo       <= lobanks[0];
-					bank_hi       <= hibanks[0];
-					IOE_ena       <= 1'b1;   // RAM readable at $DE00
-					IOE_wr_ena    <= 1'b1;   // RAM writable at $DE00
-					mf_cra2       <= 1'b0;
-					mf_crb2       <= 1'b0;
-					mf_porta      <= 8'd0;
-					mf_portb      <= 8'd0;
-				end
-				else begin
-					// Handle IOF writes to MC6821 PIA
-					// Data encoding: D[5:0] = addr_in[5:0], D7 = addr_in[1]
-					if(iof_wr) begin
-						case(addr_in[7:6])  // RS1=A7, RS0=A6
-							2'b00: begin  // Port A / DDRA
-								if(mf_cra2) begin
-									// Port A data: ROM bank[2:0], RAM enable (bit4)
-									mf_porta <= {addr_in[1], 1'b0, addr_in[5:0]};
-									bank_lo  <= lobanks[addr_in[2:0]];
-									bank_hi  <= hibanks[addr_in[2:0]];
-								end
-								// else: DDRA write (direction setup, ignored in FPGA)
-							end
-							2'b01: begin  // CRA
-								mf_cra2 <= addr_in[2];  // D2=A2 selects DDR/Data
-							end
-							2'b10: begin  // Port B / DDRB
-								if(mf_crb2) begin
-									// Port B data: RAM page[4:0], ROM enable (bit7)
-									mf_portb <= {addr_in[1], 1'b0, addr_in[5:0]};
-								end
-								// else: DDRB write (direction setup, ignored in FPGA)
-							end
-							2'b11: begin  // CRB
-								mf_crb2 <= addr_in[2];  // D2=A2 selects DDR/Data
-							end
-						endcase
-					end
-				end
-			end
+//		14: begin
+//				if(!init_n) begin
+//					exrom_overide <= 1'b1;   // ULTIMAX: exrom=1, game=0
+//					game_overide  <= 1'b0;
+//					bank_lo       <= lobanks[0];
+//					bank_hi       <= hibanks[0];
+//					IOE_ena       <= 1'b1;   // RAM readable at $DE00
+//					IOE_wr_ena    <= 1'b1;   // RAM writable at $DE00
+//					mf_cra2       <= 1'b0;
+//					mf_crb2       <= 1'b0;
+//					mf_porta      <= 8'd0;
+//					mf_portb      <= 8'd0;
+//				end
+//				else begin
+//					// Handle IOF writes to MC6821 PIA
+//					// Data encoding: D[5:0] = addr_in[5:0], D7 = addr_in[1]
+//					if(iof_wr) begin
+//						case(addr_in[7:6])  // RS1=A7, RS0=A6
+//							2'b00: begin  // Port A / DDRA
+//								if(mf_cra2) begin
+//									// Port A data: ROM bank[2:0], RAM enable (bit4)
+//									mf_porta <= {addr_in[1], 1'b0, addr_in[5:0]};
+//									bank_lo  <= lobanks[addr_in[2:0]];
+//									bank_hi  <= hibanks[addr_in[2:0]];
+//								end
+//								// else: DDRA write (direction setup, ignored in FPGA)
+//							end
+//							2'b01: begin  // CRA
+//								mf_cra2 <= addr_in[2];  // D2=A2 selects DDR/Data
+//							end
+//							2'b10: begin  // Port B / DDRB
+//								if(mf_crb2) begin
+//									// Port B data: RAM page[4:0], ROM enable (bit7)
+//									mf_portb <= {addr_in[1], 1'b0, addr_in[5:0]};
+//								end
+//								// else: DDRB write (direction setup, ignored in FPGA)
+//							end
+//							2'b11: begin  // CRB
+//								mf_crb2 <= addr_in[2];  // D2=A2 selects DDR/Data
+//							end
+//						endcase
+//					end
+//				end
+//			end
 
 		// C64GS - (game=1, exrom=0, 64 banks by 8k)
 		// 8k config
@@ -905,9 +905,9 @@ always_comb begin
 				end
 			// Magic Formel: RAM paging at IOE ($DE00-$DEFF)
 			// 32 pages x 256 bytes = 8K RAM, stored at SDRAM 0x010000-0x011FFF, addr_out[16]=1 (RAM base), [12:8]=page, [7:0]=byte offset within page
-			14: if(cs_ioe) begin
-					addr_out[24:0] = {8'd0, 1'b1, 3'b000, mf_portb[4:0], addr_in[7:0]};
-				end
+//			14: if(cs_ioe) begin
+//					addr_out[24:0] = {8'd0, 1'b1, 3'b000, mf_portb[4:0], addr_in[7:0]};
+//				end
 			99: if(IOE) begin
 					addr_out[24:8] = {3'b001, geo_bank};  // -> 4M
 				end
