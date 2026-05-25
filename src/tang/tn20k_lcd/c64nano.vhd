@@ -1802,7 +1802,7 @@ begin
   end if;
 end process;
 
-por <= system_reset(0) or detach_reset or not pll_locked or not ram_ready;
+por <= system_reset(0) or not pll_locked or not ram_ready;
 
 process(clk_sys)
   begin
@@ -1815,7 +1815,7 @@ process(clk_sys)
         reset_n <= '0';
       end if;
 
-      if por = '1' then
+      if por = '1' or detach_reset = '1' then
         if system_reset(0) = '1' then
           do_erase <= '1';
         end if;
