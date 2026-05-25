@@ -410,7 +410,7 @@ signal tx_6551         : std_logic := '1';
 signal uart_irq        : std_logic := '1'; -- low active
 signal uart_cs         : std_logic;
 signal CLK_6551_EN     : std_logic;
-signal phi2_p, phi2_n  : std_logic;
+signal phi2_n          : std_logic;
 signal sid_ld_addr     : std_logic_vector(11 downto 0) := (others =>'0');
 signal sid_ld_data     : std_logic_vector(15 downto 0) := (others =>'0');
 signal sid_ld_wr       : std_logic := '0';
@@ -1318,12 +1318,10 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   r            => r,
   g            => g,
   b            => b,
-  debugX       => open,
-	debugY       => open,
 
   phi          => phi,
-  phi2_p       => phi2_p, -- Phi 2 positive edge
-  phi2_n       => phi2_n, -- Phi 2 negative edge
+  phi2_p       => open,
+  phi2_n       => phi2_n,
 
   game         => game,
   exrom        => exrom,
@@ -1804,7 +1802,7 @@ begin
   end if;
 end process;
 
-por <= system_reset(0) or not pll_locked or not ram_ready;
+por <= system_reset(0) or detach_reset or not pll_locked or not ram_ready;
 
 process(clk_sys)
   begin
@@ -1817,8 +1815,8 @@ process(clk_sys)
         reset_n <= '0';
       end if;
 
-      if por = '1' or detach_reset = '1' then
-        if por = '1' then
+      if por = '1' then
+        if system_reset(0) = '1' then
           do_erase <= '1';
         end if;
       reset_counter <= 100000;

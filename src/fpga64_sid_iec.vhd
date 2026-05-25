@@ -74,7 +74,7 @@ port  (
 	turbo_speed : in  std_logic_vector(1 downto 0);
 
 	-- VGA/SCART interface
-	vic_variant : in std_logic_vector(1 downto 0);
+	vic_variant : in  std_logic_vector(1 downto 0);
 	ntscMode    : in  std_logic;
 	hsync       : out std_logic;
 	vsync       : out std_logic;
@@ -82,9 +82,6 @@ port  (
 	r           : out unsigned(7 downto 0);
 	g           : out unsigned(7 downto 0);
 	b           : out unsigned(7 downto 0);
-	debugX      : out unsigned(9 downto 0);
-	debugY      : out unsigned(8 downto 0);
-
     phi         : out std_logic;
     phi2_p      : out std_logic; -- Phi 2 positive edge
     phi2_n      : out std_logic; -- Phi 2 negative edge
@@ -561,11 +558,11 @@ port map (
 	mode6567old => '0',
 	mode6567R8 => ntscMode,
 	mode6572 => '0',
-	
+	variant => vic_variant,
+
 	turbo_en => turbo_en,
 	turbo_state => turbo_state,
-	variant => vic_variant,  -- 00 - NMOS, 01 - HMOS, 10 - old HMOS
-
+	
 	cs => cs_vic,
 	we => cpuWe,
 	lp_n => cia1_pbi(4),
@@ -582,8 +579,7 @@ port map (
 	hsync => hSync,
 	vsync => vSync,
 	colorIndex => vicColorIndex,
-	debugX  => debugX,
-	debugY  => debugY,
+
 	irq_n => irq_vic
 );
 
