@@ -1560,7 +1560,7 @@ end generate yes_midi;
 crt_inst : entity work.loader_sd_card
 port map (
   clk               => clk_sys,
-  reset             => por,
+  reset             => std_logic(system_reset(1) or not pll_locked),
 
   sd_lba            => loader_lba,
   sd_rd             => sd_rd(6 downto 1),
@@ -1814,7 +1814,7 @@ begin
   end if;
 end process;
 
-por <= system_reset(0) or not pll_locked or not ram_ready;
+por <= system_reset(1) or system_reset(0) or not pll_locked or not ram_ready;
 
 process(clk_sys)
   begin
@@ -1828,7 +1828,7 @@ process(clk_sys)
       end if;
 
       if por = '1' or detach_reset = '1' then
-        if system_reset(0) = '1' then
+        if system_reset(1) = '1' then
           do_erase <= '1';
         end if;
       reset_counter <= 100000;
