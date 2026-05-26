@@ -468,6 +468,8 @@ signal act              : unsigned(3 downto 0) := (others => '0');
 signal to_cnt           : integer range 0 to 2_000_000 := 0;
 signal run_prg          : std_logic;
 signal reset_counter    : integer range 0 to 100000 := 0;
+signal clear_ram        : std_logic;
+signal boot_easyflash   : std_logic;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -1238,6 +1240,8 @@ hid_inst: entity work.hid
   system_int_iec_drv  => int_iec_drv,
   system_reu_wrap     => reu_wrap,
   system_run_prg      => run_prg,
+  system_clear_ram    => clear_ram,
+  system_boot_easyflash=> boot_easyflash,
 
   -- port io (used to expose rs232)
   port_status       => serial_status,

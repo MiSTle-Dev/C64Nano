@@ -66,7 +66,9 @@ module sysctrl (
   output reg [2:0]  system_palette,
   output reg [1:0]  system_ext_iec_en,
   output reg [1:0]  system_int_iec_drv,
-  output reg        system_run_prg
+  output reg        system_run_prg,
+  output reg        system_clear_ram,
+  output reg        system_boot_easyflash
 );
 
 reg [3:0] state;
@@ -164,6 +166,8 @@ always @(posedge clk) begin
       system_palette <= 3'd0;
       system_int_iec_drv <= 2'b00;
       system_run_prg <= 1'b0;
+      system_clear_ram <= 1'b0;
+      system_boot_easyflash <= 1'b0;
    end else begin // if (reset)
       //  bring button state into local clock domain
       buttonsD <= buttons;
@@ -319,6 +323,10 @@ always @(posedge clk) begin
                     if(id == "4") system_reu_wrap <= data_in[0];
                     //
                     if(id == "5") system_run_prg <= data_in[0];
+                    // clear RAM
+                    if(id == "6") system_clear_ram <= data_in[0];
+                    // boot easyflash
+                    if(id == "7") system_boot_easyflash <= data_in[0];
                 end
             end
 
