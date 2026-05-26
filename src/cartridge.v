@@ -136,9 +136,10 @@ reg  clock_port;
 reg  rom_kbb;
 reg  force_ultimax;
 reg  ezrom_en;
-reg  init_n = 1'b0;
-reg  allow_freeze = 1'b0;
-reg  saved_d6 = 1'b0;
+
+reg  init_n = 0;
+reg  allow_freeze = 0;
+reg  saved_d6 = 0;
 
 // Magic Formel (type 14) - MC6821 PIA state
 reg  [7:0] mf_porta;   // PIA Port A output (ROM bank + RAM enable)
@@ -152,10 +153,6 @@ always @(posedge clk32) begin
 	reg [15:0] count;
 	reg        count_ena;
 	reg [15:0] old_id;
-
-	init_n <= 1'b0;
-	allow_freeze <= 1'b0;
-	saved_d6 <= 1'b0;
 
 	old_freeze <= freeze_key;
 	if(freeze_req & (allow_freeze | mod_key)) nmi <= 1;
