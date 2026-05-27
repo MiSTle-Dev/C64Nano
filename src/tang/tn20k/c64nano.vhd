@@ -1500,7 +1500,7 @@ port map
     cart_bank_num   => cart_bank_num,
     cart_bank_addr  => ioctl_load_addr(20 downto 13),
     cart_bank_wr    => cart_hdr_wr,
-    cart_boot       => '1',
+    cart_boot       => '1', -- boot_easyflash,
 
     exrom           => exrom,
     game            => game,
@@ -1850,7 +1850,8 @@ process(clk_sys)
         if reset_wait = '1' and c64_addr = X"FFCF" then reset_wait <= '0'; end if;
       else
         reset_counter <= reset_counter - 1;
-        if reset_counter = 100 and do_erase = '1' then 
+        if reset_counter = 100 and do_erase = '1' then
+        -- if reset_counter = 100 and (clear_ram = '1' or do_erase = '1') then
           force_erase <= '1'; 
         end if;
       end if;
