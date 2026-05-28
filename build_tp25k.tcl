@@ -1,5 +1,6 @@
 set_device GW5A-LV25MG121NC1/I0 -name GW5A-25A
 
+add_file src/am29f040.sv
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
 add_file src/cartridge.v
@@ -72,6 +73,7 @@ add_file src/sid/sid_voice.sv
 add_file src/uart6551/BaudRate.vhd
 add_file src/uart6551/io_fifo.v
 add_file src/uart6551/uart_6551.v
+add_file src/misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
 set_option -output_base_name C64Nano_TP25k

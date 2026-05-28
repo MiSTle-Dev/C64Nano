@@ -31,7 +31,7 @@ module loader_sd_card
 	output reg [4:0] leds,
 
 	output reg ioctl_download,
-	output reg [22:0] ioctl_addr,
+	output reg [23:0] ioctl_addr,
 	output reg [7:0] ioctl_data,
 	output reg ioctl_wr,
 	input ioctl_wait
@@ -54,7 +54,7 @@ reg [31:0] ch_timeout;
 reg wr;
 reg [8:0] cnt;
 reg [4:0] core_wait_cnt;
-reg [22:0] img_size[6:0];
+reg [23:0] img_size[6:0];
 reg img_present[6:0];
 reg img_presentD[6:0];
 reg [5:0] rd_sel;
@@ -72,7 +72,7 @@ reg boot_reu;
 		if (sd_img_mounted[i]) 
 		begin
 			img_present[i] <= |sd_img_size;
-			img_size[i] <= sd_img_size[22:0];
+			img_size[i] <= sd_img_size[23:0];
 		end 
 	end
 
@@ -100,7 +100,7 @@ reg boot_reu;
 		load_flt <= 1'b0;
 		load_reu <= 1'b0;
 		ioctl_download <= 1'b0;
-		ioctl_addr <= 23'd0;
+		ioctl_addr <= 24'd0;
 		leds <= 5'd0;
 		loader_busy <= 1'b0;
 		boot_crt <= 1'b0;
@@ -176,9 +176,9 @@ reg boot_reu;
 					load_flt <= rd_sel[4]; 
 					load_reu <= rd_sel[5]; 
 					ch_timeout <= 32'd110000; // 32'd1508863;
-					ioctl_addr <= 23'd0;
+					ioctl_addr <= 24'd0;
 					ioctl_download <= 1'b1;
-					addr <= 23'd0;
+					addr <= 24'd0;
 					sd_lba <= 32'd0;
 					core_wait_cnt <= 5'd0;
 					io_state <= WAIT4CORE;
@@ -206,7 +206,7 @@ reg boot_reu;
 				else 
 				begin
 					ioctl_download <= 1'b0;
-					ioctl_addr <= 23'd0;
+					ioctl_addr <= 24'd0;
 					io_state <= DESELECT;
 				end
 			end

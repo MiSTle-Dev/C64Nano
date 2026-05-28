@@ -931,7 +931,7 @@ always_comb begin
 //					addr_out[24:0] = {8'd0, 1'b1, 3'b000, mf_portb[4:0], addr_in[7:0]};
 //				end
 			99: if(IOE) begin
-					addr_out[24:8] = {3'b011, geo_bank};
+					addr_out[24:8] = {3'b001, geo_bank};  // -> 4M
 				end
 		default:;
 		endcase

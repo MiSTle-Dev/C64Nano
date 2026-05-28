@@ -1488,7 +1488,7 @@ port map
     cart_bank_num   => cart_bank_num,
     cart_bank_addr  => ioctl_load_addr(20 downto 13),
     cart_bank_wr    => cart_hdr_wr,
-    cart_boot       => '1', -- boot_easyflash,
+    cart_boot       => boot_easyflash,
 
     exrom           => exrom,
     game            => game,
@@ -1577,7 +1577,7 @@ port map (
   img_select        => open,
 
   ioctl_download    => ioctl_download,
-  ioctl_addr        => ioctl_addr,
+  ioctl_addr(22 downto 0) => ioctl_addr,
   ioctl_data        => ioctl_data,
   ioctl_wr          => ioctl_wr,
   ioctl_wait        => ioctl_req_wr or reset_wait or ioctl_req_rd
@@ -1660,12 +1660,12 @@ begin
           cart_hdr_cnt <= (others => '0');
         end if;
 
-        if(ioctl_addr = 23x"00016") then cart_id_hi <= ioctl_data; end if;
-        if(ioctl_addr = 23x"00017") then cart_id <= x"FF" when cart_id_hi /= 0 else ioctl_data; end if;
-        if(ioctl_addr = 23x"00018") then cart_exrom <= ioctl_data(0); end if;
-        if(ioctl_addr = 23x"00019") then cart_game <= ioctl_data(0); end if;
+        if(ioctl_addr = x"16") then cart_id_hi <= ioctl_data; end if;
+        if(ioctl_addr = x"17") then cart_id <= x"FF" when cart_id_hi /= 0 else ioctl_data; end if;
+        if(ioctl_addr = x"18") then cart_exrom <= ioctl_data(0); end if;
+        if(ioctl_addr = x"19") then cart_game <= ioctl_data(0); end if;
 
-        if(ioctl_addr >= 23x"00040") then
+        if(ioctl_addr >= x"40") then
           if (unsigned(cart_blk_len) = 0) or (unsigned(cart_hdr_cnt) /= 0) then
               cart_hdr_cnt <= cart_hdr_cnt +1;
               if(cart_hdr_cnt = 6)  then cart_blk_len <= ioctl_data & x"00"; end if;
@@ -1838,8 +1838,7 @@ process(clk_sys)
         if reset_wait = '1' and c64_addr = X"FFCF" then reset_wait <= '0'; end if;
       else
         reset_counter <= reset_counter - 1;
-        if reset_counter = 100 and do_erase = '1' then
-        -- if reset_counter = 100 and (clear_ram = '1' or do_erase = '1') then
+        if reset_counter = 100 and (clear_ram = '1' or do_erase = '1') then
           force_erase <= '1'; 
         end if;
       end if;
