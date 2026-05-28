@@ -1032,7 +1032,7 @@ joyUsb1A    <= "00" & '0' & joystick1(5) & joystick1(4) & "00"; -- Y,X button
 joyUsb2A    <= "00" & '0' & joystick2(5) & joystick2(4) & "00"; -- Y,X button
 
 -- send external DB9 joystick port to µC
-db9_joy <= 6x"00" when ext_iec_en = "01" else not(io(5) & io(0), io(2), io(1), io(4), io(3));
+db9_joy <= 6x"00" when ext_iec_en = "01" else not(io(5) & io(0) & io(2) & io(1) & io(4) & io(3));
 
 process(clk_sys)
 begin
@@ -1264,7 +1264,7 @@ hid_inst: entity work.hid
 ext_drive_interface <= '1' when ext_iec_en /= 0 else '0';
 
 process(clk_sys)
-variable toX:	integer;
+variable toX:	integer := 0;
 begin
   if rising_edge(clk_sys) then
     c64_iec_clk_old   <= c64_iec_clk;
