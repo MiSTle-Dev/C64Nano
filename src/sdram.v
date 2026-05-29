@@ -23,27 +23,26 @@
 module sdram (
 
 	// interface to the MT48LC16M16 chip
-	output 				sd_clk,
-	inout  reg [15:0]	sd_data,
 	output reg [12:0]	sd_addr,    // 13 bit multiplexed address bus
-	output 		[1:0]	sd_dqm,
+	inout      [15:0]	sd_data,
 	output reg [ 1:0]	sd_ba,      // two banks
 	output 				sd_cs,      // a single chip select
 	output 				sd_we,      // write enable
 	output 				sd_ras,     // row address select
 	output 				sd_cas,     // columns address select
+	output 				sd_clk,
+	output 		[1:0]	sd_dqm,
 
 	// cpu/chipset interface
-	input 		 		clk,		// sdram is accessed at up to 128MHz
-    input               reset_n,    // init signal after FPGA config to initialize RAM
-
-    output            ready,        // ram is ready and has been initialized	
-	input 		   	refresh,        // refresh cycle
+	input 		 		init,			// init signal after FPGA config to initialize RAM
+	input 		 		clk,			// sdram is accessed at up to 128MHz
+	
+	input      [24:0] addr,       // 25 bit byte address
 	input      [ 7:0] din,
-	output     [ 7:0] dout,
-	input      [24:0] addr,         // 25 bit byte address
-	input      [1:0]    ds,         // unused
-	input 		 		cs,         // cpu/chipset access
+	output     [ 7:0]	dout,
+
+	input 		 		refresh,    // refresh cycle
+	input 		 		ce,         // cpu/chipset access
 	input 		 		we          // cpu/chipset requests write
 );
 
@@ -68,11 +67,11 @@ localparam STATE_LAST      = 3'd7;   // last state in cycle
 reg [2:0] q /* synthesis noprune */;
 reg last_ce, last_refresh;
 always @(posedge clk) begin
-	last_ce <= cs;
+	last_ce <= ce;
 	last_refresh <= refresh;
 
 	// start a new cycle in rising edge of ce
-	if(cs && !last_ce) q <= 3'd1;
+	if(ce && !last_ce) q <= 3'd1;
 	if(q || reset) q <= q + 3'd1;
 end
 
@@ -84,13 +83,11 @@ end
 // into normal operation. Initialize the ram in the last 16 reset cycles (cycles 15-0)
 initial reset = 5'h1f;
 
-reg [4:0] reset; /* synthesis noprune=1 */;
+reg [4:0] reset;
 always @(posedge clk) begin
-	if(!reset_n) reset <= 5'h1f;
+	if(init)	reset <= 5'h1f;
 	else if((q == STATE_LAST) && (reset != 0)) reset <= reset - 5'd1;
 end
-
-assign ready = !(|reset);
 
 // ---------------------------------------------------------------------
 // ------------------ generate ram control signals ---------------------
@@ -107,22 +104,29 @@ localparam CMD_AUTO_REFRESH    = 3'b001;
 localparam CMD_LOAD_MODE       = 3'b000;
 
 reg [2:0] sd_cmd;   // current command sent to sd ram
-reg bt;
 
 // drive control signals according to current command
 assign sd_cs  = 0;
 assign sd_ras = sd_cmd[2];
 assign sd_cas = sd_cmd[1];
 assign sd_we  = sd_cmd[0];
+assign sd_dqm = sd_addr[12:11];
 
-assign sd_data = (cs && we) ? {din, din} : 16'bzzzz_zzzz_zzzz_zzzz;
-assign sd_dqm = (!we)?2'b00:sd_addr[12:11];
-assign dout = bt ? dout_r[15:8] : dout_r[7:0];
+reg bt;
 reg [15:0] dout_r;
+reg [15:0] sd_data_out;
+reg        sd_data_oe;
+
+assign dout = bt ? dout_r[15:8] : dout_r[7:0];
+assign sd_data = sd_data_oe ? sd_data_out : 16'bZ;
 
 always @(posedge clk) begin
 	reg [8:0] caddr;
-	sd_cmd  <= CMD_NOP;
+	reg [7:0] wrdata;
+	reg       wr;
+
+	sd_cmd     <= CMD_NOP;
+	sd_data_oe <= 1'b0;
 
 	if(q == STATE_READ) dout_r <= sd_data;
 
@@ -142,17 +146,22 @@ always @(posedge clk) begin
 	else begin
 		if(refresh && !last_refresh) sd_cmd <= CMD_AUTO_REFRESH;
 
-		if(cs && !last_ce) begin
+		if(ce && !last_ce) begin
 			sd_cmd  <= CMD_ACTIVE;
 			sd_ba   <= addr[22:21];
 			sd_addr <= addr[20:8];
 			caddr   <= {addr[23], addr[7:0]};
 			bt      <= addr[24];
+			wr      <= we;
+			wrdata  <= din;
 		end
-        // CAS phase 
 		if(q == STATE_CMD_CONT) begin
-			sd_cmd  <= we ? CMD_WRITE : CMD_READ;
-			sd_addr <= {~bt & we, bt & we, 2'b10, caddr};
+			if(wr) begin
+				sd_data_out <= {wrdata, wrdata};
+				sd_data_oe  <= 1'b1;
+			end
+			sd_cmd  <= wr ? CMD_WRITE : CMD_READ;
+			sd_addr <= {~bt & wr, bt & wr, 2'b10, caddr};
 		end
 	end
 end

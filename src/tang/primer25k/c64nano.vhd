@@ -253,7 +253,7 @@ signal dma_din        : unsigned(7 downto 0);
 signal dma_we         : std_logic;
 signal ext_cycle      : std_logic;
 signal ext_cycle_d    : std_logic;
-signal reu_ram_addr   : std_logic_vector(24 downto 0);
+signal reu_ram_addr   : std_logic_vector(23 downto 0);
 signal reu_ram_dout   : std_logic_vector(7 downto 0);
 signal reu_ram_we     : std_logic;
 signal reu_irq        : std_logic;
@@ -455,13 +455,20 @@ signal run_prg          : std_logic;
 signal reset_counter    : integer range 0 to 100000 := 0;
 signal clear_ram        : std_logic;
 signal boot_easyflash   : std_logic;
+signal ezfl_save        : std_logic;
+signal ezfl_save_old    : std_logic;
+signal ezfl_mod         : std_logic := '0';
+signal save_cartridge   : std_logic := '0';
+signal autosave         : std_logic := '0';
+signal ezfl_idx         : std_logic := '0';
+signal ioctl_upload     : std_logic := '0';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
-constant CRT_ADDR      : std_logic_vector(23 downto 0) := 24x"200000";
-constant TAP_ADDR      : std_logic_vector(23 downto 0) := 24x"400000";
-constant REU_ADDR      : std_logic_vector(23 downto 0) := 24x"800000";-- 2Mb max
-constant GEORAM_ADDR   : std_logic_vector(23 downto 0) := 24x"C00000";-- 4Mb max
+constant CRT_ADDR      : std_logic_vector(23 downto 0) := x"200000";
+constant TAP_ADDR      : std_logic_vector(23 downto 0) := x"400000";
+constant REU_ADDR      : std_logic_vector(23 downto 0) := x"800000";-- 2Mb max
+constant GEORAM_ADDR   : std_logic_vector(23 downto 0) := x"C00000";-- 4Mb max
 
 component CLKDIV
     generic (
@@ -790,7 +797,7 @@ addr <= cart_addr
            when io_cycle = '1' and cart_mem_req = '1' else
         io_cycle_addr
            when io_cycle = '1' else
-        reu_ram_addr(23 downto 0)
+        reu_ram_addr
            when ext_cycle = '1' else
         cart_addr;
 
@@ -834,16 +841,16 @@ port map(
     sd_cas    => O_sdram_cas_n, -- columns address select
     -- cpu/chipset interface
     clk       => clk64,         -- sdram is accessed at 64MHz
-    reset_n   => pll_locked,    -- init signal after FPGA config to initialize RAM
-    ready     => ram_ready,     -- ram is ready and has been initialized
+    init      => not pll_locked,-- init signal after FPGA config to initialize RAM
     refresh   => idle,          -- chipset requests a refresh cycle
     din       => din,           -- data input from chipset/cpu
     dout      => dout,
-    addr      => "0" & addr,    -- 25 bit word address
-    ds        => "00",
-    cs        => cs,            -- cpu/chipset requests read/wrie
+    addr      => '0' & addr,    -- 25 bit word address
+    ce        => cs,            -- cpu/chipset requests read/wrie
     we        => we             -- cpu/chipset requests write
   );
+
+ram_ready <= '1';
 
 -- Clock tree and all frequencies in Hz
 -- TN 20k
@@ -1214,8 +1221,8 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   pause        => '0',
   pause_out    => c64_pause,
 
-  usb_key      => key, -- usb_key,
-  kbd_strobe   => key_strobe, -- ,kbd_strobe,
+  usb_key      => key,
+  kbd_strobe   => key_strobe,
   kbd_reset    => not reset_n,
   shift_mod    => not shift_mod,
 
@@ -1353,7 +1360,7 @@ port map(
     dma_we    => dma_we,
   
     ram_cycle => ext_cycle,
-    ram_addr  => reu_ram_addr,
+    ram_addr(23 downto 0) => reu_ram_addr,
     ram_dout  => reu_ram_dout,
     ram_din   => dout,
     ram_we    => reu_ram_we,
@@ -1438,6 +1445,30 @@ port map
     nmi         => nmi,
     nmi_ack     => nmi_ack
   );
+
+ezfl_save <= save_cartridge or (autosave and ezfl_mod);
+
+process(clk_sys)
+  begin
+  if rising_edge(clk_sys) then
+    if cart_mem_req = '1' then 
+      ezfl_mod <= '1'; 
+    end if;
+
+    if ioctl_download = '1' and load_crt = '1' then
+      ezfl_mod <= '0'; 
+    end if;
+    
+    if ioctl_upload = '1' then 
+      ezfl_mod <= '0';
+    end if;
+
+    ezfl_save_old <= ezfl_save;
+    if ezfl_save_old = '0' and ezfl_save = '1' then
+      ezfl_idx <= not save_cartridge;
+    end if;
+  end if;
+end process;
 
 midi_en <= '1' when st_midi /= 0 else '0';
 
@@ -1564,7 +1595,7 @@ begin
               inj_end(7 downto 0)  <= ioctl_data; 
           -- Load address high-byte
           elsif ioctl_addr = 1 then
-              ioctl_load_addr(23 downto 8) <= 8x"00" & ioctl_data;
+              ioctl_load_addr(23 downto 8) <= x"00" & ioctl_data;
               inj_end(15 downto 8) <= ioctl_data;
           else
               ioctl_req_wr <= '1';
