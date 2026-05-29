@@ -31,7 +31,7 @@ module loader_sd_card
 	output reg [4:0] leds,
 
 	output reg ioctl_download,
-	output reg [22:0] ioctl_addr,
+	output reg [23:0] ioctl_addr,
 	output reg [7:0] ioctl_data,
 	output reg ioctl_wr,
 	input ioctl_wait
@@ -49,12 +49,12 @@ localparam [2:0]	GO4IT			= 3'd0,
 always @(posedge clk) begin
 
 reg [2:0] io_state;
-reg [22:0] addr;
+reg [23:0] addr;
 reg [31:0] ch_timeout;
 reg wr;
 reg [8:0] cnt;
 reg [4:0] core_wait_cnt;
-reg [22:0] img_size[6:0];
+reg [23:0] img_size[6:0];
 reg img_present[6:0];
 reg img_presentD[6:0];
 reg [5:0] rd_sel;
@@ -72,7 +72,7 @@ reg boot_reu;
 		if (sd_img_mounted[i]) 
 		begin
 			img_present[i] <= |sd_img_size;
-			img_size[i] <= sd_img_size[22:0];
+			img_size[i] <= sd_img_size[23:0];
 		end 
 	end
 
@@ -100,15 +100,21 @@ reg boot_reu;
 		load_flt <= 1'b0;
 		load_reu <= 1'b0;
 		ioctl_download <= 1'b0;
-		ioctl_addr <= 23'd0;
+		ioctl_addr <= 24'd0;
+		addr <= 24'd0;
 		leds <= 5'd0;
 		loader_busy <= 1'b0;
 		boot_crt <= 1'b0;
 		boot_bin <= 1'b0;
 		boot_prg <= 1'b0;
-//		boot_tap <= 1'b0;
+		//boot_tap <= 1'b0;
 		boot_flt <= 1'b0;
 		boot_reu <= 1'b0;
+		rd_sel <= 6'd0;
+		img_select <= 3'd0;
+		cnt <= 9'd0;
+		core_wait_cnt <= 5'd0;
+		ch_timeout <= 32'd0;
 		io_state <= START;
 	end
 	else
@@ -117,47 +123,47 @@ reg boot_reu;
 
 		START:        // 0 c1541 1 CRT 2 PRG 3 BIN 4 TAP 5 FLT
 			begin
-				if((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))
+				if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin)))
 					begin
 						img_select <= 3;
 						io_state <= GO4IT;
-						rd_sel = 6'b000100;
+						rd_sel <= 6'b000100;
 						boot_bin <= 1'b1;
 					end
-				else if((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_crt))
+				else if((|img_size[1]) && ((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_crt)))
 					begin 
 						img_select <= 1; 
 						io_state <= GO4IT; 
-						rd_sel = 6'b000001;
+						rd_sel <= 6'b000001;
 						boot_crt <= 1'b1;
 					end
-				else if((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_prg))
+				else if((|img_size[2]) && ((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_prg)))
 					begin 
 						img_select <= 2;
 						io_state <= GO4IT;
-						rd_sel = 6'b000010;
+						rd_sel <= 6'b000010;
 						boot_prg <= 1'b1;
 					end
-				else if((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flt))
+				else if((|img_size[5]) && ((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flt)))
 					begin 
 						img_select <= 5;
 						io_state <= GO4IT;
-						rd_sel = 6'b010000;
+						rd_sel <= 6'b010000;
 						boot_flt <= 1'b1;
 					end
 //				else if((img_present[4] && ~img_presentD[4]) || (img_present[4] && ~boot_tap))
-				else if(img_present[4] && ~img_presentD[4])
+				else if((|img_size[4]) && img_present[4] && ~img_presentD[4])
 					begin 
 						img_select <= 4;
 						io_state <= GO4IT;
-						rd_sel = 6'b001000;
+						rd_sel <= 6'b001000;
 //						boot_tap <= 1'b1;
 					end
-				else if((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu))
+				else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu)))
 					begin 
 						img_select <= 6;
 						io_state <= GO4IT;
-						rd_sel = 6'b100000;
+						rd_sel <= 6'b100000;
 						boot_reu <= 1'b1;
 					end
 				else if(img_present[0] && ~img_presentD[0])
@@ -168,7 +174,7 @@ reg boot_reu;
 
 		GO4IT:
 			begin
-					loader_busy <= 1;
+					loader_busy <= 1'b1;
 					load_crt <= rd_sel[0];
 					load_prg <= rd_sel[1];
 					load_rom <= rd_sel[2]; 
@@ -176,9 +182,9 @@ reg boot_reu;
 					load_flt <= rd_sel[4]; 
 					load_reu <= rd_sel[5]; 
 					ch_timeout <= 32'd110000; // 32'd1508863;
-					ioctl_addr <= 23'd0;
+					ioctl_addr <= 24'd0;
 					ioctl_download <= 1'b1;
-					addr <= 23'd0;
+					addr <= 24'd0;
 					sd_lba <= 32'd0;
 					core_wait_cnt <= 5'd0;
 					io_state <= WAIT4CORE;
@@ -206,7 +212,7 @@ reg boot_reu;
 				else 
 				begin
 					ioctl_download <= 1'b0;
-					ioctl_addr <= 23'd0;
+					ioctl_addr <= 24'd0;
 					io_state <= DESELECT;
 				end
 			end
