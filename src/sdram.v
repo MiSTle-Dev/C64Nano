@@ -72,7 +72,7 @@ always @(posedge clk) begin
 
 	// start a new cycle in rising edge of ce
 	if(ce && !last_ce) q <= 3'd1;
-	if(q || reset) q <= q + 3'd1;
+	if((q != 3'd0) || (reset != 5'd0)) q <= q + 3'd1;
 end
 
 // ---------------------------------------------------------------------
@@ -130,7 +130,7 @@ always @(posedge clk) begin
 
 	if(q == STATE_READ) dout_r <= sd_data;
 
-	if(reset) begin
+	if(reset != 5'd0) begin
 		sd_ba <= 0;
 		if(q == STATE_CMD_START) begin
 			if(reset == 13) begin

@@ -9,7 +9,6 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
 entity c1530 is
@@ -29,7 +28,7 @@ port(
 	osd_play_stop_toggle : in  std_logic;  -- PLAY/STOP toggle button from OSD
 
 	cass_sense : out std_logic;   -- 0 = PLAY/REW/FF/REC button is pressed
-	cass_read  : buffer std_logic;   -- tape read signal
+	cass_read  : out std_logic;   -- tape read signal
 	cass_write : in  std_logic;   -- signal to write on tape (not used)
 	cass_motor : in  std_logic;   -- 0 = tape motor is powered
 	cass_run   : out std_logic;   -- motor corrected with momentum
@@ -65,6 +64,7 @@ signal ear_autostop_counter  : std_logic_vector(28 downto 0); -- counter for sto
 signal cass_motor_D  : std_logic;
 signal motor         : std_logic;
 signal motor_counter : unsigned(23 downto 0);
+signal cass_read_i   : std_logic;
 
 constant autostop_time: std_logic_vector(28 downto 0) := std_logic_vector(to_unsigned(32000000 * 5, ear_autostop_counter'length)); -- about 5 seconds
 
@@ -103,7 +103,7 @@ begin
 
 		sense <= '1'; -- STOP tape
 		motor <= '1';
-		cass_read <= '1';
+		cass_read_i <= '1';
 
 	elsif rising_edge(clk32) then
 
@@ -123,14 +123,14 @@ begin
 		-- EAR input
 		if ear_input_detected='1' then
 			sense <= '0'; -- automatically press PLAY
-			cass_read <= not ear_input;
+			cass_read_i <= not ear_input;
 
 			-- autostop
-		  if ear_autostop_counter = 0 then
+		  if unsigned(ear_autostop_counter) = 0 then
 				ear_input_detected <= '0';
 				sense <= '1'; -- automatically press STOP
 			else
-				ear_autostop_counter <= ear_autostop_counter - "1";
+				ear_autostop_counter <= std_logic_vector(unsigned(ear_autostop_counter) - 1);
 			end if;
 		end if;
 
@@ -147,7 +147,7 @@ begin
 		playing <= (not motor) and (not sense) and (not ear_input_detected);  -- cass_motor and sense are low active
 
 		if playing = '0' and ear_input_detected = '0' then
-			cass_read <= '1';
+			cass_read_i <= '1';
 		end if;	
 
 		tap_fifo_rdreq <= '0';
@@ -158,7 +158,7 @@ begin
 			-- fifo not falling empty while host go reading next sd card sector
 			-- (fifo is read every ~22µs, host have to be faster than 11ms to read sd sector)
 
-			wav_player_tick_cnt <= wav_player_tick_cnt + '1';
+			wav_player_tick_cnt <= std_logic_vector(unsigned(wav_player_tick_cnt) + 1);
 
 			if wav_player_tick_cnt = x"2F0" then -- ~33MHz/44.1KHz
 
@@ -172,13 +172,13 @@ begin
 				end if;
 
 			end if;
-			cass_read <= not tap_fifo_do(7); -- only use msb (wav data is either xFF or x00/x01)
+			cass_read_i <= not tap_fifo_do(7); -- only use msb (wav data is either xFF or x00/x01)
 
 		end if; -- play wav mode
 
 		-- tap player
 
-		tap_player_tick_cnt <= tap_player_tick_cnt + '1';
+		tap_player_tick_cnt <= std_logic_vector(unsigned(tap_player_tick_cnt) + 1);
 
 		if (playing = '1') and (wav_mode = '0') then
 
@@ -187,20 +187,20 @@ begin
 
 				-- square wave period (1/2 duty cycle not mandatory, only falling edge matter)
 				if tap_version(1) = '0' then
-					if wave_cnt > '0' & wave_len(10 downto 1) then
-						cass_read <= '1';
+					if unsigned(wave_cnt) > resize(unsigned('0' & wave_len(10 downto 1)), wave_cnt'length) then
+						cass_read_i <= '1';
 					else
-						cass_read <= '0';
+						cass_read_i <= '0';
 					end if;	
 				end if;
 
 				tap_player_tick_cnt <= "000000"; 
-				wave_cnt <= wave_cnt + 1;
+				wave_cnt <= std_logic_vector(unsigned(wave_cnt) + 1);
 
-				if wave_cnt = wave_len - 1 then
+				if unsigned(wave_cnt) = (unsigned(wave_len) - 1) then
 					wave_cnt <= (others => '0');
-					if tap_version = 2 then
-						cass_read <= not cass_read;
+					if unsigned(tap_version) = 2 then
+						cass_read_i <= not cass_read_i;
 					end if;
 					if tap_fifo_empty = '1' then
 						tap_fifo_error <= '1';
@@ -235,16 +235,16 @@ begin
 				end if;
 
 				if tap_version(1) = '0' then
-					cass_read <= '1';
+					cass_read_i <= '1';
 				end if;
 			end if;
 
 			-- skip tap header bytes
 			if (skip_bytes = '1' and tap_fifo_empty = '0' and tap_player_tick_cnt(0) = '1') then
 				tap_fifo_rdreq <= '1';
-				cass_read <= '1';
-				if start_bytes < X"14" then
-					start_bytes <= start_bytes + X"01";
+				cass_read_i <= '1';
+				if unsigned(start_bytes) < to_unsigned(16#14#, start_bytes'length) then
+					start_bytes <= std_logic_vector(unsigned(start_bytes) + 1);
 				else
 					skip_bytes <= '0';
 				end if;
@@ -257,5 +257,6 @@ end process;
 
 cass_sense <= sense;
 cass_run <= motor;
+cass_read <= cass_read_i;
 
 end struct;

@@ -22,7 +22,6 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
 entity c1541_sd is
@@ -275,6 +274,7 @@ begin
 		if reset = '1' then
 			track_num_dbl <= "0100100";--"0000010";
 			track_modified <= '0';
+			save_track <= '0';
 			save_track_stage <= X"0";
 		else
 			if mtr = '1' then
@@ -282,14 +282,14 @@ begin
 					or (stp_r = "10" and stp = "01")
 					or (stp_r = "01" and stp = "11")
 					or (stp_r = "11" and stp = "00")) then
-						if track_num_dbl < max_track then
-							track_num_dbl <= track_num_dbl + '1';
+						if unsigned(track_num_dbl) < unsigned(max_track) then
+							track_num_dbl <= std_logic_vector(unsigned(track_num_dbl) + 1);
 							if track_modified = '1' then
 								if save_track_stage = X"0" then
 									save_track_stage <= X"1";
 								end if;	
 							else
-								new_track_num_dbl <= track_num_dbl + '1';
+								new_track_num_dbl <= std_logic_vector(unsigned(track_num_dbl) + 1);
 							end if;	
 						end if;
 				end if;
@@ -298,14 +298,14 @@ begin
 					or (stp_r = "10" and stp = "00")
 					or (stp_r = "01" and stp = "10")
 					or (stp_r = "11" and stp = "01")) then 
-						if track_num_dbl > "0000010" then
-							track_num_dbl <= track_num_dbl - '1';
+						if unsigned(track_num_dbl) > to_unsigned(2, track_num_dbl'length) then
+							track_num_dbl <= std_logic_vector(unsigned(track_num_dbl) - 1);
 							if track_modified = '1' then
 								if save_track_stage = X"0" then
 									save_track_stage <= X"1";
 								end if;	
 							else
-								new_track_num_dbl <= track_num_dbl - '1';
+								new_track_num_dbl <= std_logic_vector(unsigned(track_num_dbl) - 1);
 							end if;	
 						end if;
 				end if;

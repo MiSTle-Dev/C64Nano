@@ -52,7 +52,6 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
-use ieee.std_logic_unsigned.all; 
 use work.T65_Pack.all;
 
 entity T65_MCode is

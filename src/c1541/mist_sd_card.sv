@@ -84,28 +84,14 @@ reg   [8:0] sector_offset;
 reg [6:0] cur_track = 0;
 reg ready = 0;
 reg saving = 0;
-reg old_ack;
-reg old_change;
+reg old_ack = 0;
+reg old_change = 0;
 
 always @(posedge clk) begin
 
-	old_ack <= sd_ack;
-	if(sd_ack) {sd_rd,sd_wr} <= 0;
-
-	old_change <= change;
-	if(~old_change & change) begin
-		ready <= mount;
-		saving <= 0;
-		busy <= 0;
-		id1 <= 8'h20;
-		id2 <= 8'h20;
-		new_disk <= mount;
-		raw <= g64;
-		if(!g64) max_track <= 7'd80;
-		{g64_rd, g64_wr} <= 0;
-	end
-	else
 	if(reset) begin
+		old_ack <= 0;
+		old_change <= 0;
 		cur_track <= 'b1111111;
 		busy  <= 0;
 		sd_rd <= 0;
@@ -114,6 +100,22 @@ always @(posedge clk) begin
 		id1   <= 8'h20;
 		id2   <= 8'h20;
 		new_disk <= 0;
+		{g64_rd, g64_wr} <= 0;
+	end
+	else begin
+		old_ack <= sd_ack;
+		if(sd_ack) {sd_rd,sd_wr} <= 0;
+
+		old_change <= change;
+		if(~old_change & change) begin
+		ready <= mount;
+		saving <= 0;
+		busy <= 0;
+		id1 <= 8'h20;
+		id2 <= 8'h20;
+		new_disk <= mount;
+		raw <= g64;
+		if(!g64) max_track <= 7'd80;
 		{g64_rd, g64_wr} <= 0;
 	end
 	else
@@ -246,6 +248,7 @@ always @(posedge clk) begin
 				busy <= 1;
 			end
 		end
+	end
 	end
 end
 

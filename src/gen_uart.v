@@ -672,7 +672,7 @@ always @(posedge clk) begin
 		if (bit_en) rx_echo <= rx_in;
 		if (bit_cnt == 0 && !rx_in) begin
 			// start bit detected
-			bit_cnt <= 4'd10 - wordlen + parity_en;
+			bit_cnt <= 4'd10 - {2'b00, wordlen} + {3'b000, parity_en};
 			start_pos <= cnt; // mark the position for middle sampling
 		end
 		if (bit_en && bit_cnt != 0) begin
@@ -772,7 +772,7 @@ always @(posedge clk) begin
 	end else begin
 		start_d <= start;
 		if (start & ~start_d) begin
-			bit_cnt <= 4'd11 - wordlen + parity_en;
+			bit_cnt <= 4'd11 - {2'b00, wordlen} + {3'b000, parity_en};
 			shift_reg <= { 1'b1, parity, tx_data, 1'b0, 1'b1 };
 			case (wordlen)
 				1: shift_reg[10:9] <= {1'b1, parity};
@@ -783,7 +783,7 @@ always @(posedge clk) begin
 		end
 		if (bit_en && bit_cnt != 0) begin
 			bit_cnt <= bit_cnt - 1'd1;
-			shift_reg <= { 1'b1, shift_reg[10:1] };
+			shift_reg <= { 2'b11, shift_reg[10:1] };
 		end
 	end
 end

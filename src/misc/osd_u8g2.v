@@ -82,7 +82,7 @@ wire	    svactive = vcnt >= vstart-`SCALE*`BORDER+`SCALE*`SHADOW && vcnt < vstar
 assign	    sactive = shactive && svactive;  
 
 // 1024 bytes = 8192 pixels = 128 x 64 pixels
-reg [7:0] buffer [1024];
+reg [7:0] buffer [0:1023];
 
 // external data interface to write to buffer
 reg [9:0] data_cnt;
