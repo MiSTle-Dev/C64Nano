@@ -1340,7 +1340,7 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   io_rom       => io_rom,
   io_ext       => reu_oe or cart_oe or uart_oe or (midi_oe and midi_en),
   io_data      => io_data,
-  irq_n        => '0' when midi_irq_n = '0' and midi_en = '1' else '1',
+  irq_n        => midi_irq_n or (not midi_en),
   nmi_n        => not nmi and (uart_irq or not uart_en), -- and (midi_nmi_n or not midi_en),
   nmi_ack      => nmi_ack,
   romL         => romL,
@@ -1558,7 +1558,7 @@ yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi
   port map (
     clk32   => clk_sys,
-    reset   => '1' when reset_n = '0' or midi_en = '0' else '0',
+    reset   => (not reset_n) or (not midi_en),
     Mode    => st_midi,
     E       => phi,
     IOE     => IOE and midi_en,
