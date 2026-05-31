@@ -6,7 +6,6 @@
     <Device name="GW2A-18C" pn="GW2A-LV18PG256C8/I7">gw2a18c-011</Device>
     <FileList>
         <File path="src/c1541/mist_sd_card.sv" type="file.verilog" enable="1"/>
-        <File path="src/cartridge.v" type="file.verilog" enable="1"/>
         <File path="src/gen_uart.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_dpb/gowin_dpb_track_buffer_b.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_dpb/gowin_dpb_trkbuf.v" type="file.verilog" enable="1"/>
@@ -42,6 +41,8 @@
         <File path="src/sid/sid_top.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_voice.sv" type="file.verilog" enable="1"/>
         <File path="src/tang/console60k/video.v" type="file.verilog" enable="1"/>
+        <File path="src/tang/tn20k/am29f040.sv" type="file.verilog" enable="1"/>
+        <File path="src/tang/tn20k/cartridge.v" type="file.verilog" enable="1"/>
         <File path="src/tang/tp20k/ddr3_controller.v" type="file.verilog" enable="1"/>
         <File path="src/tang/tp20k/ddr3_tester.v" type="file.verilog" enable="1"/>
         <File path="src/tang/tp20k/memory_controller.v" type="file.verilog" enable="1"/>
@@ -55,6 +56,7 @@
         <File path="src/c1541/via6522.vhd" type="file.vhdl" enable="1"/>
         <File path="src/c64_midi.vhd" type="file.vhdl" enable="1"/>
         <File path="src/cpu_6510.vhd" type="file.vhdl" enable="1"/>
+        <File path="src/ddr3_memory_interface/ddr3_memory_interface.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fifo_sc_hs/fifo_sc_hs.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fpga64_buslogic.vhd" type="file.vhdl" enable="1"/>
         <File path="src/fpga64_keyboard.vhd" type="file.vhdl" enable="1"/>
