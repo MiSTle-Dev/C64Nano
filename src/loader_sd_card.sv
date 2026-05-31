@@ -5,74 +5,77 @@
 //
 module loader_sd_card
 (
-	input clk,
-	input reset,
+	input  logic        clk,
+	input  logic        reset,
 
-	output reg [31:0] sd_lba,
-	output reg [5:0] sd_rd, // read request for target
-	output reg [5:0] sd_wr, // write request for target
-	input sd_busy, // SD is busy (has accepted read or write request)
+	output logic [31:0] sd_lba,
+	output logic [5:0]  sd_rd, // read request for target
+	output logic [5:0]  sd_wr, // write request for target
+	input  logic        sd_busy, // SD is busy (has accepted read or write request)
 
-	input [8:0] sd_byte_index, // address of data byte within 512 bytes sector
-	input [7:0] sd_rd_data, // data byte received from SD card
-	input sd_rd_byte_strobe, // SD has read a byte to be stored in  buffer
-	input sd_done, // SD is done (data has been read or written
+	input  logic [8:0]  sd_byte_index, // address of data byte within 512 bytes sector
+	input  logic [7:0]  sd_rd_data, // data byte received from SD card
+	input  logic        sd_rd_byte_strobe, // SD has read a byte to be stored in  buffer
+	input  logic        sd_done, // SD is done (data has been read or written
 
-	input [6:0] sd_img_mounted,
-	input [31:0] sd_img_size,
-	output reg load_crt,
-	output reg load_prg,
-	output reg load_rom,
-	output reg load_tap,
-	output reg load_flt,
-	output reg load_reu,
-	output reg loader_busy,
-	output reg [2:0] img_select,
-	output reg [4:0] leds,
+	input  logic [6:0]  sd_img_mounted,
+	input  logic [31:0] sd_img_size,
+	output logic        load_crt,
+	output logic        load_prg,
+	output logic        load_rom,
+	output logic        load_tap,
+	output logic        load_flt,
+	output logic        load_reu,
+	output logic        loader_busy,
+	output logic [2:0]  img_select,
+	output logic [4:0]  leds,
 
-	output reg ioctl_download,
-	output reg [22:0] ioctl_addr,
-	output reg [7:0] ioctl_data,
-	output reg ioctl_wr,
-	input ioctl_wait
+	output logic        ioctl_download,
+	output logic [23:0] ioctl_addr,
+	output logic [7:0]  ioctl_data,
+	output logic        ioctl_wr,
+	input  logic        ioctl_wait
 );
 
-// states of FSM
-localparam [2:0]	GO4IT			= 3'd0,
-					WAIT4CORE		= 3'd1,
-					READ_WAIT4SD	= 3'd2,
-					READING			= 3'd3,
-					READ_NEXT		= 3'd4,
-					DESELECT		= 3'd5,
-					START			= 3'd6;
+typedef enum logic [2:0] {
+	GO4IT,
+	WAIT4CORE,
+	READ_WAIT4SD,
+	READING,
+	READ_NEXT,
+	DESELECT,
+	START
+} io_state_t;
 
-always @(posedge clk) begin
+io_state_t io_state;
+logic [23:0] addr;
+logic [31:0] ch_timeout;
+logic wr;
+logic [8:0] cnt;
+logic [4:0] core_wait_cnt;
+logic [23:0] img_size [0:6];
+logic img_present [0:6];
+logic img_presentD [0:6];
+logic [5:0] rd_sel;
+logic boot_crt;
+logic boot_bin;
+logic boot_prg;
+logic boot_tap;
+logic boot_flt;
+logic boot_reu;
 
-reg [2:0] io_state;
-reg [22:0] addr;
-reg [31:0] ch_timeout;
-reg wr;
-reg [8:0] cnt;
-reg [4:0] core_wait_cnt;
-reg [22:0] img_size[6:0];
-reg img_present[6:0];
-reg img_presentD[6:0];
-reg [5:0] rd_sel;
-reg boot_crt;
-reg boot_bin;
-reg boot_prg;
-//reg boot_tap;
-reg boot_flt;
-reg boot_reu;
+integer i;
 
-	for(integer i = 0; i < 7; i = i + 1'd1)
+always_ff @(posedge clk) begin
+
+	for(i = 0; i < 7; i = i + 1)
 	begin
 		img_presentD[i] <= img_present[i];
 
 		if (sd_img_mounted[i]) 
 		begin
 			img_present[i] <= |sd_img_size;
-			img_size[i] <= sd_img_size[22:0];
+			img_size[i] <= sd_img_size[23:0];
 		end 
 	end
 
@@ -100,15 +103,21 @@ reg boot_reu;
 		load_flt <= 1'b0;
 		load_reu <= 1'b0;
 		ioctl_download <= 1'b0;
-		ioctl_addr <= 23'd0;
+		ioctl_addr <= 24'd0;
+		addr <= 24'd0;
 		leds <= 5'd0;
 		loader_busy <= 1'b0;
 		boot_crt <= 1'b0;
 		boot_bin <= 1'b0;
 		boot_prg <= 1'b0;
-//		boot_tap <= 1'b0;
+		boot_tap <= 1'b0;
 		boot_flt <= 1'b0;
 		boot_reu <= 1'b0;
+		rd_sel <= 6'd0;
+		img_select <= 3'd0;
+		cnt <= 9'd0;
+		core_wait_cnt <= 5'd0;
+		ch_timeout <= 32'd0;
 		io_state <= START;
 	end
 	else
@@ -117,47 +126,47 @@ reg boot_reu;
 
 		START:        // 0 c1541 1 CRT 2 PRG 3 BIN 4 TAP 5 FLT
 			begin
-				if((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))
+				if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin)))
 					begin
 						img_select <= 3;
 						io_state <= GO4IT;
-						rd_sel = 6'b000100;
+						rd_sel <= 6'b000100;
 						boot_bin <= 1'b1;
 					end
-				else if((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_crt))
+				else if((|img_size[1]) && ((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_crt)))
 					begin 
 						img_select <= 1; 
 						io_state <= GO4IT; 
-						rd_sel = 6'b000001;
+						rd_sel <= 6'b000001;
 						boot_crt <= 1'b1;
 					end
-				else if((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_prg))
+				else if((|img_size[2]) && ((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_prg)))
 					begin 
 						img_select <= 2;
 						io_state <= GO4IT;
-						rd_sel = 6'b000010;
+						rd_sel <= 6'b000010;
 						boot_prg <= 1'b1;
 					end
-				else if((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flt))
+				else if((|img_size[5]) && ((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flt)))
 					begin 
 						img_select <= 5;
 						io_state <= GO4IT;
-						rd_sel = 6'b010000;
+						rd_sel <= 6'b010000;
 						boot_flt <= 1'b1;
 					end
 //				else if((img_present[4] && ~img_presentD[4]) || (img_present[4] && ~boot_tap))
-				else if(img_present[4] && ~img_presentD[4])
+				else if((|img_size[4]) && img_present[4] && ~img_presentD[4])
 					begin 
 						img_select <= 4;
 						io_state <= GO4IT;
-						rd_sel = 6'b001000;
+						rd_sel <= 6'b001000;
 //						boot_tap <= 1'b1;
 					end
-				else if((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu))
+				else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu)))
 					begin 
 						img_select <= 6;
 						io_state <= GO4IT;
-						rd_sel = 6'b100000;
+						rd_sel <= 6'b100000;
 						boot_reu <= 1'b1;
 					end
 				else if(img_present[0] && ~img_presentD[0])
@@ -168,7 +177,7 @@ reg boot_reu;
 
 		GO4IT:
 			begin
-					loader_busy <= 1;
+					loader_busy <= 1'b1;
 					load_crt <= rd_sel[0];
 					load_prg <= rd_sel[1];
 					load_rom <= rd_sel[2]; 
@@ -176,9 +185,9 @@ reg boot_reu;
 					load_flt <= rd_sel[4]; 
 					load_reu <= rd_sel[5]; 
 					ch_timeout <= 32'd110000; // 32'd1508863;
-					ioctl_addr <= 23'd0;
+					ioctl_addr <= 24'd0;
 					ioctl_download <= 1'b1;
-					addr <= 23'd0;
+					addr <= 24'd0;
 					sd_lba <= 32'd0;
 					core_wait_cnt <= 5'd0;
 					io_state <= WAIT4CORE;
@@ -201,12 +210,12 @@ reg boot_reu;
 
 		READING: 
 			begin
-				if(ioctl_addr <= img_size[img_select])
+				if(addr < img_size[img_select])
 					io_state <= READ_NEXT;
 				else 
 				begin
 					ioctl_download <= 1'b0;
-					ioctl_addr <= 23'd0;
+					ioctl_addr <= 24'd0;
 					io_state <= DESELECT;
 				end
 			end

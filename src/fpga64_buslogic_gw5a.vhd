@@ -155,22 +155,7 @@ begin
         ada => c64rom_addr(12 downto 0),
         din => c64rom_data,
         adb => std_logic_vector(cpuAddr(12 downto 0))
-		);
-
---	kernal_loadable_rom: entity work.Gowin_SDPB_kernal_8k
---    port map (
---        dout => romData_Kernal,
---        clka => clk,
---        cea => c64rom_wr,
---        reseta => '0',
---        clkb => clk,
---        ceb => '1',
---        resetb => '0',
---        oce => '1',
---        ada => c64rom_addr(12 downto 0),
---        din => c64rom_data,
---        adb => std_logic_vector(cpuAddr(12 downto 0))
---    );
+    );
 
 romData <= romData_Kernal when cpuAddr(14) = '1' else romData_Basic;
 
@@ -249,11 +234,9 @@ romData <= romData_Kernal when cpuAddr(14) = '1' else romData_Basic;
 			currentAddr <= cpuAddr;
 			case cpuAddr(15 downto 12) is
 			when X"E" | X"F" =>
-				if ultimax = '1' and cpuWe = '0' then
-					-- ULTIMAX MODE - drop out the kernal - LCA
+				if ultimax = '1' then
+					-- pass cpuWe to cartridge. Cartridge must block writes if no RAM connected.
 					cs_romHLoc <= '1';
-				elsif ultimax = '1' then
-					cs_UMAXnomapLoc <= '1';
 				elsif cpuWe = '0' and bankSwitch(1) = '1' then
 					-- Read kernal
 					cs_romLoc <= '1';

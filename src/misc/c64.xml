@@ -76,6 +76,19 @@
       <hide/>      
     </action>
 
+    <action name="save_cartridge">
+      <!-- trigger a save cartridge -->
+      <set id="9" value="1"/>
+      <delay ms="10"/>
+      <set id="9" value="0"/>
+    </action>
+
+    <action name="save_cartridge_hide">
+      <!-- trigger a save cartridge and hide OSD -->
+      <link action="save_cartridge"/>
+      <hide/>      
+    </action>
+
   </actions>
   
   <menu label="C64Nano">
@@ -242,6 +255,18 @@
  <listentry label="Retro D9 #1" value="1"/>
  <listentry label="D9 #2/spare" value="2"/>
       </list>
+      <list label="Clear RAM on Reset" id="6" default="1">
+ <listentry label="Off" value="0"/>
+ <listentry label="On" value="1"/>
+      </list>
+      <list label="Boot EasyFlash" id="7" default="1">
+ <listentry label="Off" value="0"/>
+ <listentry label="On" value="1"/>
+      </list>
+      <list label="Autosave" id="8" default="0">
+ <listentry label="Off" value="0"/>
+ <listentry label="On" value="1"/>
+      </list>
       <list label="Run PRG:" id="5" default="1">
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
@@ -281,6 +306,7 @@
 	<listentry label="100%" value="3"/>
       </list>
       <button label="Save settings" action="save"/>
+      <button label="Save cartridge" action="save_cartridge_hide"/>
     </menu>
     <button label="Reset" action="reset_hide"/>
   </menu>    

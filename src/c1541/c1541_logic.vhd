@@ -123,15 +123,12 @@ architecture SYN of c1541_logic is
   signal uc3_pa_oe      : std_logic_vector(7 downto 0);
   signal uc3_pb_oe      : std_logic_vector(7 downto 0);
 
-  signal cpu_a_slice    : std_logic_vector(3 downto 0);
-
   signal uc1_ca2_o      : std_logic;
   signal uc1_ca2_oe     : std_logic;
   signal uc1_cb1_o      : std_logic;
   signal uc1_cb1_oe     : std_logic;
   signal cb1_i          : std_logic;
 
-  signal cpu_b_slice    : std_logic_vector(2 downto 0);
   signal extram_cs      : std_logic;
   signal extram_do      : std_logic_vector(7 downto 0) := x"FF";
   signal extram_wr      : std_logic;
@@ -149,15 +146,14 @@ architecture SYN of c1541_logic is
   end process;
 
   -- decode logic
-  process (cpu_a, cpu_a_slice)
+  process (all)
   begin
     ram_cs <= '0';
     uc1_cs2_n <= '1';
     uc3_cs2_n <= '1';
 
     -- address decoder logic using a 74LS42 BCD decoder
-    cpu_a_slice <= cpu_a(15)&cpu_a(12)&cpu_a(11)&cpu_a(10);
-    case cpu_a_slice is
+    case std_logic_vector'(cpu_a(15)&cpu_a(12)&cpu_a(11)&cpu_a(10)) is
       when "0000" => ram_cs <= '1';     -- RAM $0000-$07FF (2KB) + mirrors
       when "0001" => ram_cs <= '1';     -- RAM $0000-$07FF (2KB) + mirrors
       when "0110" => uc1_cs2_n <= '0';  -- UC1 (VIA6522) $1800-$180F + mirrors
@@ -170,12 +166,11 @@ architecture SYN of c1541_logic is
   ram_wr <= '1' when ram_cs = '1' and cpu_rw_n = '0' else '0';
   extram_wr <= '1' when extram_cs = '1' and cpu_rw_n = '0' else '0';
 
-  process (cpu_a, cpu_b_slice)
+  process (all)
   begin
   rom_cs <= '0';
   extram_cs <= '0';
-  cpu_b_slice <= cpu_a(15)&cpu_a(14)&cpu_a(13);
-    case cpu_b_slice is
+    case std_logic_vector'(cpu_a(15)&cpu_a(14)&cpu_a(13)) is
       when "110" => rom_cs <= '1';    -- 8k standard rom low
       when "111" => rom_cs <= '1';    -- 8k standard rom high
       when "101" => rom_cs <= '1';    -- 8k extra rom

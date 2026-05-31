@@ -13,8 +13,7 @@
 -------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.std_logic_unsigned.all;
+use ieee.numeric_std.all;
 
 entity via6522 is
 port (
@@ -469,7 +468,7 @@ begin
                             timer_a_reload <= '1';
                         end if;
                         --Timer coutinues to count in both free run and one shot.                        
-                        timer_a_count <= timer_a_count - X"0001";
+                        timer_a_count <= std_logic_vector(unsigned(timer_a_count) - 1);
                     end if;                    
                 end if;
                 
@@ -546,7 +545,7 @@ begin
                                 null;
                             end case;
                         end if;
-                        timer_b_count <= timer_b_count - X"0001";
+                        timer_b_count <= std_logic_vector(unsigned(timer_b_count) - 1);
                     end if;
                     if timer_b_reload_lo = '1' then
                         timer_b_count(7 downto 0) <= timer_b_latch(7 downto 0);

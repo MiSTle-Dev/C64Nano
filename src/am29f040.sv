@@ -272,6 +272,7 @@ logic  [7:0] mem0_out;
 logic        mem0_ce;
 logic        mem0_we;
 logic        mem0_req;
+logic        mem_rom_sel;
 
 am29f040 rom0
 (
@@ -338,7 +339,7 @@ end
 
 assign mem_oe = ~mem_cycle_q & mem_cycle & mem_req_en;
 
-logic mem_rom_sel;
+
 always_ff @(posedge clk) begin
 	if(mem_oe) begin
 		if(mem0_req && mem1_req) mem_rom_sel <= ~mem_rom_sel;

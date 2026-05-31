@@ -82,7 +82,7 @@ always @(posedge clk) begin
 
 	old_cs <= cpu_cs;
 
-	if(reset || !cfg) begin
+	if(reset || (cfg == 2'b00)) begin
 		status     <= 0;
 		cmd        <= 'h10;
 		addr_c64   <= 0;

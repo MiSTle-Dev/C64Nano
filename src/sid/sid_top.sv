@@ -2,7 +2,8 @@
 module sid_top 
 #(
 	parameter MULTI_FILTERS = 1,
-	parameter DUAL = 0
+	parameter DUAL = 0,
+	parameter N = DUAL ? 2 : 1
 )
 (
 	input         reset,
@@ -37,8 +38,6 @@ module sid_top
 	input  [15:0] ld_data,
 	input         ld_wr
 );
-
-localparam N = DUAL ? 2 : 1;
 
 // Internal Signals
 reg  [15:0] Voice_1_Freq[N];
