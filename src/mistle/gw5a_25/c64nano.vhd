@@ -422,7 +422,6 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal spi_intn         : std_logic;
 signal uart_tx_i        : std_logic;
-signal boot_button_detected : std_logic := '1';
 signal palette          : unsigned(2 downto 0);
 signal reu_wrap         : std_logic;
 signal c64_data_in      : unsigned(7 downto 0);
@@ -1118,6 +1117,8 @@ hid_inst: entity work.hid
   system_run_prg      => run_prg,
   system_clear_ram    => clear_ram,
   system_boot_easyflash=> boot_easyflash,
+  system_autosave     => autosave,
+  system_save_cartridge => save_cartridge,
 
   -- port io (used to expose rs232)
   port_status       => serial_status,
@@ -1133,6 +1134,7 @@ hid_inst: entity work.hid
   int_ack             => int_ack,
 
   buttons             => unsigned'(not key_user & not key_reset),
+  leds                => open,
   color               => ws2812_color
 );
 
@@ -1571,28 +1573,67 @@ begin
           cart_hdr_cnt <= (others => '0');
         end if;
 
-        if(ioctl_addr(7 downto 0) = x"16") then cart_id_hi <= ioctl_data; end if;
-        if(ioctl_addr(7 downto 0) = x"17") then cart_id <= x"FF" when cart_id_hi /= x"00" else ioctl_data; end if;
-        if(ioctl_addr(7 downto 0) = x"18") then cart_exrom <= ioctl_data(0); end if;
-        if(ioctl_addr(7 downto 0) = x"19") then cart_game <= ioctl_data(0); end if;
+        if unsigned(ioctl_addr) = to_unsigned(16#16#, ioctl_addr'length) then
+            cart_id_hi <= ioctl_data;
+        end if;
 
-        if(unsigned(ioctl_addr) >= 16#40#) then
-          if (unsigned(cart_blk_len) = 0) or (unsigned(cart_hdr_cnt) /= 0) then
-              cart_hdr_cnt <= std_logic_vector(unsigned(cart_hdr_cnt) + 1);
-              if(unsigned(cart_hdr_cnt) = 6)  then cart_blk_len <= ioctl_data & x"00"; end if;
-              if(unsigned(cart_hdr_cnt) = 11) then cart_bank_num <= ioctl_data; end if;
-              if(unsigned(cart_hdr_cnt) = 12) then cart_bank_hi <= '1' when unsigned(ioctl_data) > to_unsigned(16#80#, ioctl_data'length) else '0'; end if;
-              if(unsigned(cart_hdr_cnt) = 14) then cart_bank_16k <= '1' when unsigned(ioctl_data) > to_unsigned(16#20#, ioctl_data'length) else '0'; end if;
-              if(unsigned(cart_hdr_cnt) = 15) then cart_hdr_wr <= '1'; end if;
-          else
+        if unsigned(ioctl_addr) = to_unsigned(16#17#, ioctl_addr'length) then
+            if cart_id_hi /= x"00" then
+                cart_id <= x"FF";
+            else
+                cart_id <= ioctl_data;
+            end if;
+        end if;
+
+        if unsigned(ioctl_addr) = to_unsigned(16#18#, ioctl_addr'length) then
+            cart_exrom <= ioctl_data(0);
+        end if;
+
+        if unsigned(ioctl_addr) = to_unsigned(16#19#, ioctl_addr'length) then
+            cart_game <= ioctl_data(0);
+        end if;
+
+        if unsigned(ioctl_addr) >= to_unsigned(16#40#, ioctl_addr'length) then
+          if (unsigned(cart_blk_len) = to_unsigned(0, cart_blk_len'length)) or
+            (unsigned(cart_hdr_cnt) /= to_unsigned(0, cart_hdr_cnt'length)) then
+            cart_hdr_cnt <= std_logic_vector(unsigned(cart_hdr_cnt) + 1);
+
+            if unsigned(cart_hdr_cnt) = to_unsigned(6, cart_hdr_cnt'length) then
+              cart_blk_len <= ioctl_data & x"00";
+                end if;
+
+            if unsigned(cart_hdr_cnt) = to_unsigned(11, cart_hdr_cnt'length) then
+                    cart_bank_num <= ioctl_data;
+                end if;
+
+            if unsigned(cart_hdr_cnt) = to_unsigned(12, cart_hdr_cnt'length) then
+                    if unsigned(ioctl_data) > to_unsigned(16#80#, ioctl_data'length) then
+                        cart_bank_hi <= '1';
+                    else
+                        cart_bank_hi <= '0';
+                    end if;
+                end if;
+
+            if unsigned(cart_hdr_cnt) = to_unsigned(14, cart_hdr_cnt'length) then
+                    if unsigned(ioctl_data) > to_unsigned(16#20#, ioctl_data'length) then
+                        cart_bank_16k <= '1';
+                    else
+                        cart_bank_16k <= '0';
+                    end if;
+                end if;
+
+            if unsigned(cart_hdr_cnt) = to_unsigned(15, cart_hdr_cnt'length) then
+                    cart_hdr_wr <= '1';
+                end if;
+            else
               cart_blk_len <= std_logic_vector(unsigned(cart_blk_len) - 1);
-              ioctl_req_wr <= '1';
+                  ioctl_req_wr <= '1';
+            end if;
           end if;
         end if;
-      end if;
 
       if load_tap = '1' then
-        if ioctl_addr = x"000000"  then ioctl_load_addr <= TAP_ADDR; end if;
+        if ioctl_addr = x"000000" then ioctl_load_addr <= TAP_ADDR; end if;
         if ioctl_addr = x"00000C" then tap_version <= ioctl_data(1 downto 0); end if;
         ioctl_req_wr <= '1';
       end if;
