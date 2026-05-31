@@ -1,7 +1,7 @@
 // 
 // loader_sd_card.sv
 //
-// 2024 Stefan Voss
+// 2024...26 Stefan Voss
 //
 module loader_sd_card
 (
@@ -31,9 +31,12 @@ module loader_sd_card
 	output logic [4:0]  leds,
 
 	output logic        ioctl_download,
+	input  logic        ioctl_upload_req,
+	output logic        ioctl_upload,
 	output logic [23:0] ioctl_addr,
 	output logic [7:0]  ioctl_data,
 	output logic        ioctl_wr,
+	output logic        ioctl_rd,
 	input  logic        ioctl_wait
 );
 
@@ -93,6 +96,8 @@ always_ff @(posedge clk) begin
 
 	if(reset)
 	begin
+		ioctl_upload <= 1'b0;
+		ioctl_rd <= 1'b0;
 		sd_rd <= 6'd0;
 		sd_wr <= 6'd0;
 		wr <= 1'b0;

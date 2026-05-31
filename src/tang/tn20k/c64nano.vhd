@@ -469,8 +469,8 @@ signal run_prg          : std_logic;
 signal reset_counter    : integer range 0 to 100000 := 0;
 signal clear_ram        : std_logic;
 signal boot_easyflash   : std_logic;
-signal ezfl_save        : std_logic;
-signal ezfl_save_old    : std_logic;
+signal ezfl_save        : std_logic := '0';
+signal ezfl_save_old    : std_logic := '0';
 signal ezfl_mod         : std_logic := '0';
 signal save_cartridge   : std_logic := '0';
 signal autosave         : std_logic := '0';
@@ -1622,9 +1622,12 @@ port map (
   img_select        => open,
 
   ioctl_download    => ioctl_download,
+	ioctl_upload_req  => ezfl_save,
+	ioctl_upload      => ioctl_upload,
   ioctl_addr        => ioctl_addr,
   ioctl_data        => ioctl_data,
   ioctl_wr          => ioctl_wr,
+  ioctl_rd          => ioctl_rd,
   ioctl_wait        => ioctl_req_wr or reset_wait or ioctl_req_rd
 );
 
