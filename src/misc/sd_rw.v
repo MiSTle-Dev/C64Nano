@@ -297,8 +297,9 @@ always @ (posedge clk or negedge rstn)
 			end
 		    end 
 		   
-		   // data is being read on the rising sd clock
-		    else if(ena_p) begin		   
+		    // data is being read on the rising sd clock
+		    else if(ena_p) begin
+		       // This only starts after read command has been sent
                        if(~sddatin[0]) begin
                           sddat_stat <= RDATA;
                           ridx   <= 0;

@@ -221,10 +221,10 @@ signal disk_chg_trg   : std_logic;
 signal disk_chg_trg_d : std_logic;
 signal sd_img_size    : std_logic_vector(31 downto 0);
 signal sd_img_size_d  : std_logic_vector(31 downto 0);
-signal sd_img_mounted : std_logic_vector(6 downto 0);
+signal sd_img_mounted : std_logic_vector(7 downto 0);
 signal sd_img_mounted_d : std_logic;
-signal sd_rd          : std_logic_vector(6 downto 0);
-signal sd_wr          : std_logic_vector(6 downto 0);
+signal sd_rd          : std_logic_vector(7 downto 0);
+signal sd_wr          : std_logic_vector(7 downto 0);
 signal disk_lba       : std_logic_vector(31 downto 0);
 signal sd_lba         : std_logic_vector(31 downto 0);
 signal loader_lba     : std_logic_vector(31 downto 0);
@@ -476,6 +476,8 @@ signal save_cartridge   : std_logic := '0';
 signal autosave         : std_logic := '0';
 signal ezfl_idx         : std_logic := '0';
 signal ioctl_upload     : std_logic := '0';
+signal disk_sd_wr_data  : std_logic_vector(7 downto 0);
+signal loader_sd_wr_data: std_logic_vector(7 downto 0);
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -729,7 +731,7 @@ port map
 
     sd_buff_addr  => sd_byte_index,
     sd_buff_dout  => sd_rd_data,
-    sd_buff_din   => sd_wr_data,
+    sd_buff_din   => disk_sd_wr_data,
     sd_buff_wr    => sd_rd_byte_strobe,
 
     led           => led1541,
@@ -740,6 +742,7 @@ port map
 );
 
 sd_lba <= loader_lba when loader_busy = '1' else disk_lba;
+sd_wr_data <= loader_sd_wr_data when loader_busy = '1' else disk_sd_wr_data;
 sd_rd(0) <= c1541_sd_rd;
 sd_wr(0) <= c1541_sd_wr;
 ext_en <= '1' when dos_sel(0) = '0' else '0'; -- dolphindos, speeddos
@@ -747,10 +750,12 @@ sdc_iack <= int_ack(3);
 
 sd_card_inst: entity work.sd_card
 generic map (
-    CLK_DIV  => 1
+    CLK_DIV  => 0,
+    SIMULATE => 0,
+    IMAGE_FIFO_BITS => 9
   )
     port map (
-    rstn            => pll_locked_hid, 
+    rstn            => pll_locked_hid,
     clk             => clk_sys,
   
     -- SD card signals
@@ -771,12 +776,21 @@ generic map (
     -- output file/image information. Image size is e.g. used by fdc to 
     -- translate between sector/track/side and lba sector
     image_size(31 downto 0) => sd_img_size,           -- length of image file
-    image_mounted(6 downto 0)=> sd_img_mounted,
+    image_mounted => sd_img_mounted,
+
+    rom_image_selection_strobe => open,
+    rom_image_selected => open,
+    rom_image_accepted => '0',
+    rom_image_data_available => open,
+    rom_image_data => open,
+    rom_image_data_strobe => '0',
 
     -- user read sector command interface (sync with clk)
-    rstart          => '0' & sd_rd,
-    wstart          => '0' & sd_wr, 
+    rstart          => sd_rd,
+    wstart          => sd_wr, 
     rsector         => sd_lba,
+    rsrc            => open, -- source currently being process and for which 
+
     rbusy           => sd_busy,
     rdone           => sd_done,           --  done from sd reader acknowledges/clears start
 
@@ -1600,14 +1614,16 @@ port map (
   reset             => std_logic(system_reset(1) or not pll_locked),
 
   sd_lba            => loader_lba,
-  sd_rd             => sd_rd(6 downto 1),
-  sd_wr             => sd_wr(6 downto 1),
+  sd_rd             => sd_rd(7 downto 1),
+  sd_wr             => sd_wr(7 downto 1),
   sd_busy           => sd_busy,
   sd_done           => sd_done,
 
   sd_byte_index     => sd_byte_index,
   sd_rd_data        => sd_rd_data,
   sd_rd_byte_strobe => sd_rd_byte_strobe,
+
+  sd_wr_data        => loader_sd_wr_data,
 
   sd_img_mounted    => sd_img_mounted,
   loader_busy       => loader_busy,

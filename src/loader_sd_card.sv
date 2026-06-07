@@ -9,8 +9,8 @@ module loader_sd_card
 	input  logic        reset,
 
 	output logic [31:0] sd_lba,
-	output logic [5:0]  sd_rd, // read request for target
-	output logic [5:0]  sd_wr, // write request for target
+	output logic [6:0]  sd_rd, // read request for target
+	output logic [6:0]  sd_wr, // write request for target
 	input  logic        sd_busy, // SD is busy (has accepted read or write request)
 
 	input  logic [8:0]  sd_byte_index, // address of data byte within 512 bytes sector
@@ -18,7 +18,9 @@ module loader_sd_card
 	input  logic        sd_rd_byte_strobe, // SD has read a byte to be stored in  buffer
 	input  logic        sd_done, // SD is done (data has been read or written
 
-	input  logic [6:0]  sd_img_mounted,
+	output logic [7:0]  sd_wr_data,
+
+	input  logic [7:0]  sd_img_mounted,
 	input  logic [31:0] sd_img_size,
 	output logic        load_crt,
 	output logic        load_prg,
@@ -56,10 +58,10 @@ logic [31:0] ch_timeout;
 logic wr;
 logic [8:0] cnt;
 logic [4:0] core_wait_cnt;
-logic [23:0] img_size [0:6];
-logic img_present [0:6];
-logic img_presentD [0:6];
-logic [5:0] rd_sel;
+logic [23:0] img_size [0:7];
+logic img_present [0:7];
+logic img_presentD [0:7];
+logic [6:0] rd_sel;
 logic boot_crt;
 logic boot_bin;
 logic boot_prg;
@@ -69,9 +71,11 @@ logic boot_reu;
 
 integer i;
 
+assign sd_wr_data = 8'd0;
+
 always_ff @(posedge clk) begin
 
-	for(i = 0; i < 7; i = i + 1)
+	for(i = 0; i < 8; i = i + 1)
 	begin
 		img_presentD[i] <= img_present[i];
 
@@ -90,16 +94,16 @@ always_ff @(posedge clk) begin
 	ioctl_wr <= wr;
 	wr <= 1'b0;
 	if(sd_busy) begin
-		sd_rd <= 6'd0;
-		sd_wr <= 6'd0; 
+		sd_rd <= 7'd0;
+		sd_wr <= 7'd0; 
 	end
 
 	if(reset)
 	begin
 		ioctl_upload <= 1'b0;
 		ioctl_rd <= 1'b0;
-		sd_rd <= 6'd0;
-		sd_wr <= 6'd0;
+		sd_rd <= 7'd0;
+		sd_wr <= 7'd0;
 		wr <= 1'b0;
 		load_crt <= 1'b0;
 		load_prg <= 1'b0;
@@ -118,7 +122,7 @@ always_ff @(posedge clk) begin
 		boot_tap <= 1'b0;
 		boot_flt <= 1'b0;
 		boot_reu <= 1'b0;
-		rd_sel <= 6'd0;
+		rd_sel <= 7'd0;
 		img_select <= 3'd0;
 		cnt <= 9'd0;
 		core_wait_cnt <= 5'd0;
@@ -135,28 +139,28 @@ always_ff @(posedge clk) begin
 					begin
 						img_select <= 3;
 						io_state <= GO4IT;
-						rd_sel <= 6'b000100;
+						rd_sel <= 7'b0000100;
 						boot_bin <= 1'b1;
 					end
 				else if((|img_size[1]) && ((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_crt)))
 					begin 
 						img_select <= 1; 
 						io_state <= GO4IT; 
-						rd_sel <= 6'b000001;
+						rd_sel <= 7'b0000001;
 						boot_crt <= 1'b1;
 					end
 				else if((|img_size[2]) && ((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_prg)))
 					begin 
 						img_select <= 2;
 						io_state <= GO4IT;
-						rd_sel <= 6'b000010;
+						rd_sel <= 7'b0000010;
 						boot_prg <= 1'b1;
 					end
 				else if((|img_size[5]) && ((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flt)))
 					begin 
 						img_select <= 5;
 						io_state <= GO4IT;
-						rd_sel <= 6'b010000;
+						rd_sel <= 7'b0010000;
 						boot_flt <= 1'b1;
 					end
 //				else if((img_present[4] && ~img_presentD[4]) || (img_present[4] && ~boot_tap))
@@ -164,14 +168,14 @@ always_ff @(posedge clk) begin
 					begin 
 						img_select <= 4;
 						io_state <= GO4IT;
-						rd_sel <= 6'b001000;
+						rd_sel <= 7'b0001000;
 //						boot_tap <= 1'b1;
 					end
 				else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu)))
 					begin 
 						img_select <= 6;
 						io_state <= GO4IT;
-						rd_sel <= 6'b100000;
+						rd_sel <= 7'b0100000;
 						boot_reu <= 1'b1;
 					end
 				else if(img_present[0] && ~img_presentD[0])
