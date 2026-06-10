@@ -28,7 +28,8 @@ module mist_sd_card
 	output [31:0] sd_lba,
 	output reg    sd_rd,
 	output reg    sd_wr,
-	input         sd_ack,
+	input         sd_ack, // sd_busy
+	input         sd_done,
 
 	input   [8:0] sd_buff_addr,
 	input   [7:0] sd_buff_dout,

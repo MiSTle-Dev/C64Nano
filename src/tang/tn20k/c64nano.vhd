@@ -728,6 +728,7 @@ port map
     sd_rd         => c1541_sd_rd,
     sd_wr         => c1541_sd_wr,
     sd_ack        => sd_busy,
+    sd_done       => sd_done,
 
     sd_buff_addr  => sd_byte_index,
     sd_buff_dout  => sd_rd_data,

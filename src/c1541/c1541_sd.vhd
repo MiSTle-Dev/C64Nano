@@ -49,6 +49,7 @@ port(
 	sd_rd          : out std_logic;
 	sd_wr          : out std_logic;
 	sd_ack         : in  std_logic;
+	sd_done        : in  std_logic;
 
 	sd_buff_addr   : in  std_logic_vector(8 downto 0);
 	sd_buff_dout   : in  std_logic_vector(7 downto 0);
@@ -221,7 +222,8 @@ port map
 	sd_lba        => sd_lba,
 	sd_rd         => sd_rd,
 	sd_wr         => sd_wr,
-	sd_ack        => sd_ack
+	sd_ack        => sd_ack,
+	sd_done       => sd_done
 );
 
 --sd_spi : entity work.spi_controller
