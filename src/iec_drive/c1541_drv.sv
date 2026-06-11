@@ -55,6 +55,7 @@ module c1541_drv
 	input         ext_en,
 	output [14:0] rom_addr,
 	input   [7:0] rom_data,
+	output        rom_cs,
 
 	//clk_sys ports
 	input         clk_sys,
@@ -118,6 +119,7 @@ c1541_logic c1541_logic
 	.ext_en(ext_en),
 	.rom_addr(rom_addr),
 	.rom_data(rom_data),
+	.c1541rom_cs(rom_cs),
 
 	// parallel bus
 	.par_data_in(par_data_i),
