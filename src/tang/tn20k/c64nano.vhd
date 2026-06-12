@@ -478,6 +478,9 @@ signal ezfl_idx         : std_logic := '0';
 signal ioctl_upload     : std_logic := '0';
 signal disk_sd_wr_data  : std_logic_vector(7 downto 0);
 signal loader_sd_wr_data: std_logic_vector(7 downto 0);
+signal ext_old          : std_logic := '0';
+signal ext_crt          : std_logic := '0';
+signal ezfl_save_en     : std_logic := '0';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -1571,12 +1574,19 @@ process(clk_sys)
     
     if ioctl_upload = '1' then 
       ezfl_mod <= '0';
+      ezfl_save_en <= '0';
     end if;
 
     ezfl_save_old <= ezfl_save;
     if ezfl_save_old = '0' and ezfl_save = '1' then
-      ezfl_idx <= not save_cartridge;
+      ezfl_idx <= save_cartridge;
     end if;
+
+    ext_old <= ext_crt;
+	  if ext_old = '0' and ext_crt = '1' then
+      ezfl_save_en <= '1';
+    end if;
+
   end if;
 end process;
 
@@ -1639,10 +1649,11 @@ port map (
   img_select        => open,
 
   ioctl_download    => ioctl_download,
-	ioctl_upload_req  => ezfl_save,
-	ioctl_upload      => ioctl_upload,
+  ioctl_upload_req  => ezfl_save,
+  ioctl_upload      => ioctl_upload,
+  ioctl_din         => ioctl_din,
   ioctl_addr        => ioctl_addr,
-  ioctl_data        => ioctl_data,
+  ioctl_dout        => ioctl_data,
   ioctl_wr          => ioctl_wr,
   ioctl_rd          => ioctl_rd,
   ioctl_wait        => ioctl_req_wr or reset_wait or ioctl_req_rd
@@ -1798,9 +1809,10 @@ begin
     end if;
 
     -- cart added
-    if old_download /= ioctl_download and load_crt = '1' then
+    if old_download /= ioctl_download and load_crt = '1' then -- or save to EZFLASH index ID = 7
       cart_attached <= old_download;
       erase_cram <= '1';
+      ext_crt <= ioctl_download and load_crt;
     end if;
 
     -- meminit for RAM injection

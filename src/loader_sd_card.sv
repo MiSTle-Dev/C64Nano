@@ -35,21 +35,26 @@ module loader_sd_card
 	output logic        ioctl_download,
 	input  logic        ioctl_upload_req,
 	output logic        ioctl_upload,
+	input  logic [7:0]  ioctl_din,
 	output logic [23:0] ioctl_addr,
-	output logic [7:0]  ioctl_data,
+	output logic [7:0]  ioctl_dout,
 	output logic        ioctl_wr,
 	output logic        ioctl_rd,
 	input  logic        ioctl_wait
 );
 
-typedef enum logic [2:0] {
+typedef enum logic [3:0] {
 	GO4IT,
 	WAIT4CORE,
 	READ_WAIT4SD,
 	READING,
 	READ_NEXT,
 	DESELECT,
-	START
+	START,
+	WRITE_WAIT4CORE,
+	WRITING,
+	WRITE_START_SD,
+	WRITE_WAIT4SD
 } io_state_t;
 
 io_state_t io_state;
@@ -68,6 +73,9 @@ logic boot_prg;
 logic boot_tap;
 logic boot_flt;
 logic boot_reu;
+logic old_upload_req;
+logic upload_req;
+logic write_strobe;
 
 integer i;
 
@@ -91,17 +99,27 @@ always_ff @(posedge clk) begin
 	leds[2] <= img_present[2];
 	leds[3] <= img_present[3];
 	leds[4] <= img_present[4];
+	ioctl_rd <= 1'b0;
 	ioctl_wr <= wr;
 	wr <= 1'b0;
+	write_strobe <= 1'b0;
+
 	if(sd_busy) begin
 		sd_rd <= 7'd0;
 		sd_wr <= 7'd0; 
 	end
 
+	old_upload_req <= ioctl_upload_req;
+	if(~old_upload_req & ioctl_upload_req)
+		upload_req <= 1;
+
 	if(reset)
 	begin
+		old_upload_req <= 1'b0;
+		upload_req <= 1'b0;
 		ioctl_upload <= 1'b0;
 		ioctl_rd <= 1'b0;
+		write_strobe <= 1'b0;
 		sd_rd <= 7'd0;
 		sd_wr <= 7'd0;
 		wr <= 1'b0;
@@ -132,60 +150,103 @@ always_ff @(posedge clk) begin
 	else
 	begin
 	case(io_state)
+		WRITE_WAIT4CORE: begin
+				core_wait_cnt <= core_wait_cnt + 1'd1;
+				if(~ioctl_wait && &core_wait_cnt)
+					io_state <= WRITING;
+			end
 
-		START:        // 0 c1541 1 CRT 2 PRG 3 BIN 4 TAP 5 FLT
-			begin
-				if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin)))
-					begin
+		WRITING: begin
+			write_strobe <= 1'b1;
+			ioctl_rd <= 1;
+			ioctl_addr <= addr;
+			addr <= addr + 1'd1;
+			cnt <= cnt + 1'd1;
+			if(cnt == 511)
+				begin
+					io_state <= WRITE_START_SD;
+				//	sd_wr <= 7'b1000000; // request write to sd card
+					sd_wr <= 7'b0000001; // request write to sd card
+				end
+			io_state <= WRITE_WAIT4CORE;
+		end
+
+		WRITE_START_SD: begin
+		   // wait for SD card to ack the request by becoming
+		   // busy
+		   if(sd_busy) begin
+			  io_state <= WRITE_WAIT4SD;
+		   end
+		end
+
+		WRITE_WAIT4SD: begin
+			if(sd_done) begin
+				ioctl_upload <= 1'b0;
+				ioctl_addr <= 24'd0;
+				io_state <= START;
+			end
+		end
+
+		START:
+			begin // 0 c1541 1 CRT 2 PRG 3 BIN 4 TAP 5 FLT 6 REU 7 EZFLASH SAVE
+				if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))) begin
 						img_select <= 3;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0000100;
 						boot_bin <= 1'b1;
 					end
-				else if((|img_size[1]) && ((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_crt)))
-					begin 
+				else if((|img_size[1]) && ((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_crt))) begin
 						img_select <= 1; 
 						io_state <= GO4IT; 
 						rd_sel <= 7'b0000001;
 						boot_crt <= 1'b1;
 					end
-				else if((|img_size[2]) && ((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_prg)))
-					begin 
+				else if((|img_size[2]) && ((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_prg))) begin 
 						img_select <= 2;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0000010;
 						boot_prg <= 1'b1;
 					end
-				else if((|img_size[5]) && ((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flt)))
-					begin 
+				else if((|img_size[5]) && ((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flt))) begin
 						img_select <= 5;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0010000;
 						boot_flt <= 1'b1;
 					end
 //				else if((img_present[4] && ~img_presentD[4]) || (img_present[4] && ~boot_tap))
-				else if((|img_size[4]) && img_present[4] && ~img_presentD[4])
-					begin 
+				else if((|img_size[4]) && img_present[4] && ~img_presentD[4]) begin
 						img_select <= 4;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0001000;
 //						boot_tap <= 1'b1;
 					end
-				else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu)))
-					begin 
+				else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu))) begin
 						img_select <= 6;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0100000;
 						boot_reu <= 1'b1;
 					end
-				else if(img_present[0] && ~img_presentD[0])
-					begin
+				else if(img_present[0] && ~img_presentD[0]) begin
 						img_select <= 0; 
+					end
+				else if(img_present[7] && ~img_presentD[7]) begin
+						img_select <= 7; 
+					end
+				else if(upload_req) begin
+						upload_req <= 1'b0;
+						loader_busy <= 1'b1;
+						io_state <= WRITE_WAIT4CORE;
+						ch_timeout <= 32'd110000;
+						ioctl_addr <= 24'd0;
+						ioctl_upload <= 1'b1;
+						addr <= 24'd0;
+						sd_lba <= 32'd0;
+						core_wait_cnt <= 5'd0;
+						cnt <= 9'd0;
 					end
 			end
 
-		GO4IT:
-			begin
+		GO4IT: begin
 					loader_busy <= 1'b1;
 					load_crt <= rd_sel[0];
 					load_prg <= rd_sel[1];
@@ -202,8 +263,7 @@ always_ff @(posedge clk) begin
 					io_state <= WAIT4CORE;
 			end
 
-		WAIT4CORE: 
-			begin
+		WAIT4CORE: begin
 				if(ch_timeout > 0) ch_timeout <= ch_timeout - 1'd1;
 				if(ch_timeout == 0 && ~ioctl_wait) 
 				begin
@@ -217,8 +277,7 @@ always_ff @(posedge clk) begin
 			if(sd_done)
 				io_state <= READING;
 
-		READING: 
-			begin
+		READING: begin
 				if(addr < img_size[img_select])
 					io_state <= READ_NEXT;
 				else 
@@ -229,8 +288,7 @@ always_ff @(posedge clk) begin
 				end
 			end
 
-		READ_NEXT:
-			begin
+		READ_NEXT: begin
 				core_wait_cnt <= core_wait_cnt + 1'd1;
 				if(~ioctl_wait && &core_wait_cnt) 
 					begin
@@ -249,8 +307,7 @@ always_ff @(posedge clk) begin
 						io_state <= READING;
 			end
 
-		DESELECT:
-			begin
+		DESELECT: begin
 				load_crt <= 1'b0;
 				load_prg <= 1'b0;
 				load_rom <= 1'b0;
@@ -268,8 +325,8 @@ always_ff @(posedge clk) begin
 end
 
 Gowin_DPB_track_buffer_b trkbuf_inst_loader(
-	.douta(), 
-	.doutb(ioctl_data),
+	.douta(sd_wr_data),   // sd module, write data to SD card (write)
+	.doutb(ioctl_dout),
 	.clka(clk), 
 	.ocea(1'b1), 
 	.cea(1'b1), 
@@ -279,11 +336,11 @@ Gowin_DPB_track_buffer_b trkbuf_inst_loader(
 	.oceb(1'b1), 
 	.ceb(1'b1),
 	.resetb(1'b0), 
-	.wreb(1'b0),
+	.wreb(write_strobe),// write from ioctl to buffer (write)
 	.ada(sd_byte_index),  // sd module
 	.dina(sd_rd_data),    // sd module
 	.adb(ioctl_addr[8:0]),
-	.dinb(8'd0)
+	.dinb(ioctl_din)      // data from ioctl to be written to SD card (write)
 );
 
 endmodule

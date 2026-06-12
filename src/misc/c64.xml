@@ -276,12 +276,13 @@
     </menu>
     <menu label="Storage">
       <fileselector label="Floppy:" ext="d64;g64" index="0" default="disk8.d64"/>
-      <fileselector label="CRT ROM:" ext="crt" index="1"/>
+      <fileselector label="CRT ROM:" ext="crt;sav" index="1"/>
       <fileselector label="PRG BASIC:" ext="prg" index="2"/>
       <fileselector label="C64 KERNAL:" ext="bin" index="3"/>
       <fileselector label="TAP TAPE:" ext="tap" index="4"/>
       <fileselector label="FLT FILTER:" ext="flt" index="5"/>
       <fileselector label="REU:" ext="reu" index="6"/>
+      <fileselector label="SAVE CRT:" ext="sav" index="7" default="ezflash.sav"/>
       <list label="Disk prot.:" id="P" default="0">
 	<listentry label="None" value="0"/>
 	<listentry label="8:" value="1"/>
