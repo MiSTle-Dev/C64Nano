@@ -152,8 +152,10 @@ always_ff @(posedge clk) begin
 	case(io_state)
 		WRITE_WAIT4CORE: begin
 				core_wait_cnt <= core_wait_cnt + 1'd1;
-				if(~ioctl_wait && &core_wait_cnt)
+				if(~ioctl_wait && &core_wait_cnt) begin
 					io_state <= WRITING;
+					core_wait_cnt <= 5'd0;
+				end
 			end
 
 		WRITING: begin
@@ -165,15 +167,13 @@ always_ff @(posedge clk) begin
 			if(cnt == 511)
 				begin
 					io_state <= WRITE_START_SD;
-				//	sd_wr <= 7'b1000000; // request write to sd card
-					sd_wr <= 7'b0000001; // request write to sd card
+					sd_wr <= 7'b0000001; // request write to sd card CRT
 				end
 			io_state <= WRITE_WAIT4CORE;
 		end
 
 		WRITE_START_SD: begin
-		   // wait for SD card to ack the request by becoming
-		   // busy
+		   // wait for SD card to ack the request by becoming busy
 		   if(sd_busy) begin
 			  io_state <= WRITE_WAIT4SD;
 		   end
@@ -181,15 +181,36 @@ always_ff @(posedge clk) begin
 
 		WRITE_WAIT4SD: begin
 			if(sd_done) begin
-				ioctl_upload <= 1'b0;
-				ioctl_addr <= 24'd0;
-				io_state <= START;
+				if(addr < img_size[img_select]) begin
+					io_state <= WRITE_WAIT4CORE;
+					cnt <= 9'd0;
+					core_wait_cnt <= 5'd0;
+					sd_lba <= sd_lba + 1'd1;
+				end
+				else
+				begin
+					ioctl_upload <= 1'b0;
+					ioctl_addr <= 24'd0;
+					io_state <= START;
+				end
 			end
 		end
 
 		START:
 			begin // 0 c1541 1 CRT 2 PRG 3 BIN 4 TAP 5 FLT 6 REU 7 EZFLASH SAVE
-				if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))) begin
+				if((|img_size[1]) && upload_req) begin // ! overwrite CRT if upload requested
+						upload_req <= 1'b0;
+						loader_busy <= 1'b1;
+						io_state <= WRITE_WAIT4CORE;
+						ch_timeout <= 32'd110000;
+						ioctl_addr <= 24'd0;
+						ioctl_upload <= 1'b1;
+						addr <= 24'd0;
+						sd_lba <= 32'd0;
+						core_wait_cnt <= 5'd0;
+						cnt <= 9'd0;
+					end
+				else if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))) begin
 						img_select <= 3;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0000100;
@@ -218,7 +239,7 @@ always_ff @(posedge clk) begin
 						img_select <= 4;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0001000;
-//						boot_tap <= 1'b1;
+						boot_tap <= 1'b1;
 					end
 				else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu))) begin
 						img_select <= 6;
@@ -226,23 +247,11 @@ always_ff @(posedge clk) begin
 						rd_sel <= 7'b0100000;
 						boot_reu <= 1'b1;
 					end
-				else if(img_present[0] && ~img_presentD[0]) begin
+				else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
 						img_select <= 0; 
 					end
-				else if(img_present[7] && ~img_presentD[7]) begin
+				else if((|img_size[7]) && img_present[7] && ~img_presentD[7]) begin // EZFLASH SAVE
 						img_select <= 7; 
-					end
-				else if(upload_req) begin
-						upload_req <= 1'b0;
-						loader_busy <= 1'b1;
-						io_state <= WRITE_WAIT4CORE;
-						ch_timeout <= 32'd110000;
-						ioctl_addr <= 24'd0;
-						ioctl_upload <= 1'b1;
-						addr <= 24'd0;
-						sd_lba <= 32'd0;
-						core_wait_cnt <= 5'd0;
-						cnt <= 9'd0;
 					end
 			end
 
