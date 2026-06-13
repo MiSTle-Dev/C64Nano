@@ -35,7 +35,7 @@
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.numeric_std.all;
+use IEEE.numeric_std.ALL;
 
 -- -----------------------------------------------------------------------
 
@@ -174,44 +174,19 @@ end fpga64_sid_iec;
 
 architecture rtl of fpga64_sid_iec is
 -- System state machine
-constant CYCLE_EXT0: unsigned(4 downto 0) := to_unsigned( 0, 5);
-constant CYCLE_EXT1: unsigned(4 downto 0) := to_unsigned( 1, 5);
-constant CYCLE_EXT2: unsigned(4 downto 0) := to_unsigned( 2, 5);
-constant CYCLE_EXT3: unsigned(4 downto 0) := to_unsigned( 3, 5);
-constant CYCLE_DMA0: unsigned(4 downto 0) := to_unsigned( 4, 5);
-constant CYCLE_DMA1: unsigned(4 downto 0) := to_unsigned( 5, 5);
-constant CYCLE_DMA2: unsigned(4 downto 0) := to_unsigned( 6, 5);
-constant CYCLE_DMA3: unsigned(4 downto 0) := to_unsigned( 7, 5);
-constant CYCLE_EXT4 : unsigned(4 downto 0) := to_unsigned( 8, 5);
-constant CYCLE_EXT5 : unsigned(4 downto 0) := to_unsigned( 9, 5);
-constant CYCLE_EXT6 : unsigned(4 downto 0) := to_unsigned(10, 5);
-constant CYCLE_EXT7 : unsigned(4 downto 0) := to_unsigned(11, 5);
-constant CYCLE_VIC0 : unsigned(4 downto 0) := to_unsigned(12, 5);
-constant CYCLE_VIC1 : unsigned(4 downto 0) := to_unsigned(13, 5);
-constant CYCLE_VIC2 : unsigned(4 downto 0) := to_unsigned(14, 5);
-constant CYCLE_VIC3 : unsigned(4 downto 0) := to_unsigned(15, 5);
-constant CYCLE_CPU0 : unsigned(4 downto 0) := to_unsigned(16, 5);
-constant CYCLE_CPU1 : unsigned(4 downto 0) := to_unsigned(17, 5);
-constant CYCLE_CPU2 : unsigned(4 downto 0) := to_unsigned(18, 5);
-constant CYCLE_CPU3 : unsigned(4 downto 0) := to_unsigned(19, 5);
-constant CYCLE_CPU4 : unsigned(4 downto 0) := to_unsigned(20, 5);
-constant CYCLE_CPU5 : unsigned(4 downto 0) := to_unsigned(21, 5);
-constant CYCLE_CPU6 : unsigned(4 downto 0) := to_unsigned(22, 5);
-constant CYCLE_CPU7 : unsigned(4 downto 0) := to_unsigned(23, 5);
-constant CYCLE_CPU8 : unsigned(4 downto 0) := to_unsigned(24, 5);
-constant CYCLE_CPU9 : unsigned(4 downto 0) := to_unsigned(25, 5);
-constant CYCLE_CPUA : unsigned(4 downto 0) := to_unsigned(26, 5);
-constant CYCLE_CPUB : unsigned(4 downto 0) := to_unsigned(27, 5);
-constant CYCLE_CPUC : unsigned(4 downto 0) := to_unsigned(28, 5);
-constant CYCLE_CPUD : unsigned(4 downto 0) := to_unsigned(29, 5);
-constant CYCLE_CPUE : unsigned(4 downto 0) := to_unsigned(30, 5);
-constant CYCLE_CPUF : unsigned(4 downto 0) := to_unsigned(31, 5);
+type sysCycleDef is (
+	CYCLE_EXT0, CYCLE_EXT1, CYCLE_EXT2, CYCLE_EXT3,
+	CYCLE_DMA0, CYCLE_DMA1, CYCLE_DMA2, CYCLE_DMA3,
+	CYCLE_EXT4, CYCLE_EXT5, CYCLE_EXT6, CYCLE_EXT7,
+	CYCLE_VIC0, CYCLE_VIC1, CYCLE_VIC2, CYCLE_VIC3,
+	CYCLE_CPU0, CYCLE_CPU1, CYCLE_CPU2, CYCLE_CPU3,
+	CYCLE_CPU4, CYCLE_CPU5, CYCLE_CPU6, CYCLE_CPU7,
+	CYCLE_CPU8, CYCLE_CPU9, CYCLE_CPUA, CYCLE_CPUB,
+	CYCLE_CPUC, CYCLE_CPUD, CYCLE_CPUE, CYCLE_CPUF
+);
 
-signal sysCycle     : unsigned(4 downto 0) := (others => '0');
-signal preCycle     : unsigned(4 downto 0) := (others => '0');
-attribute syn_preserve : integer;
-attribute syn_preserve of sysCycle : signal is 1;
-attribute syn_preserve of preCycle : signal is 1;
+signal sysCycle     : sysCycleDef := sysCycleDef'low;
+signal preCycle     : sysCycleDef := sysCycleDef'low;
 signal sysEnable    : std_logic;
 signal rfsh_cycle   : unsigned(1 downto 0);
 
@@ -340,8 +315,9 @@ begin
 -- -----------------------------------------------------------------------
 
 io_cycle <= '1' when
-	(sysCycle >= CYCLE_EXT0 and sysCycle <= CYCLE_EXT3) or
-	(sysCycle >= CYCLE_EXT4 and sysCycle <= CYCLE_EXT7 and rfsh_cycle /= "00")  else '0';
+    (sysCycle >= CYCLE_EXT0 and sysCycle <= CYCLE_EXT3) or
+    (sysCycle >= CYCLE_EXT4 and sysCycle <= CYCLE_EXT7 and rfsh_cycle /= "00")
+    else '0';
 
 -- -----------------------------------------------------------------------
 -- System state machine, controls bus accesses
@@ -354,15 +330,17 @@ pause_out <= not sysEnable;
 process(clk32)
 begin
 	if rising_edge(clk32) then
-		preCycle <= preCycle+1;
-		if preCycle = CYCLE_CPUF then
-		if sysEnable = '1' then
-			rfsh_cycle <= rfsh_cycle + 1;
+		if preCycle = sysCycleDef'high then
+			preCycle <= sysCycleDef'low;
+			if sysEnable = '1' then
+				rfsh_cycle <= rfsh_cycle + 1;
 			end if;
+		else
+			preCycle <= sysCycleDef'succ(preCycle);
 		end if;
 		
 		refresh <= '0';
-		if preCycle = CYCLE_DMA3 and rfsh_cycle = "00" then
+		if preCycle = sysCycleDef'pred(CYCLE_EXT4) and rfsh_cycle = "00" then
 			sysEnable <= not pause;
 			refresh <= '1';
 		end if;
@@ -372,7 +350,7 @@ end process;
 process(clk32)
 begin
 	if rising_edge(clk32) then
-		if preCycle = CYCLE_CPUF then
+		if preCycle = sysCycleDef'high then
 			reset <= not reset_n;
 		end if;
 	end if;
@@ -382,13 +360,11 @@ end process;
 process(clk32)
 begin
 	if rising_edge(clk32) then
-		if sysCycle = CYCLE_VIC3 then
+		if sysCycle = sysCycleDef'pred(CYCLE_CPU0) then
 			phi0_cpu <= '1';
-			if baLoc = '1' or (cpuWe = '1' and dma_active = '0') or (ba_dma = '1' and dma_active = '1') then
-				cpuHasBus <= '1';
-			end if;
+			cpuHasBus <= baLoc or (cpuWe and not dma_active) or (ba_dma and dma_active);
 		end if;
-		if sysCycle = CYCLE_CPUF then
+		if sysCycle = sysCycleDef'high then
 			phi0_cpu <= '0';
 			cpuHasBus <= '0';
 		end if;
@@ -875,12 +851,12 @@ ramDout <= cpuDo;
 ramAddr <= systemAddr;
 ramWE   <= systemWe when sysCycle >= CYCLE_CPU0 else '0';
 ramCE   <= cs_ram when sysCycle = CYCLE_VIC0 or cpu_cyc = '1' else '0';
-
-cpu_cyc <= '1' when 
-				(sysCycle = CYCLE_CPU0 and turbo_m(0) = '1' and cs_ram = '1' ) or
-				(sysCycle = CYCLE_CPU4 and turbo_m(1) = '1' and cs_ram = '1' ) or
-				(sysCycle = CYCLE_CPU8 and turbo_m(2) = '1' and cs_ram = '1' ) or
-				(sysCycle = CYCLE_CPUC and (io_enable = '1'  or cs_ram = '1')) else '0';
+cpu_cyc <= '1' when
+              (sysCycle = CYCLE_CPU0 and turbo_m(0) = '1' and cs_ram = '1') or
+              (sysCycle = CYCLE_CPU4 and turbo_m(1) = '1' and cs_ram = '1') or
+              (sysCycle = CYCLE_CPU8 and turbo_m(2) = '1' and cs_ram = '1') or
+              (sysCycle = CYCLE_CPUC and (io_enable or cs_ram) = '1')
+              else '0';
 				
 process(clk32)
 begin
@@ -915,7 +891,8 @@ cpuDo   <= cpuDo_pre   when dma_active = '0' else dma_dout;
 cpuWe   <= cpuWe_pre   when dma_active = '0' else dma_we;
 
 ext_cycle <= '1' when (sysCycle >= CYCLE_DMA0 and sysCycle <= CYCLE_DMA3) else '0';
-dma_cycle <= '1' when (sysCycle >= CYCLE_CPU0 and sysCycle <= CYCLE_CPUF) and cpuHasBus = '1' and dma_active = '1' else '0';
+dma_cycle <= '1' when (sysCycle >= CYCLE_CPU0 and sysCycle <= CYCLE_CPUF) and cpuHasBus = '1' and dma_active = '1'
+              else '0';
 dma_din   <= cpuDi;
 
 -- -----------------------------------------------------------------------

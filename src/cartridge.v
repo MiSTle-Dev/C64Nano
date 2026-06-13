@@ -137,9 +137,7 @@ reg  rom_kbb;
 reg  force_ultimax;
 reg  ezrom_en;
 
-reg  init_n = 0;
-reg  allow_freeze = 0;
-reg  saved_d6 = 0;
+
 
 // Magic Formel (type 14) - MC6821 PIA state
 //reg  [7:0] mf_porta;   // PIA Port A output (ROM bank + RAM enable)
@@ -150,6 +148,9 @@ reg  saved_d6 = 0;
 // 0018 - EXROM line status
 // 0019 - GAME line status
 always @(posedge clk32) begin
+	reg        init_n;
+	reg        allow_freeze;
+	reg        saved_d6;
 	reg [15:0] count;
 	reg        count_ena;
 	reg [15:0] old_id;
