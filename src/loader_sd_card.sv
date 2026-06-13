@@ -167,7 +167,8 @@ always_ff @(posedge clk) begin
 					io_state <= WRITE_START_SD;
 					sd_wr <= 7'b0000001; // request write to sd card CRT
 				end
-			io_state <= WRITE_WAIT4CORE;
+			else
+				io_state <= WRITE_WAIT4CORE;
 		end
 
 		WRITE_START_SD: begin
