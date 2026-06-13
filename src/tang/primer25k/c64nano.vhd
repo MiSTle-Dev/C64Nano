@@ -1727,27 +1727,33 @@ begin
       ioctl_load_addr <= (others => '0');
     end if;
 
-    if inj_meminit = '1' and ioctl_req_wr = '0' then
-            -- finish at $100
-            if ioctl_load_addr(15 downto 0) = x"0100" then 
-                inj_meminit <= '0'; 
+    if inj_meminit = '1' then
+        if ioctl_req_wr = '0' then
+            -- check if done
+            if ioctl_load_addr(15 downto 0) = x"0100" then
+                inj_meminit <= '0';
+            else
+                ioctl_req_wr <= '1';
+                -- Initialize BASIC pointers to simulate the BASIC LOAD command
+                case ioctl_load_addr(7 downto 0) is
+                    -- TXT (2B-2C)
+                    -- Set these two bytes to $01, $08 just as they would be on reset (the BASIC LOAD command does not alter these)
+                    when x"2B" => inj_meminit_data <= x"01";
+                    when x"2C" => inj_meminit_data <= x"08";
+                    -- SAVE_START (AC-AD)
+                    -- Set these two bytes to zero just as they would be on reset (the BASIC LOAD command does not alter these)
+                    when x"AC" | x"AD" => inj_meminit_data <= x"00";
+                    -- VAR (2D-2E), ARY (2F-30), STR (31-32), LOAD_END (AE-AF)
+                    -- Set these just as they would be with the BASIC LOAD command (essentially they are all set to the load end address)
+                    when x"2D" | x"2F" | x"31" | x"AE" => inj_meminit_data <= inj_end(7 downto 0);
+                    when x"2E" | x"30" | x"32" | x"AF" => inj_meminit_data <= inj_end(15 downto 8);
+                    when others =>
+                        ioctl_req_wr <= '0';
+                        -- advance the address
+                        ioctl_load_addr <= std_logic_vector(unsigned(ioctl_load_addr) + 1);
+                end case;
             end if;
-            -- Initialize BASIC pointers to simulate the BASIC LOAD command
-            case ioctl_load_addr(7 downto 0) is
-            -- TXT (2B-2C)
-            -- Set these two bytes to $01, $08 just as they would be on reset (the BASIC LOAD command does not alter these)
-            when x"2b" => inj_meminit_data <= X"01";ioctl_req_wr <= '1';
-            when x"2c" => inj_meminit_data <= X"08";ioctl_req_wr <= '1';
-            -- SAVE_START (AC-AD)
-            -- Set these two bytes to zero just as they would be on reset (the BASIC LOAD command does not alter these)
-            when x"ac"|x"ad" => inj_meminit_data <= X"00";ioctl_req_wr <= '1';
-            -- VAR (2D-2E), ARY (2F-30), STR (31-32), LOAD_END (AE-AF)
-            -- Set these just as they would be with the BASIC LOAD command (essentially they are all set to the load end address)
-            when x"2d"|x"2f"|x"31"|x"ae" => inj_meminit_data <= inj_end(7 downto 0);ioctl_req_wr <= '1';
-            when x"2e"|x"30"|x"32"|x"af" => inj_meminit_data <= inj_end(15 downto 8);ioctl_req_wr <= '1';
-              -- advance the address
-            when others => ioctl_load_addr <= std_logic_vector(unsigned(ioctl_load_addr) + 1);
-          end case;
+        end if;
     end if;
 
     old_meminit <= inj_meminit;

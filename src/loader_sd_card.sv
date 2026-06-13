@@ -79,8 +79,6 @@ logic write_strobe;
 
 integer i;
 
-assign sd_wr_data = 8'd0;
-
 always_ff @(posedge clk) begin
 
 	for(i = 0; i < 8; i = i + 1)
@@ -333,6 +331,22 @@ always_ff @(posedge clk) begin
 	end // else: !if(reset)
 end
 
+`ifdef VERILATOR
+sector_dpram #(8, 9) trkbuf_inst_loader
+(
+	.clock(clk),
+
+	.address_a(sd_byte_index),
+	.data_a(sd_rd_data),
+	.wren_a(sd_rd_byte_strobe && sd_busy),
+	.q_a(sd_wr_data),
+
+	.address_b(ioctl_addr[8:0]),
+	.data_b(ioctl_din),
+	.wren_b(write_strobe),
+	.q_b(ioctl_dout)
+);
+`else
 Gowin_DPB_track_buffer_b trkbuf_inst_loader(
 	.douta(sd_wr_data),   // sd module, write data to SD card (write)
 	.doutb(ioctl_dout),
@@ -351,5 +365,44 @@ Gowin_DPB_track_buffer_b trkbuf_inst_loader(
 	.adb(ioctl_addr[8:0]),
 	.dinb(ioctl_din)      // data from ioctl to be written to SD card (write)
 );
+`endif
+endmodule
+
+`ifdef VERILATOR
+module sector_dpram #(parameter DATAWIDTH=8, ADDRWIDTH=9)
+(
+	input                   clock,
+
+	input   [ADDRWIDTH-1:0] address_a,
+	input   [DATAWIDTH-1:0] data_a,
+	input                   wren_a,
+	output reg [DATAWIDTH-1:0] q_a,
+
+	input   [ADDRWIDTH-1:0] address_b,
+	input   [DATAWIDTH-1:0] data_b,
+	input                   wren_b,
+	output reg [DATAWIDTH-1:0] q_b
+);
+
+reg [DATAWIDTH-1:0] ram[0:(1<<ADDRWIDTH)-1];
+
+always @(posedge clock) begin
+	if(wren_a) begin
+		ram[address_a] <= data_a;
+		q_a <= data_a;
+	end else begin
+		q_a <= ram[address_a];
+	end
+end
+
+always @(posedge clock) begin
+	if(wren_b) begin
+		ram[address_b] <= data_b;
+		q_b <= data_b;
+	end else begin
+		q_b <= ram[address_b];
+	end
+end
 
 endmodule
+`endif
