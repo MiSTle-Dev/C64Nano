@@ -949,7 +949,7 @@ port map (
 );
 
 leds_n <=  leds(1 downto 0);
-leds(0) <= led1541;
+leds(0) <= led1541 or ioctl_download or ioctl_upload or ezfl_mod;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
@@ -1623,17 +1623,17 @@ begin
       if load_prg = '1' then
         -- PRG header
         -- Load address low-byte
-            if ioctl_addr = x"000000" then
-              ioctl_load_addr(7 downto 0) <= ioctl_data;
-              inj_end(7 downto 0)  <= ioctl_data; 
+        if ioctl_addr = x"000000" then
+          ioctl_load_addr(7 downto 0) <= ioctl_data;
+          inj_end(7 downto 0)  <= ioctl_data;
           -- Load address high-byte
-            elsif ioctl_addr = x"000001" then
-              ioctl_load_addr(23 downto 8) <= x"00" & ioctl_data;
-              inj_end(15 downto 8) <= ioctl_data;
-          else
-              ioctl_req_wr <= '1';
-              inj_end <= std_logic_vector(unsigned(inj_end) + 1);
-          end if;
+        elsif ioctl_addr = x"000001" then
+          ioctl_load_addr(23 downto 8) <= x"00" & ioctl_data;
+          inj_end(15 downto 8) <= ioctl_data;
+        else
+          ioctl_req_wr <= '1';
+          inj_end <= std_logic_vector(unsigned(inj_end) + 1);
+        end if;
       end if;
 
       if load_crt = '1' then
@@ -1643,70 +1643,64 @@ begin
           cart_hdr_cnt <= (others => '0');
         end if;
 
-      if load_ezflash = '1' then
-        if ioctl_addr = x"000000" then ioctl_load_addr <= CRT_ADDR;
-        end if;
-        ioctl_req_wr <= '1';
-      end if;
-
         if unsigned(ioctl_addr) = to_unsigned(16#16#, ioctl_addr'length) then
-            cart_id_hi <= ioctl_data;
+          cart_id_hi <= ioctl_data;
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#17#, ioctl_addr'length) then
-            if cart_id_hi /= x"00" then
-                cart_id <= x"FF";
-            else
-                cart_id <= ioctl_data;
-            end if;
+          if cart_id_hi /= x"00" then
+            cart_id <= x"FF";
+          else
+            cart_id <= ioctl_data;
+          end if;
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#18#, ioctl_addr'length) then
-            cart_exrom <= ioctl_data(0);
+          cart_exrom <= ioctl_data(0);
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#19#, ioctl_addr'length) then
-            cart_game <= ioctl_data(0);
+          cart_game <= ioctl_data(0);
         end if;
 
         if unsigned(ioctl_addr) >= to_unsigned(16#40#, ioctl_addr'length) then
           if (unsigned(cart_blk_len) = to_unsigned(0, cart_blk_len'length)) or
-            (unsigned(cart_hdr_cnt) /= to_unsigned(0, cart_hdr_cnt'length)) then
+             (unsigned(cart_hdr_cnt) /= to_unsigned(0, cart_hdr_cnt'length)) then
             cart_hdr_cnt <= std_logic_vector(unsigned(cart_hdr_cnt) + 1);
 
             if unsigned(cart_hdr_cnt) = to_unsigned(6, cart_hdr_cnt'length) then
               cart_blk_len <= ioctl_data & x"00";
-                end if;
+            end if;
 
             if unsigned(cart_hdr_cnt) = to_unsigned(11, cart_hdr_cnt'length) then
-                    cart_bank_num <= ioctl_data;
-                end if;
+              cart_bank_num <= ioctl_data;
+            end if;
 
             if unsigned(cart_hdr_cnt) = to_unsigned(12, cart_hdr_cnt'length) then
-                    if unsigned(ioctl_data) > to_unsigned(16#80#, ioctl_data'length) then
-                        cart_bank_hi <= '1';
-                    else
-                        cart_bank_hi <= '0';
-                    end if;
-                end if;
+              if unsigned(ioctl_data) > to_unsigned(16#80#, ioctl_data'length) then
+                cart_bank_hi <= '1';
+              else
+                cart_bank_hi <= '0';
+              end if;
+            end if;
 
             if unsigned(cart_hdr_cnt) = to_unsigned(14, cart_hdr_cnt'length) then
-                    if unsigned(ioctl_data) > to_unsigned(16#20#, ioctl_data'length) then
-                        cart_bank_16k <= '1';
-                    else
-                        cart_bank_16k <= '0';
-                    end if;
-                end if;
+              if unsigned(ioctl_data) > to_unsigned(16#20#, ioctl_data'length) then
+                cart_bank_16k <= '1';
+              else
+                cart_bank_16k <= '0';
+              end if;
+            end if;
 
             if unsigned(cart_hdr_cnt) = to_unsigned(15, cart_hdr_cnt'length) then
-                    cart_hdr_wr <= '1';
-                end if;
-            else
-              cart_blk_len <= std_logic_vector(unsigned(cart_blk_len) - 1);
-                  ioctl_req_wr <= '1';
+              cart_hdr_wr <= '1';
             end if;
+          else
+            cart_blk_len <= std_logic_vector(unsigned(cart_blk_len) - 1);
+            ioctl_req_wr <= '1';
           end if;
         end if;
+      end if;
 
       if load_tap = '1' then
         if ioctl_addr = x"000000" then ioctl_load_addr <= TAP_ADDR; end if;
@@ -1719,6 +1713,11 @@ begin
         ioctl_req_wr <= '1';
       end if;
 
+      if load_ezflash = '1' then
+        if ioctl_addr = x"000000" then ioctl_load_addr <= CRT_ADDR;
+        end if;
+        ioctl_req_wr <= '1';
+      end if;
     end if;
 
     -- cart added
@@ -1735,32 +1734,32 @@ begin
     end if;
 
     if inj_meminit = '1' then
-        if ioctl_req_wr = '0' then
-            -- check if done
-            if ioctl_load_addr(15 downto 0) = x"0100" then
-                inj_meminit <= '0';
-            else
-                ioctl_req_wr <= '1';
-                -- Initialize BASIC pointers to simulate the BASIC LOAD command
-                case ioctl_load_addr(7 downto 0) is
-                    -- TXT (2B-2C)
-                    -- Set these two bytes to $01, $08 just as they would be on reset (the BASIC LOAD command does not alter these)
-                    when x"2B" => inj_meminit_data <= x"01";
-                    when x"2C" => inj_meminit_data <= x"08";
-                    -- SAVE_START (AC-AD)
-                    -- Set these two bytes to zero just as they would be on reset (the BASIC LOAD command does not alter these)
-                    when x"AC" | x"AD" => inj_meminit_data <= x"00";
-                    -- VAR (2D-2E), ARY (2F-30), STR (31-32), LOAD_END (AE-AF)
-                    -- Set these just as they would be with the BASIC LOAD command (essentially they are all set to the load end address)
-                    when x"2D" | x"2F" | x"31" | x"AE" => inj_meminit_data <= inj_end(7 downto 0);
-                    when x"2E" | x"30" | x"32" | x"AF" => inj_meminit_data <= inj_end(15 downto 8);
-                    when others =>
-                        ioctl_req_wr <= '0';
-                        -- advance the address
-                        ioctl_load_addr <= std_logic_vector(unsigned(ioctl_load_addr) + 1);
-                end case;
-            end if;
+      if ioctl_req_wr = '0' then
+        -- check if done
+        if ioctl_load_addr(15 downto 0) = x"0100" then
+          inj_meminit <= '0';
+        else
+          ioctl_req_wr <= '1';
+          -- Initialize BASIC pointers to simulate the BASIC LOAD command
+          case ioctl_load_addr(7 downto 0) is
+            -- TXT (2B-2C)
+            -- Set these two bytes to $01, $08 just as they would be on reset (the BASIC LOAD command does not alter these)
+            when x"2B" => inj_meminit_data <= x"01";
+            when x"2C" => inj_meminit_data <= x"08";
+            -- SAVE_START (AC-AD)
+            -- Set these two bytes to zero just as they would be on reset (the BASIC LOAD command does not alter these)
+            when x"AC" | x"AD" => inj_meminit_data <= x"00";
+            -- VAR (2D-2E), ARY (2F-30), STR (31-32), LOAD_END (AE-AF)
+            -- Set these just as they would be with the BASIC LOAD command (essentially they are all set to the load end address)
+            when x"2D" | x"2F" | x"31" | x"AE" => inj_meminit_data <= inj_end(7 downto 0);
+            when x"2E" | x"30" | x"32" | x"AF" => inj_meminit_data <= inj_end(15 downto 8);
+            when others =>
+              ioctl_req_wr <= '0';
+              -- advance the address
+              ioctl_load_addr <= std_logic_vector(unsigned(ioctl_load_addr) + 1);
+          end case;
         end if;
+      end if;
     end if;
 
     old_meminit <= inj_meminit;
@@ -1780,12 +1779,12 @@ begin
     if erasing = '1' and ioctl_req_wr = '0' then
       erase_to <= std_logic_vector(unsigned(erase_to) + 1);
       if erase_to = "11111" then
-          if ioctl_load_addr(16 downto 0) < (erase_cram & x"FFFF") then 
-            ioctl_req_wr <= '1';
-          else
-            erasing <= '0';
-            erase_cram <= '0';
-          end if;
+        if ioctl_load_addr(16 downto 0) < (erase_cram & x"FFFF") then 
+          ioctl_req_wr <= '1';
+        else
+          erasing <= '0';
+          erase_cram <= '0';
+        end if;
       end if;
     end if;
 

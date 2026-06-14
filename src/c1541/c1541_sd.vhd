@@ -104,15 +104,14 @@ signal disk_freq : std_logic_vector(1 downto 0);
 signal raw_disk : std_logic;
 signal raw_track_len : std_logic_vector(15 downto 0);
 signal max_track : std_logic_vector(6 downto 0);
-signal wps_n : std_logic;
-signal tr00_sense_n : std_logic;
+signal wps_flag : std_logic;
 signal change_timer : integer;
 signal mounted : std_logic := '0';
-signal readonly : std_logic := '0';
+signal tr00_sense_n : std_logic;
 
 begin
 	
-tr00_sense_n <= '1' when new_track_num_dbl /= "0000010" else '0';
+tr00_sense_n <='0' when new_track_num_dbl = 7x"00" else '1';
 
   c1541 : entity work.c1541_logic
   generic map
@@ -149,8 +148,8 @@ tr00_sense_n <= '1' when new_track_num_dbl /= "0000010" else '0';
     freq            => freq,     -- motor frequency
     sync_n          => sync_n,   -- reading SYNC bytes
     byte_n          => byte_n,   -- byte ready
-    wps_n           => wps_n,    -- write-protect sense (0 = protected)
-	tr00_sense_n    => tr00_sense_n,-- track 0 sense
+    wps_n           => not wps_flag,      -- write-protect sense (0 = protected)
+    tr00_sense_n    => tr00_sense_n, -- track 0 sense
     act             => act,      -- activity LED
 
     ext_en          => ext_en,
@@ -252,7 +251,7 @@ port map
 --	dbg_state => dbg_sd_state
 --);
 
-wps_n <= not readonly when change_timer = 0 else '0';
+wps_flag <= disk_readonly when change_timer = 0 else not disk_readonly;
 
 process (clk32,reset)
 begin
@@ -262,7 +261,6 @@ begin
 		if disk_change = '1' then
 			mounted <= disk_mount;
 			change_timer <= 1000000;
-			readonly <= disk_readonly;
 		elsif change_timer /= 0 then
 			change_timer <= change_timer - 1;
 		end if;

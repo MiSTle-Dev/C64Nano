@@ -104,7 +104,7 @@ always_ff @(posedge clk) begin
 
 	if(sd_busy) begin
 		sd_rd <= 7'd0;
-		sd_wr <= 7'd0; 
+		sd_wr <= 7'd0;
 	end
 
 	old_upload_req <= ioctl_upload_req;
@@ -153,7 +153,6 @@ always_ff @(posedge clk) begin
 				core_wait_cnt <= core_wait_cnt + 1'd1;
 				if(~ioctl_wait && &core_wait_cnt) begin
 					io_state <= WRITING;
-					core_wait_cnt <= 5'd0;
 				end
 			end
 
@@ -184,7 +183,6 @@ always_ff @(posedge clk) begin
 				if(addr < 24'h100000) begin  // 1Mbyte
 					io_state <= WRITE_WAIT4CORE;
 					cnt <= 9'd0;
-					core_wait_cnt <= 5'd0;
 					sd_lba <= sd_lba + 1'd1;
 				end
 				else
@@ -247,9 +245,9 @@ always_ff @(posedge clk) begin
 						rd_sel <= 7'b0100000;
 						boot_reu <= 1'b1;
 					end
-				else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
-						img_select <= 0;
-					end
+				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
+				//		img_select <= 0;
+				//	end
 				else if((|img_size[7]) && img_present[7] && ~img_presentD[7]) begin // EZFLASH SAVE
 						img_select <= 7;
 						io_state <= GO4IT;

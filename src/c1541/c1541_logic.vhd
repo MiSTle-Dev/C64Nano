@@ -78,9 +78,13 @@ architecture SYN of c1541_logic is
   
   -- UC1 (VIA6522) signals
   signal uc1_do         : std_logic_vector(7 downto 0);
+  signal uc1_do_oe_n    : std_logic;
   signal uc1_cs2_n      : std_logic;
+  signal uc1_irq_n      : std_logic;
+  signal uc1_ca1_i      : std_logic;
   signal uc1_pa_i       : std_logic_vector(7 downto 0);
   signal uc1_pa_o       : std_logic_vector(7 downto 0);
+  signal uc1_pa_oe_n    : std_logic_vector(7 downto 0);
   signal uc1_pb_i       : std_logic_vector(7 downto 0);
   signal uc1_pb_o       : std_logic_vector(7 downto 0);
   signal uc1_pb_oe_n    : std_logic_vector(7 downto 0);
@@ -89,12 +93,20 @@ architecture SYN of c1541_logic is
     
   -- UC3 (VIA6522) signals
   signal uc3_do         : std_logic_vector(7 downto 0);
+  signal uc3_do_oe_n    : std_logic;
   signal uc3_cs2_n      : std_logic;
+  signal uc3_irq_n      : std_logic;
+  signal uc3_ca1_i      : std_logic;
   signal uc3_ca2_o      : std_logic;
+  signal uc3_ca2_oe_n   : std_logic;
+  signal uc3_pa_i       : std_logic_vector(7 downto 0);
   signal uc3_pa_o       : std_logic_vector(7 downto 0);
   signal uc3_cb2_o      : std_logic;
+  signal uc3_cb2_oe_n   : std_logic;
+  signal uc3_pa_oe_n    : std_logic_vector(7 downto 0);
   signal uc3_pb_i       : std_logic_vector(7 downto 0);
   signal uc3_pb_o       : std_logic_vector(7 downto 0);
+  signal uc3_pb_oe_n    : std_logic_vector(7 downto 0);
   signal uc3_cb1_o      : std_logic;
   signal uc3_cb1_oe     : std_logic;
 
@@ -190,7 +202,7 @@ port map (
   par_stb_o  <= uc1_ca2_o or not uc1_ca2_oe;
   par_data_o <= uc1_pa_o or not uc1_pa_oe; 
   cb1_i <= par_stb_i when ext_en = '1' else '1';
-  uc1_pa_i <= par_data_i when ext_en = '1' else ((7 downto 1 => '1') & tr00_sense_n);
+  uc1_pa_i <= par_data_i when ext_en = '1' else  "1111111" & tr00_sense_n;
 
   -- PB
   uc1_pb_i(0) <=  not (sb_data_in and sb_data_oe);
@@ -204,13 +216,14 @@ port map (
   --
   -- hook up UC3 ports
   --
-  soe <= uc3_ca2_o or (not uc3_ca2_oe);
-  do <= uc3_pa_o or not uc3_pa_oe;
-  mode <= uc3_cb2_o or (not uc3_cb2_oe);
-  stp <= uc3_pb_o(1 downto 0) or (not uc3_pb_oe(1 downto 0));
-  mtr <= uc3_pb_o(2) or (not uc3_pb_oe(2));
-  act <= uc3_pb_o(3) or (not uc3_pb_oe(3));
-  freq <= uc3_pb_o(6 downto 5) or (not uc3_pb_oe(6 downto 5));
+  soe <= uc3_ca2_o or uc3_ca2_oe_n;
+  do <= uc3_pa_o or uc3_pa_oe_n;
+  mode <= uc3_cb2_o or uc3_cb2_oe_n;
+  stp(1) <= uc3_pb_o(0) or uc3_pb_oe_n(0);
+  stp(0) <= uc3_pb_o(1) or uc3_pb_oe_n(1);
+  mtr <= uc3_pb_o(2) or uc3_pb_oe_n(2);
+  act <= uc3_pb_o(3) or uc3_pb_oe_n(3);
+  freq <= uc3_pb_o(6 downto 5) or uc3_pb_oe_n(6 downto 5);
   uc3_pb_i <= sync_n & "11" & wps_n & "1111";
   
   --
@@ -223,7 +236,7 @@ port map (
             uc3_do when uc3_cs2_n = '0' else
             extram_do when extram_cs = '1' else
             (others => '1');
-  cpu_irq_n <= not (uc1_irq or uc3_irq);
+  cpu_irq_n <= uc1_irq_n and uc3_irq_n;
   cpu_so_n <= byte_n or not soe;
   
   cpu_inst : entity work.T65
@@ -256,7 +269,9 @@ port map (
         din => cpu_do
     );
 
+  uc1_pa_oe_n <= not uc1_pa_oe;
   uc1_pb_oe_n <= not uc1_pb_oe;
+  uc1_irq_n   <= not uc1_irq;
 
   uc1_via6522_inst : entity work.via6522
     port map
@@ -288,7 +303,7 @@ port map (
 
       cb1_o           => uc1_cb1_o,
       cb1_t           => uc1_cb1_oe, 
-      cb1_i           => cb1_i and (uc1_cb1_o or (not uc1_cb1_oe)),
+      cb1_i           => cb1_i and (uc1_cb1_o or not uc1_cb1_oe),
 
       cb2_o           => uc1_cb2_o,
       cb2_t           => uc1_cb2_oe,
@@ -296,6 +311,12 @@ port map (
 
       irq             => uc1_irq
     );
+
+  uc3_irq_n    <= not uc3_irq;
+  uc3_ca2_oe_n <= not uc3_ca2_oe;
+  uc3_cb2_oe_n <= not uc3_cb2_oe;
+  uc3_pa_oe_n  <= not uc3_pa_oe;
+  uc3_pb_oe_n  <= not uc3_pb_oe;
 
   uc3_via6522_inst : entity work.via6522
     port map
@@ -317,7 +338,7 @@ port map (
 
       port_b_o        => uc3_pb_o,
       port_b_t        => uc3_pb_oe,
-      port_b_i        => uc3_pb_i and (uc3_pb_o or (not uc3_pb_oe)),
+      port_b_i        => uc3_pb_i and (uc3_pb_o or not uc3_pb_oe) ,
 
       ca1_i           => cpu_so_n,
 
