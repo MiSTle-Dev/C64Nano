@@ -17,7 +17,6 @@ module loader_sd_card
 	input  logic [7:0]  sd_rd_data, // data byte received from SD card
 	input  logic        sd_rd_byte_strobe, // SD has read a byte to be stored in  buffer
 	input  logic        sd_done, // SD is done (data has been read or written
-
 	output logic [7:0]  sd_wr_data,
 
 	input  logic [7:0]  sd_img_mounted,
@@ -28,6 +27,7 @@ module loader_sd_card
 	output logic        load_tap,
 	output logic        load_flt,
 	output logic        load_reu,
+	output logic        load_ezflash,
 	output logic        loader_busy,
 	output logic [2:0]  img_select,
 	output logic [4:0]  leds,
@@ -127,6 +127,7 @@ always_ff @(posedge clk) begin
 		load_tap <= 1'b0;
 		load_flt <= 1'b0;
 		load_reu <= 1'b0;
+		load_ezflash <= 1'b0;
 		ioctl_download <= 1'b0;
 		ioctl_addr <= 24'd0;
 		addr <= 24'd0;
@@ -165,7 +166,7 @@ always_ff @(posedge clk) begin
 			if(cnt == 511)
 				begin
 					io_state <= WRITE_START_SD;
-					sd_wr <= 7'b0000001; // request write to sd card CRT
+					sd_wr <= 7'b1000000; // request write to sd card, EZFLASH index
 				end
 			else
 				io_state <= WRITE_WAIT4CORE;
@@ -180,7 +181,7 @@ always_ff @(posedge clk) begin
 
 		WRITE_WAIT4SD: begin
 			if(sd_done) begin
-				if(addr < img_size[img_select]) begin
+				if(addr < 24'h100000) begin  // 1Mbyte
 					io_state <= WRITE_WAIT4CORE;
 					cnt <= 9'd0;
 					core_wait_cnt <= 5'd0;
@@ -197,7 +198,7 @@ always_ff @(posedge clk) begin
 
 		START:
 			begin // 0 c1541 1 CRT 2 PRG 3 BIN 4 TAP 5 FLT 6 REU 7 EZFLASH SAVE
-				if((|img_size[1]) && upload_req) begin // ! overwrite CRT if upload requested
+				if((|img_size[7]) && upload_req) begin //
 						upload_req <= 1'b0;
 						loader_busy <= 1'b1;
 						io_state <= WRITE_WAIT4CORE;
@@ -247,10 +248,12 @@ always_ff @(posedge clk) begin
 						boot_reu <= 1'b1;
 					end
 				else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
-						img_select <= 0; 
+						img_select <= 0;
 					end
 				else if((|img_size[7]) && img_present[7] && ~img_presentD[7]) begin // EZFLASH SAVE
-						img_select <= 7; 
+						img_select <= 7;
+						io_state <= GO4IT;
+						rd_sel <= 7'b1000000;
 					end
 			end
 
@@ -261,7 +264,8 @@ always_ff @(posedge clk) begin
 					load_rom <= rd_sel[2]; 
 					load_tap <= rd_sel[3]; 
 					load_flt <= rd_sel[4]; 
-					load_reu <= rd_sel[5]; 
+					load_reu <= rd_sel[5];
+					load_ezflash <= rd_sel[6];
 					ch_timeout <= 32'd110000; // 32'd1508863;
 					ioctl_addr <= 24'd0;
 					ioctl_download <= 1'b1;
@@ -320,8 +324,9 @@ always_ff @(posedge clk) begin
 				load_prg <= 1'b0;
 				load_rom <= 1'b0;
 				load_tap <= 1'b0;
-				load_flt <= 1'b0;	
-				load_reu <= 1'b0;			
+				load_flt <= 1'b0;
+				load_reu <= 1'b0;
+				load_ezflash <= 1'b0;
 				loader_busy <= 1'b0;
 				io_state <= START;
 			end

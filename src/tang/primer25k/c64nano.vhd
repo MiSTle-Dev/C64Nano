@@ -317,6 +317,7 @@ signal io_cycle_we     : std_logic;
 signal io_cycle_addr   : std_logic_vector(23 downto 0);
 signal io_cycle_data   : std_logic_vector(7 downto 0);
 signal load_crt        : std_logic := '0';
+signal load_ezflash    : std_logic := '0';
 signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
@@ -1539,7 +1540,6 @@ port map (
   sd_byte_index     => sd_byte_index,
   sd_rd_data        => sd_rd_data,
   sd_rd_byte_strobe => sd_rd_byte_strobe,
-
   sd_wr_data        => loader_sd_wr_data,
 
   sd_img_mounted    => sd_img_mounted,
@@ -1550,6 +1550,7 @@ port map (
   load_tap          => load_tap,
   load_flt          => load_flt,
   load_reu          => load_reu,
+  load_ezflash      => load_ezflash,
   sd_img_size       => sd_img_size,
   leds              => leds(5 downto 1),
   img_select        => open,
@@ -1641,6 +1642,12 @@ begin
           cart_blk_len <= (others => '0');
           cart_hdr_cnt <= (others => '0');
         end if;
+
+      if load_ezflash = '1' then
+        if ioctl_addr = x"000000" then ioctl_load_addr <= CRT_ADDR;
+        end if;
+        ioctl_req_wr <= '1';
+      end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#16#, ioctl_addr'length) then
             cart_id_hi <= ioctl_data;

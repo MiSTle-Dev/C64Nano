@@ -309,6 +309,9 @@ end process;
 read_write_process : process (clk32, raw)
 begin
 	if rising_edge(clk32) and raw = '0' then
+--read_write_process : process (clk32)
+--	if rising_edge(clk32) then
+--	  if raw = '0' then
 
 	  old_track <= unsigned(track_num);
 
@@ -436,6 +439,7 @@ begin
 
 		end if;
 	  end if;
+	--end if;
 	end if;
 end process;
 
