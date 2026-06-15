@@ -53,6 +53,7 @@ typedef enum logic [3:0] {
 	START,
 	WRITE_WAIT4CORE,
 	WRITING,
+	WRITE_FLUSH,
 	WRITE_START_SD,
 	WRITE_WAIT4SD
 } io_state_t;
@@ -73,6 +74,7 @@ logic boot_prg;
 logic boot_tap;
 logic boot_flt;
 logic boot_reu;
+logic boot_ezflash;
 logic old_upload_req;
 logic upload_req;
 logic write_strobe;
@@ -139,6 +141,7 @@ always_ff @(posedge clk) begin
 		boot_tap <= 1'b0;
 		boot_flt <= 1'b0;
 		boot_reu <= 1'b0;
+		boot_ezflash <= 1'b0;
 		rd_sel <= 7'd0;
 		img_select <= 3'd0;
 		cnt <= 9'd0;
@@ -162,13 +165,15 @@ always_ff @(posedge clk) begin
 			ioctl_addr <= addr;
 			addr <= addr + 1'd1;
 			cnt <= cnt + 1'd1;
-			if(cnt == 511)
-				begin
-					io_state <= WRITE_START_SD;
-					sd_wr <= 7'b1000000; // request write to sd card, EZFLASH index
-				end
+			if(cnt == 511) io_state <= WRITE_FLUSH;
 			else
 				io_state <= WRITE_WAIT4CORE;
+		end
+
+		WRITE_FLUSH: begin
+			write_strobe <= 1'b1;
+			sd_wr <= 7'b1000000; // request write to sd card, EZFLASH index
+			io_state <= WRITE_START_SD;
 		end
 
 		WRITE_START_SD: begin
@@ -202,6 +207,7 @@ always_ff @(posedge clk) begin
 						io_state <= WRITE_WAIT4CORE;
 						ch_timeout <= 32'd110000;
 						ioctl_addr <= 24'd0;
+						ioctl_rd <= 1'b1;
 						ioctl_upload <= 1'b1;
 						addr <= 24'd0;
 						sd_lba <= 32'd0;
@@ -248,10 +254,11 @@ always_ff @(posedge clk) begin
 				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
 				//		img_select <= 0;
 				//	end
-				else if((|img_size[7]) && img_present[7] && ~img_presentD[7]) begin // EZFLASH SAVE
+				else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_ezflash))) begin // EZFLASH SAVE
 						img_select <= 7;
 						io_state <= GO4IT;
 						rd_sel <= 7'b1000000;
+						boot_ezflash <= 1'b1;
 					end
 			end
 

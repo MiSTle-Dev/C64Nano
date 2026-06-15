@@ -341,6 +341,7 @@ signal load_tap        : std_logic := '0';
 signal tap_play_addr   : std_logic_vector(23 downto 0);
 signal reset_wait      : std_logic := '0';
 signal old_download_r  : std_logic;
+signal old_upload      : std_logic := '0';
 signal reset_n         : std_logic;
 signal por             : std_logic;
 signal c64rom_wr       : std_logic;
@@ -1570,6 +1571,7 @@ process(clk_sys)
 begin
   if rising_edge(clk_sys) then
     old_download <= ioctl_download;
+    old_upload <= ioctl_upload;
     io_cycleD <= io_cycle;
     cart_hdr_wr <= '0';
     detach_reset_d <= detach_reset;
@@ -1604,10 +1606,11 @@ begin
       ioctl_rd_en <= '0';
     end if;
 
+    if old_upload = '0' and ioctl_upload = '1' then
+      ioctl_load_addr <= CRT_ADDR;
+    end if;
+
     if ioctl_rd = '1' then
-      if ioctl_addr = x"000000" then
-        ioctl_load_addr <= CRT_ADDR;
-      end if;
       ioctl_req_rd <= '1';
     end if;
 
@@ -1714,14 +1717,25 @@ begin
       end if;
 
       if load_ezflash = '1' then
-        if ioctl_addr = x"000000" then ioctl_load_addr <= CRT_ADDR;
+        if ioctl_addr = x"000000" then
+          ioctl_load_addr <= CRT_ADDR;
+          --cart_loading <= '0';
+          --cart_id <= std_logic_vector(to_unsigned(32, cart_id'length));-- Super Snapshot 5 / EZFlash
+          --cart_exrom <= '1';
+          --cart_game  <= '0';
+          --cart_bank_hi <= '0';
+          --cart_bank_16k <= '0';
+          --cart_bank_num <= (others => '0');
+          --cart_bank_addr <= (others => '0');
+          --cart_blk_len <= (others => '0');
+          --cart_hdr_cnt <= (others => '0');
         end if;
         ioctl_req_wr <= '1';
       end if;
     end if;
 
     -- cart added
-    if old_download /= ioctl_download and load_crt = '1' then -- or save to EZFLASH index ID = 7
+    if old_download /= ioctl_download and (load_crt or load_ezflash) = '1' then
       cart_attached <= old_download;
       erase_cram <= '1';
       ext_crt <= ioctl_download and load_crt;
@@ -1862,7 +1876,7 @@ process(clk_sys)
         do_erase <= '1';
         reset_wait <= '1';
         reset_counter <= 255;
-      elsif ioctl_download = '1' and ((load_crt = '1') or (load_rom = '1')) then
+      elsif ioctl_download = '1' and (load_crt or load_ezflash or load_rom) = '1' then
         do_erase <= '1';
         reset_counter <= 255;
       elsif erasing = '1' then 
