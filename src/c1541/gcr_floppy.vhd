@@ -91,6 +91,7 @@ signal sync_in_n_raw  : std_logic;
 signal byte_in_n_raw  : std_logic;
 
 type gcr_array is array(0 to 15) of std_logic_vector(4 downto 0);
+type gcr_tail_array is array(0 to 20) of std_logic_vector(7 downto 0);
 
 signal gcr_lut : gcr_array := 
 	("01010","11010","01001","11001",
@@ -104,6 +105,7 @@ signal gcr_byte_out   : std_logic_vector(7 downto 0);
 signal gcr_bit_out    : std_logic;
 signal gcr_nibble_out : std_logic_vector(4 downto 0);
 signal nibble_out     : std_logic_vector(3 downto 0);
+signal gcr_tail       : gcr_tail_array := (others => (others => '0'));
 
 signal autorise_write : std_logic;
 signal autorise_count : std_logic;
@@ -314,6 +316,9 @@ begin
 
 	  if old_track /= track_num then
 	    sector <= (others => '0'); --reset sector number on track change
+		for i in 0 to 20 loop
+			gcr_tail(i) <= (others => '0');
+		end loop;
 	  elsif mounted = '1' and bit_clk_en = '1' then
 
 		mode_r2 <= mode;
@@ -361,13 +366,13 @@ begin
 				if nibble = '1' then 
 					nibble    <= '0';
 					byte_addr <= sector & byte_cnt(7 downto 0);
-					if byte_cnt = "000000000" then
+					if byte_cnt = std_logic_vector(to_unsigned(0, byte_cnt'length)) then
 						data_cks <= (others => '0');
 					else
 						data_cks <= data_cks xor data;
 					end if;
 					if mode = '1' or (mode = '0' and autorise_count = '1') then
-						byte_cnt  <= byte_cnt + '1';
+						byte_cnt <= byte_cnt + '1';
 					end if;
 				else
 					nibble <= '1';
@@ -375,7 +380,7 @@ begin
 						autorise_write <= '1';
 						autorise_count <= '1';
 					end if;
-					if byte_cnt >= "100000000" then
+					if byte_cnt >= std_logic_vector(to_unsigned(256, byte_cnt'length)) then
 						autorise_write <= '0';
 						autorise_count <= '0';
 					end if;
@@ -387,17 +392,20 @@ begin
 			if bit_cnt = X"7" then
 				byte_in_n <= '0';
 				gcr_byte_out <= c1541_logic_dout;
+				if mode = '0' and state = '1' and byte_cnt = std_logic_vector(to_unsigned(256, byte_cnt'length)) then
+					gcr_tail(to_integer(unsigned(sector))) <= c1541_logic_dout;
+				end if;
 			end if;
 
 			if state = '0' then
 				-- header
-				if byte_cnt = "000001111" and bit_cnt = 0 then
+				if byte_cnt = std_logic_vector(to_unsigned(15, byte_cnt'length)) and bit_cnt = 0 then
 					sync_in_n <= '0';
 					state<= '1';
 				end if;
 			else
 				-- data
-				if byte_cnt = "100010001" then 
+				if byte_cnt = std_logic_vector(to_unsigned(273, byte_cnt'length)) then 
 					sync_in_n <= '0';
 					state <= '0';
 					if sector = sector_max then 
@@ -412,7 +420,12 @@ begin
 			gcr_byte <= gcr_byte(6 downto 0) & gcr_bit;
 
 			if bit_cnt = X"7" then
-				byte_in <= gcr_byte(6 downto 0) & gcr_bit;
+				if mode = '1' and state = '1' and gcr_tail(to_integer(unsigned(sector))) /= X"00" and
+				   (byte_cnt = std_logic_vector(to_unsigned(258, byte_cnt'length))) then 
+					byte_in <= gcr_tail(to_integer(unsigned(sector)));
+				else
+					byte_in <= gcr_byte(6 downto 0) & gcr_bit;
+				end if;
 			end if;
 
 			-- serialise/convert byte to floppy (ram)				
