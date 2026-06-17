@@ -10,11 +10,14 @@
 --
 -- Input clk 32MHz
 --     
+-- 2026 Stefan Voss: DolphinDos write fixed based on work done by mateusz nalewajski
+-- (DD verifies the GCR bitstream for a sector rather than the decoded bytes)
+--  VHDL 2008 cleanup
 ---------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 entity gcr_floppy is
 port(
@@ -22,7 +25,6 @@ port(
 	c1541_logic_din  : out std_logic_vector(7 downto 0);   -- data from ram to 1541 logic
 	c1541_logic_dout : in  std_logic_vector(7 downto 0);   -- data from 1541 logic to ram 
 	mode   : in  std_logic;                      -- read/write
---	stp    : in  std_logic_vector(1 downto 0);   -- stepper motor control
 	mtr    : in  std_logic;                      -- stepper motor on/off
 	freq   : in  std_logic_vector(1 downto 0);   -- motor (gcr_bit) frequency
 	sync_n : out std_logic;                      -- reading SYNC bytes
@@ -137,24 +139,24 @@ with byte_cnt select
 
 with byte_cnt select
 	data_body <=
-		X"07"     when "000000000",
-		data_cks  when "100000001",
-		X"00"     when "100000010",
-		X"00"     when "100000011",
-		X"0F"     when "100000100",
-		X"0F"     when "100000101",
-		X"0F"     when "100000110",
-		X"0F"     when "100000111",
-		X"0F"     when "100001000",
-		X"0F"     when "100001001",
-		X"0F"     when "100001010",
-		X"0F"     when "100001011",
-		X"0F"     when "100001100",
-		X"0F"     when "100001101",
-		X"0F"     when "100001110",
-		X"0F"     when "100001111",
-		X"0F"     when "100010000",
-		X"0F"     when "100010001",
+		X"07"     when std_logic_vector(to_unsigned(  0, byte_cnt'length)),
+		data_cks  when std_logic_vector(to_unsigned(257, byte_cnt'length)),
+		X"00"     when std_logic_vector(to_unsigned(258, byte_cnt'length)),
+		X"00"     when std_logic_vector(to_unsigned(259, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(260, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(261, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(262, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(263, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(264, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(265, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(266, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(267, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(268, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(269, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(270, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(271, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(272, byte_cnt'length)),
+		X"0F"     when std_logic_vector(to_unsigned(273, byte_cnt'length)),
 		ram_do    when others;
 	
 with state select
@@ -219,22 +221,22 @@ begin
 			bit_clk_cnt := (others => '0');
 			raw_bit_clk_cnt := (others => '0');
 		elsif mtr = '1' then
-			if bit_clk_cnt = 0 then
+			if unsigned(bit_clk_cnt) = 0 then
 				bit_clk_en <= '1';
 				bit_clk_cnt := bit_clk_div;
 			else
-				bit_clk_cnt := bit_clk_cnt - '1';
+				bit_clk_cnt := std_logic_vector(unsigned(bit_clk_cnt) - 1);
 			end if;
 
-			if raw_bit_clk_cnt = 0 then
+			if unsigned(raw_bit_clk_cnt) = 0 then
 				raw_bit_clk_en <= '1';
 				raw_bit_clk_cnt := raw_bit_clk_div;
 			else
-				raw_bit_clk_cnt := raw_bit_clk_cnt - '1';
+				raw_bit_clk_cnt := std_logic_vector(unsigned(raw_bit_clk_cnt) - 1);
 			end if;
 
 			if ((byte_in_n = '0' and raw = '0') or (byte_in_n_raw = '0' and raw = '1')) and ram_ready = '1' then
-				if bit_clk_cnt > X"10" and bit_clk_cnt < X"5E" then
+				if unsigned(bit_clk_cnt) > X"10" and unsigned(bit_clk_cnt) < X"5E" then
 					byte_n <= '0';
 				end if;
 			end if;
@@ -249,7 +251,7 @@ begin
 	end if;
 end process;
 
-sync_in_n_raw <= '0' when shift_reg(17 downto 8) = "11"&x"FF" and raw_track_len /= 0 and mode = '1' else '1';
+sync_in_n_raw <= '0' when shift_reg(17 downto 8) = "11"&x"FF" and unsigned(raw_track_len) /= 0 and mode = '1' else '1';
 
 -- G64 handling
 raw_read_write_process : process(clk32)
@@ -257,9 +259,9 @@ begin
 	if rising_edge(clk32) then
 		raw_byte_we <= '0';
 		if mtr = '0' or mounted = '0' or raw = '0' then
-			raw_byte_cnt <= '0'&x"202";
-			synced_bit_cnt <= "000";
-			raw_bit_cnt <= "000";
+			raw_byte_cnt <= std_logic_vector(to_unsigned(1026, raw_byte_cnt'length));
+			synced_bit_cnt <= (others => '0');
+			raw_bit_cnt <= (others => '0');
 			byte_in_n_raw <= '1';
 			shift_reg <= (others => '0');
 		else
@@ -277,29 +279,29 @@ begin
 						raw_byte_in <= shift_reg(15 downto 8);
 					end if;
 
-					synced_bit_cnt <= synced_bit_cnt + 1;
+					synced_bit_cnt <= std_logic_vector(unsigned(synced_bit_cnt) + 1);
 				end if;
 
-				if sync_in_n_raw = '0' or ram_ready = '0' or raw_track_len = 0 then
-					synced_bit_cnt <= "000";
+				if sync_in_n_raw = '0' or ram_ready = '0' or unsigned(raw_track_len) = 0 then
+					synced_bit_cnt <= (others => '0');
 				end if;
 			end if;
 
 			if raw_bit_clk_en = '1' then
-				raw_bit_cnt <= raw_bit_cnt + '1';
-				if raw_bit_cnt = 0 then
+				raw_bit_cnt <= std_logic_vector(unsigned(raw_bit_cnt) + 1);
+				if unsigned(raw_bit_cnt) = 0 then
 					shift_reg(7 downto 0) <= ram_do;
 				else
 					shift_reg(7 downto 0) <= shift_reg(6 downto 0) & '0';
 				end if;
 
 				if raw_bit_cnt = "111" then
-					if raw_track_len /= 0 then
+					if unsigned(raw_track_len) /= 0 then
 						raw_byte_we <= not mode;
 					end if;
-					raw_byte_cnt <= raw_byte_cnt + 1;
-					if raw_byte_cnt >= raw_track_len + 1 and raw_track_len /= 0 then
-						raw_byte_cnt <= '0'&x"002";
+					raw_byte_cnt <= std_logic_vector(unsigned(raw_byte_cnt) + 1);
+					if unsigned(raw_byte_cnt) >= unsigned(raw_track_len) + 1 and unsigned(raw_track_len) /= 0 then
+					raw_byte_cnt <= std_logic_vector(to_unsigned(2, raw_byte_cnt'length));
 					end if;
 				end if;
 			end if;
@@ -308,147 +310,148 @@ begin
 end process;
 
 -- D64 handling
-read_write_process : process (clk32, raw)
+read_write_process : process (clk32)
 begin
-	if rising_edge(clk32) and raw = '0' then
+	if rising_edge(clk32) then
+		if raw = '0' then
+			old_track <= track_num;
 
-	  old_track <= track_num;
+			if old_track /= track_num then
+				sector <= (others => '0'); --reset sector number on track change
+			for i in 0 to 20 loop
+				gcr_tail(i) <= (others => '0');
+			end loop;
+			elsif mounted = '1' and bit_clk_en = '1' then
 
-	  if old_track /= track_num then
-	    sector <= (others => '0'); --reset sector number on track change
-		for i in 0 to 20 loop
-			gcr_tail(i) <= (others => '0');
-		end loop;
-	  elsif mounted = '1' and bit_clk_en = '1' then
+				mode_r2 <= mode;
+				if mode = '1' then autorise_write <= '0'; end if;
 
-		mode_r2 <= mode;
-		if mode = '1' then autorise_write <= '0'; end if;
+				if (mode xor mode_r2) = '1' then 
+					if mode = '1' then  -- leaving write mode
+						sync_in_n <= '0';
+						sync_cnt <= (others => '0');
+						state <= '0';
+					else                -- entering write mode
+						byte_cnt    <= (others => '0');
+						nibble      <= '0';
+						gcr_bit_cnt <= (others => '0');
+						bit_cnt     <= (others => '0');
+						gcr_byte    <= (others => '0');
+						data_cks    <= (others => '0');
+					end if;
+				end if;
 
-		if (mode xor mode_r2) = '1' then 
-			if mode = '1' then  -- leaving write mode
-				sync_in_n <= '0';
-				sync_cnt <= (others => '0');
-				state <= '0';
-			else                -- entering write mode
-				byte_cnt    <= (others => '0');
-				nibble      <= '0';
-				gcr_bit_cnt <= (others => '0');
-				bit_cnt     <= (others => '0');
-				gcr_byte    <= (others => '0');
-				data_cks    <= (others => '0');
-			end if;	
-		end if;
+				if sync_in_n = '0' and mode = '1' then
 
-		if sync_in_n = '0' and mode = '1' then
+					byte_cnt        <= (others => '0');
+					nibble          <= '0';
+					gcr_bit_cnt     <= (others => '0');
+					bit_cnt         <= (others => '0');
+					byte_in         <= (others => '1');
+					gcr_byte        <= (others => '0');
+					data_cks        <= (others => '0');
 
-			byte_cnt        <= (others => '0');
-			nibble          <= '0';
-			gcr_bit_cnt     <= (others => '0');
-			bit_cnt         <= (others => '0');
-			byte_in         <= (others => '1');
-			gcr_byte        <= (others => '0');
-			data_cks        <= (others => '0');
-
-			if sync_cnt = X"27" then 
-				sync_cnt <= (others => '0');
-				sync_in_n <= '1';
-			else
-				sync_cnt <= sync_cnt + '1';
-			end if;
-
-		end if;
-
-		if sync_in_n = '1' or mode = '0' then
-
-			gcr_bit_cnt <= gcr_bit_cnt + '1';
-			if gcr_bit_cnt = X"4" then
-				gcr_bit_cnt <= (others => '0');
-				if nibble = '1' then 
-					nibble    <= '0';
-					byte_addr <= sector & byte_cnt(7 downto 0);
-					if byte_cnt = std_logic_vector(to_unsigned(0, byte_cnt'length)) then
-						data_cks <= (others => '0');
+					if sync_cnt = std_logic_vector(to_unsigned(39, sync_cnt'length)) then
+						sync_cnt <= (others => '0');
+						sync_in_n <= '1';
 					else
-						data_cks <= data_cks xor data;
+						sync_cnt <= std_logic_vector(unsigned(sync_cnt) + 1);
 					end if;
-					if mode = '1' or (mode = '0' and autorise_count = '1') then
-						byte_cnt <= byte_cnt + '1';
-					end if;
-				else
-					nibble <= '1';
-					if mode = '0' and byte_out = X"07" then
-						autorise_write <= '1';
-						autorise_count <= '1';
-					end if;
-					if byte_cnt >= std_logic_vector(to_unsigned(256, byte_cnt'length)) then
-						autorise_write <= '0';
-						autorise_count <= '0';
-					end if;
-				end if;
-			end if;
 
-			bit_cnt <= bit_cnt + '1';
-			byte_in_n  <= '1';
-			if bit_cnt = X"7" then
-				byte_in_n <= '0';
-				gcr_byte_out <= c1541_logic_dout;
-				if mode = '0' and state = '1' and byte_cnt = std_logic_vector(to_unsigned(256, byte_cnt'length)) then
-					gcr_tail(to_integer(unsigned(sector))) <= c1541_logic_dout;
 				end if;
-			end if;
 
-			if state = '0' then
-				-- header
-				if byte_cnt = std_logic_vector(to_unsigned(15, byte_cnt'length)) and bit_cnt = 0 then
-					sync_in_n <= '0';
-					state<= '1';
-				end if;
-			else
-				-- data
-				if byte_cnt = std_logic_vector(to_unsigned(273, byte_cnt'length)) then 
-					sync_in_n <= '0';
-					state <= '0';
-					if sector = sector_max then 
-						sector <= (others=>'0');
+				if sync_in_n = '1' or mode = '0' then
+
+					gcr_bit_cnt <= std_logic_vector(unsigned(gcr_bit_cnt) + 1);
+					if gcr_bit_cnt = X"4" then
+						gcr_bit_cnt <= (others => '0');
+						if nibble = '1' then 
+							nibble    <= '0';
+							byte_addr <= sector & byte_cnt(7 downto 0);
+							if byte_cnt = std_logic_vector(to_unsigned(0, byte_cnt'length)) then
+								data_cks <= (others => '0');
+							else
+								data_cks <= data_cks xor data;
+							end if;
+							if mode = '1' or (mode = '0' and autorise_count = '1') then
+								byte_cnt <= std_logic_vector(unsigned(byte_cnt) + 1);
+							end if;
+						else
+							nibble <= '1';
+							if mode = '0' and byte_out = X"07" then
+								autorise_write <= '1';
+								autorise_count <= '1';
+							end if;
+							if byte_cnt >= std_logic_vector(to_unsigned(256, byte_cnt'length)) then
+								autorise_write <= '0';
+								autorise_count <= '0';
+							end if;
+						end if;
+					end if;
+
+					bit_cnt <= std_logic_vector(unsigned(bit_cnt) + 1);
+					byte_in_n  <= '1';
+					if bit_cnt = X"7" then
+						byte_in_n <= '0';
+						gcr_byte_out <= c1541_logic_dout;
+						if mode = '0' and state = '1' and byte_cnt = std_logic_vector(to_unsigned(256, byte_cnt'length)) then
+							gcr_tail(to_integer(unsigned(sector))) <= c1541_logic_dout;
+						end if;
+					end if;
+
+					if state = '0' then
+						-- header
+						if byte_cnt = std_logic_vector(to_unsigned(15, byte_cnt'length)) and unsigned(bit_cnt) = 0 then
+							sync_in_n <= '0';
+							state<= '1';
+						end if;
 					else
-						sector <= sector + '1';
+						-- data
+						if byte_cnt = std_logic_vector(to_unsigned(273, byte_cnt'length)) then 
+							sync_in_n <= '0';
+							state <= '0';
+							if sector = sector_max then 
+								sector <= (others=>'0');
+							else
+								sector <= std_logic_vector(unsigned(sector) + 1);
+							end if;
+						end if;
 					end if;
+
+					-- demux byte from floppy (ram)
+					gcr_byte <= gcr_byte(6 downto 0) & gcr_bit;
+
+					if bit_cnt = X"7" then
+						if mode = '1' and state = '1' and gcr_tail(to_integer(unsigned(sector))) /= X"00" and
+						(byte_cnt = std_logic_vector(to_unsigned(258, byte_cnt'length))) then 
+							byte_in <= gcr_tail(to_integer(unsigned(sector)));
+						else
+							byte_in <= gcr_byte(6 downto 0) & gcr_bit;
+						end if;
+					end if;
+
+					-- serialise/convert byte to floppy (ram)
+					gcr_nibble_out <= gcr_nibble_out(3 downto 0) & gcr_bit_out;
+
+					if gcr_bit_cnt = X"0" then
+						if nibble = '0' then 
+							byte_out(3 downto 0) <= nibble_out;
+						else
+							byte_out(7 downto 4) <= nibble_out;
+						end if;
+					end if;
+
+					if gcr_bit_cnt = X"1" and nibble = '0' then
+						if autorise_write = '1' then
+							byte_we <= '1';
+						end if;
+					else
+						byte_we <= '0';
+					end if;
+
 				end if;
 			end if;
-
-			-- demux byte from floppy (ram)			
-			gcr_byte <= gcr_byte(6 downto 0) & gcr_bit;
-
-			if bit_cnt = X"7" then
-				if mode = '1' and state = '1' and gcr_tail(to_integer(unsigned(sector))) /= X"00" and
-				   (byte_cnt = std_logic_vector(to_unsigned(258, byte_cnt'length))) then 
-					byte_in <= gcr_tail(to_integer(unsigned(sector)));
-				else
-					byte_in <= gcr_byte(6 downto 0) & gcr_bit;
-				end if;
-			end if;
-
-			-- serialise/convert byte to floppy (ram)				
-			gcr_nibble_out <= gcr_nibble_out(3 downto 0) & gcr_bit_out;
-
-			if gcr_bit_cnt = X"0" then
-				if nibble = '0' then 
-					byte_out(3 downto 0) <= nibble_out;
-				else
-					byte_out(7 downto 4) <= nibble_out;
-				end if;
-			end if;
-
-			if gcr_bit_cnt = X"1" and nibble = '0' then
-				if autorise_write = '1' then
-					byte_we <= '1';
-				end if;	
-			else
-				byte_we <= '0';
-			end if;
-
 		end if;
-	  end if;
 	end if;
 end process;
 

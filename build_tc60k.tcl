@@ -1,9 +1,9 @@
 set_device GW5AT-LV60PG484AC1/I0 -device_version B
 
+add_file src/am29f040.sv
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
 add_file src/cartridge.v
-add_file src/dualshock2.v
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
 add_file src/gowin_dpb/sector_dpram.v
@@ -28,6 +28,7 @@ add_file src/misc/sdcmd_ctrl.v
 add_file src/misc/sysctrl.v
 add_file src/tang/console60k/video.v
 add_file src/misc/video_analyzer.v
+add_file src/misc/ws2812.v
 add_file src/mos6526.v
 add_file src/reu.v
 add_file src/sdram.v

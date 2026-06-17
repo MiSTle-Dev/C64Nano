@@ -206,10 +206,10 @@ signal disk_chg_trg   : std_logic;
 signal disk_chg_trg_d : std_logic;
 signal sd_img_size    : std_logic_vector(31 downto 0);
 signal sd_img_size_d  : std_logic_vector(31 downto 0);
-signal sd_img_mounted : std_logic_vector(6 downto 0);
+signal sd_img_mounted : std_logic_vector(7 downto 0);
 signal sd_img_mounted_d : std_logic;
-signal sd_rd          : std_logic_vector(6 downto 0);
-signal sd_wr          : std_logic_vector(6 downto 0);
+signal sd_rd          : std_logic_vector(7 downto 0);
+signal sd_wr          : std_logic_vector(7 downto 0);
 signal disk_lba       : std_logic_vector(31 downto 0);
 signal sd_lba         : std_logic_vector(31 downto 0);
 signal loader_lba     : std_logic_vector(31 downto 0);
@@ -308,6 +308,7 @@ signal io_cycle_we     : std_logic;
 signal io_cycle_addr   : std_logic_vector(23 downto 0);
 signal io_cycle_data   : std_logic_vector(7 downto 0);
 signal load_crt        : std_logic := '0';
+signal load_ezflash    : std_logic := '0';
 signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
@@ -331,6 +332,7 @@ signal load_tap        : std_logic := '0';
 signal tap_play_addr   : std_logic_vector(23 downto 0);
 signal reset_wait      : std_logic := '0';
 signal old_download_r  : std_logic;
+signal old_upload      : std_logic := '0';
 signal reset_n         : std_logic;
 signal por             : std_logic;
 signal c64rom_wr       : std_logic;
@@ -910,7 +912,8 @@ port map (
     mdclk => clk
 );
 
-leds(0) <= led1541 or ioctl_download or ioctl_upload or ezfl_mod or tape_led;
+leds(0) <= led1541 or ioctl_download or ioctl_upload;
+leds(1) <= '1' when cart_id = x"20" else '0'; -- light up if EasyFlash cartridge is detected
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
@@ -1386,7 +1389,7 @@ port map
     clk32           => clk_sys,
     reset_n         => reset_n,
   
-    cart_loading    => ioctl_download and load_crt,
+    cart_loading    => ioctl_download and (load_crt or load_ezflash),
     cart_id         => cid,
     cart_exrom      => cart_exrom,
     cart_game       => cart_game,
@@ -1501,7 +1504,6 @@ port map (
   sd_byte_index     => sd_byte_index,
   sd_rd_data        => sd_rd_data,
   sd_rd_byte_strobe => sd_rd_byte_strobe,
-
   sd_wr_data        => loader_sd_wr_data,
 
   sd_img_mounted    => sd_img_mounted,
@@ -1512,8 +1514,9 @@ port map (
   load_tap          => load_tap,
   load_flt          => load_flt,
   load_reu          => load_reu,
+  load_ezflash      => load_ezflash,
   sd_img_size       => sd_img_size,
-  leds              => leds(5 downto 1),
+  leds              => open,
   img_select        => open,
 
   ioctl_download    => ioctl_download,
@@ -1531,6 +1534,7 @@ process(clk_sys)
 begin
   if rising_edge(clk_sys) then
     old_download <= ioctl_download;
+    old_upload <= ioctl_upload;
     io_cycleD <= io_cycle;
     cart_hdr_wr <= '0';
     detach_reset_d <= detach_reset;
@@ -1565,10 +1569,11 @@ begin
       ioctl_rd_en <= '0';
     end if;
 
+    if old_upload = '0' and ioctl_upload = '1' then
+      ioctl_load_addr <= CRT_ADDR;
+    end if;
+
     if ioctl_rd = '1' then
-      if ioctl_addr = x"000000" then
-        ioctl_load_addr <= CRT_ADDR;
-      end if;
       ioctl_req_rd <= '1';
     end if;
 
@@ -1584,17 +1589,17 @@ begin
       if load_prg = '1' then
         -- PRG header
         -- Load address low-byte
-            if ioctl_addr = x"000000" then
-              ioctl_load_addr(7 downto 0) <= ioctl_data;
-              inj_end(7 downto 0)  <= ioctl_data; 
+        if ioctl_addr = x"000000" then
+          ioctl_load_addr(7 downto 0) <= ioctl_data;
+          inj_end(7 downto 0)  <= ioctl_data;
           -- Load address high-byte
-            elsif ioctl_addr = x"000001" then
-              ioctl_load_addr(23 downto 8) <= x"00" & ioctl_data;
-              inj_end(15 downto 8) <= ioctl_data;
-          else
-              ioctl_req_wr <= '1';
-              inj_end <= std_logic_vector(unsigned(inj_end) + 1);
-          end if;
+        elsif ioctl_addr = x"000001" then
+          ioctl_load_addr(23 downto 8) <= x"00" & ioctl_data;
+          inj_end(15 downto 8) <= ioctl_data;
+        else
+          ioctl_req_wr <= '1';
+          inj_end <= std_logic_vector(unsigned(inj_end) + 1);
+        end if;
       end if;
 
       if load_crt = '1' then
@@ -1605,63 +1610,63 @@ begin
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#16#, ioctl_addr'length) then
-            cart_id_hi <= ioctl_data;
+          cart_id_hi <= ioctl_data;
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#17#, ioctl_addr'length) then
-            if cart_id_hi /= x"00" then
-                cart_id <= x"FF";
-            else
-                cart_id <= ioctl_data;
-            end if;
+          if cart_id_hi /= x"00" then
+            cart_id <= x"FF";
+          else
+            cart_id <= ioctl_data;
+          end if;
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#18#, ioctl_addr'length) then
-            cart_exrom <= ioctl_data(0);
+          cart_exrom <= ioctl_data(0);
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#19#, ioctl_addr'length) then
-            cart_game <= ioctl_data(0);
+          cart_game <= ioctl_data(0);
         end if;
 
         if unsigned(ioctl_addr) >= to_unsigned(16#40#, ioctl_addr'length) then
           if (unsigned(cart_blk_len) = to_unsigned(0, cart_blk_len'length)) or
-            (unsigned(cart_hdr_cnt) /= to_unsigned(0, cart_hdr_cnt'length)) then
+             (unsigned(cart_hdr_cnt) /= to_unsigned(0, cart_hdr_cnt'length)) then
             cart_hdr_cnt <= std_logic_vector(unsigned(cart_hdr_cnt) + 1);
 
             if unsigned(cart_hdr_cnt) = to_unsigned(6, cart_hdr_cnt'length) then
               cart_blk_len <= ioctl_data & x"00";
-                end if;
+            end if;
 
             if unsigned(cart_hdr_cnt) = to_unsigned(11, cart_hdr_cnt'length) then
-                    cart_bank_num <= ioctl_data;
-                end if;
+              cart_bank_num <= ioctl_data;
+            end if;
 
             if unsigned(cart_hdr_cnt) = to_unsigned(12, cart_hdr_cnt'length) then
-                    if unsigned(ioctl_data) > to_unsigned(16#80#, ioctl_data'length) then
-                        cart_bank_hi <= '1';
-                    else
-                        cart_bank_hi <= '0';
-                    end if;
-                end if;
+              if unsigned(ioctl_data) > to_unsigned(16#80#, ioctl_data'length) then
+                cart_bank_hi <= '1';
+              else
+                cart_bank_hi <= '0';
+              end if;
+            end if;
 
             if unsigned(cart_hdr_cnt) = to_unsigned(14, cart_hdr_cnt'length) then
-                    if unsigned(ioctl_data) > to_unsigned(16#20#, ioctl_data'length) then
-                        cart_bank_16k <= '1';
-                    else
-                        cart_bank_16k <= '0';
-                    end if;
-                end if;
+              if unsigned(ioctl_data) > to_unsigned(16#20#, ioctl_data'length) then
+                cart_bank_16k <= '1';
+              else
+                cart_bank_16k <= '0';
+              end if;
+            end if;
 
             if unsigned(cart_hdr_cnt) = to_unsigned(15, cart_hdr_cnt'length) then
-                    cart_hdr_wr <= '1';
-                end if;
-            else
-              cart_blk_len <= std_logic_vector(unsigned(cart_blk_len) - 1);
-                  ioctl_req_wr <= '1';
+              cart_hdr_wr <= '1';
             end if;
+          else
+            cart_blk_len <= std_logic_vector(unsigned(cart_blk_len) - 1);
+            ioctl_req_wr <= '1';
           end if;
         end if;
+      end if;
 
       if load_tap = '1' then
         if ioctl_addr = x"000000" then ioctl_load_addr <= TAP_ADDR; end if;
@@ -1674,10 +1679,25 @@ begin
         ioctl_req_wr <= '1';
       end if;
 
+      if load_ezflash = '1' then
+        if ioctl_addr = x"000000" then
+          ioctl_load_addr <= CRT_ADDR;
+          cart_id <= std_logic_vector(to_unsigned(32, cart_id'length));-- EZFlash
+          cart_exrom <= '1'; -- Ultimax mode for easy compatibility
+          cart_game  <= '0';
+          cart_bank_hi <= '0';
+          cart_bank_16k <= '0';
+          cart_bank_num <= (others => '0');
+          cart_blk_len <= (others => '0');
+          cart_hdr_cnt <= (others => '0');
+          cart_hdr_wr <= '1';
+        end if;
+        ioctl_req_wr <= '1';
+      end if;
     end if;
 
     -- cart added
-    if old_download /= ioctl_download and load_crt = '1' then -- or save to EZFLASH index ID = 7
+    if old_download /= ioctl_download and (load_crt or load_ezflash) = '1' then
       cart_attached <= old_download;
       erase_cram <= '1';
       ext_crt <= ioctl_download and load_crt;
@@ -1690,32 +1710,32 @@ begin
     end if;
 
     if inj_meminit = '1' then
-        if ioctl_req_wr = '0' then
-            -- check if done
-            if ioctl_load_addr(15 downto 0) = x"0100" then
-                inj_meminit <= '0';
-            else
-                ioctl_req_wr <= '1';
-                -- Initialize BASIC pointers to simulate the BASIC LOAD command
-                case ioctl_load_addr(7 downto 0) is
-                    -- TXT (2B-2C)
-                    -- Set these two bytes to $01, $08 just as they would be on reset (the BASIC LOAD command does not alter these)
-                    when x"2B" => inj_meminit_data <= x"01";
-                    when x"2C" => inj_meminit_data <= x"08";
-                    -- SAVE_START (AC-AD)
-                    -- Set these two bytes to zero just as they would be on reset (the BASIC LOAD command does not alter these)
-                    when x"AC" | x"AD" => inj_meminit_data <= x"00";
-                    -- VAR (2D-2E), ARY (2F-30), STR (31-32), LOAD_END (AE-AF)
-                    -- Set these just as they would be with the BASIC LOAD command (essentially they are all set to the load end address)
-                    when x"2D" | x"2F" | x"31" | x"AE" => inj_meminit_data <= inj_end(7 downto 0);
-                    when x"2E" | x"30" | x"32" | x"AF" => inj_meminit_data <= inj_end(15 downto 8);
-                    when others =>
-                        ioctl_req_wr <= '0';
-                        -- advance the address
-                        ioctl_load_addr <= std_logic_vector(unsigned(ioctl_load_addr) + 1);
-                end case;
-            end if;
+      if ioctl_req_wr = '0' then
+        -- check if done
+        if ioctl_load_addr(15 downto 0) = x"0100" then
+          inj_meminit <= '0';
+        else
+          ioctl_req_wr <= '1';
+          -- Initialize BASIC pointers to simulate the BASIC LOAD command
+          case ioctl_load_addr(7 downto 0) is
+            -- TXT (2B-2C)
+            -- Set these two bytes to $01, $08 just as they would be on reset (the BASIC LOAD command does not alter these)
+            when x"2B" => inj_meminit_data <= x"01";
+            when x"2C" => inj_meminit_data <= x"08";
+            -- SAVE_START (AC-AD)
+            -- Set these two bytes to zero just as they would be on reset (the BASIC LOAD command does not alter these)
+            when x"AC" | x"AD" => inj_meminit_data <= x"00";
+            -- VAR (2D-2E), ARY (2F-30), STR (31-32), LOAD_END (AE-AF)
+            -- Set these just as they would be with the BASIC LOAD command (essentially they are all set to the load end address)
+            when x"2D" | x"2F" | x"31" | x"AE" => inj_meminit_data <= inj_end(7 downto 0);
+            when x"2E" | x"30" | x"32" | x"AF" => inj_meminit_data <= inj_end(15 downto 8);
+            when others =>
+              ioctl_req_wr <= '0';
+              -- advance the address
+              ioctl_load_addr <= std_logic_vector(unsigned(ioctl_load_addr) + 1);
+          end case;
         end if;
+      end if;
     end if;
 
     old_meminit <= inj_meminit;
@@ -1735,12 +1755,12 @@ begin
     if erasing = '1' and ioctl_req_wr = '0' then
       erase_to <= std_logic_vector(unsigned(erase_to) + 1);
       if erase_to = "11111" then
-          if ioctl_load_addr(16 downto 0) < (erase_cram & x"FFFF") then 
-            ioctl_req_wr <= '1';
-          else
-            erasing <= '0';
-            erase_cram <= '0';
-          end if;
+        if ioctl_load_addr(16 downto 0) < (erase_cram & x"FFFF") then 
+          ioctl_req_wr <= '1';
+        else
+          erasing <= '0';
+          erase_cram <= '0';
+        end if;
       end if;
     end if;
 
@@ -1818,7 +1838,7 @@ process(clk_sys)
         do_erase <= '1';
         reset_wait <= '1';
         reset_counter <= 255;
-      elsif ioctl_download = '1' and ((load_crt = '1') or (load_rom = '1')) then
+      elsif ioctl_download = '1' and (load_crt or load_ezflash or load_rom) = '1' then
         do_erase <= '1';
         reset_counter <= 255;
       elsif erasing = '1' then 

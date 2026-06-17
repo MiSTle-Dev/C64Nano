@@ -659,8 +659,8 @@ always @(posedge clk32) begin
 					IOF_wr_ena <= 1;
 					exrom_overide <= (cart_id==32);
 					game_overide  <= ~cart_boot;
-					bank_lo <= lobanks[0];
-					bank_hi <= hibanks[0];
+					bank_lo <= lobanks_map[0] ? lobanks[0] : 7'd0;
+					bank_hi <= hibanks_map[0] ? hibanks[0] : 7'd1;
 					bank_no <= 0;
 					ezrom_en <= 1;
 				end
@@ -672,8 +672,8 @@ always @(posedge clk32) begin
 					end
 					else begin
 						bank_no <= data_in[5:0];
-						bank_lo <= lobanks[data_in[5:0]];
-						bank_hi <= hibanks[data_in[5:0]];
+						bank_lo <= lobanks_map[data_in[5:0]] ? lobanks[data_in[5:0]] : {data_in[5:0], 1'b0};
+						bank_hi <= hibanks_map[data_in[5:0]] ? hibanks[data_in[5:0]] : {data_in[5:0], 1'b1};
 					end
 				end
 			end

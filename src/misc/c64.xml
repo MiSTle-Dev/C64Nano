@@ -282,7 +282,8 @@
       <fileselector label="TAP TAPE:" ext="tap" index="4"/>
       <fileselector label="FLT FILTER:" ext="flt" index="5"/>
       <fileselector label="REU:" ext="reu" index="6"/>
-      <fileselector label="SAVE EZFLASH:" ext="sav" index="7" default="ezflash.sav"/>
+      <fileselector label="Load EZFLASH:" ext="sav" index="7" default="ezflash.sav"/>
+      <button label="Save EZFLASH" action="save_cartridge_hide"/>
       <list label="Disk prot.:" id="P" default="0">
 	<listentry label="None" value="0"/>
 	<listentry label="8:" value="1"/>
@@ -307,7 +308,6 @@
 	<listentry label="100%" value="3"/>
       </list>
       <button label="Save settings" action="save"/>
-      <button label="Save cartridge" action="save_cartridge_hide"/>
     </menu>
     <button label="Reset" action="reset_hide"/>
   </menu>    

@@ -950,7 +950,8 @@ port map (
 );
 
 leds_n <=  leds(1 downto 0);
-leds(0) <= led1541 or ioctl_download or ioctl_upload or ezfl_mod;
+leds(0) <= led1541 or ioctl_download or ioctl_upload;
+leds(1) <= '1' when cart_id = x"20" else '0'; -- light up if EasyFlash cartridge is detected
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
@@ -1426,7 +1427,7 @@ port map
     clk32           => clk_sys,
     reset_n         => reset_n,
   
-    cart_loading    => ioctl_download and load_crt,
+    cart_loading    => ioctl_download and (load_crt or load_ezflash),
     cart_id         => cid,
     cart_exrom      => cart_exrom,
     cart_game       => cart_game,
@@ -1553,7 +1554,7 @@ port map (
   load_reu          => load_reu,
   load_ezflash      => load_ezflash,
   sd_img_size       => sd_img_size,
-  leds              => leds(5 downto 1),
+  leds              => open,
   img_select        => open,
 
   ioctl_download    => ioctl_download,
@@ -1719,16 +1720,15 @@ begin
       if load_ezflash = '1' then
         if ioctl_addr = x"000000" then
           ioctl_load_addr <= CRT_ADDR;
-          --cart_loading <= '0';
-          --cart_id <= std_logic_vector(to_unsigned(32, cart_id'length));-- Super Snapshot 5 / EZFlash
-          --cart_exrom <= '1';
-          --cart_game  <= '0';
-          --cart_bank_hi <= '0';
-          --cart_bank_16k <= '0';
-          --cart_bank_num <= (others => '0');
-          --cart_bank_addr <= (others => '0');
-          --cart_blk_len <= (others => '0');
-          --cart_hdr_cnt <= (others => '0');
+          cart_id <= std_logic_vector(to_unsigned(32, cart_id'length));-- EZFlash
+          cart_exrom <= '1'; -- Ultimax mode for easy compatibility
+          cart_game  <= '0';
+          cart_bank_hi <= '0';
+          cart_bank_16k <= '0';
+          cart_bank_num <= (others => '0');
+          cart_blk_len <= (others => '0');
+          cart_hdr_cnt <= (others => '0');
+          cart_hdr_wr <= '1';
         end if;
         ioctl_req_wr <= '1';
       end if;
