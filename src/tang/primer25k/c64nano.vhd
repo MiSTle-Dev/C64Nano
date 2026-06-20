@@ -303,7 +303,7 @@ signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : std_logic_vector(24 downto 0);
 signal ioctl_req_wr    : std_logic := '0';
-signal cart_id         : std_logic_vector(7 downto 0);
+signal cart_id         : std_logic_vector(7 downto 0); -- := (others => '1');
 signal cart_bank_num   : std_logic_vector(7 downto 0);
 signal cart_exrom      : std_logic;
 signal cart_game       : std_logic;
@@ -468,6 +468,7 @@ signal loader_sd_wr_data: std_logic_vector(7 downto 0);
 signal ext_old          : std_logic := '0';
 signal ext_crt          : std_logic := '0';
 signal ezfl_save_en     : std_logic := '0';
+signal reset_keys       : std_logic := '0';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -1245,7 +1246,7 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
 
   usb_key      => key,
   kbd_strobe   => key_strobe,
-  kbd_reset    => not reset_n,
+  kbd_reset    => (not reset_n) or reset_keys,
   shift_mod    => not shift_mod,
 
   -- external memory
@@ -1809,10 +1810,13 @@ end process;
 process(clk_sys)
 begin
   if rising_edge(clk_sys) then
+    reset_keys <= '0';
+
     if reset_n = '0' then
       act <= (others => '0');
       key <= (others => '0');
       key_strobe <= kbd_strobe;
+      reset_keys <= '1';
     end if;
 
     if act /= 0 then

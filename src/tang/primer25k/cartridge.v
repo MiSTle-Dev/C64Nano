@@ -113,7 +113,6 @@ logic old_ez_romLH;
 always_ff @(posedge clk32) begin
 	old_ioe    <= IOE;
 	old_iof    <= IOF;
-	old_ez_romLH <= mem_ce & (romH|romL);
 end
 
 logic stb_ioe;
@@ -179,9 +178,6 @@ always_ff @(posedge clk32) begin
 
 	if(~reset_n || (old_id != cart_id)) begin
 		cart_disable <= 0;
-	//	bank_cnt <= 0;
-	//	lobanks_map <= 0;
-	//	hibanks_map <= 0;
 		bank_lo <= 0;
 		bank_hi <= 0;
 		IOE_ena <= 0;
@@ -867,8 +863,7 @@ ez_rom ez_rom
 (
 	.clk(clk32),
 	.reset_n(reset_n & ezrom_en),
-//	.ce(~old_ez_romLH & mem_ce & (romH|romL)),  // single-cycle rising-edge strobe
-    .ce(mem_ce & (romH|romL)),
+	.ce(mem_ce & (romH|romL)),
 	.we(mem_write),
 	.addr({romH, bank_no, addr_in[12:0]}),
 	.dq_in(data_in),
