@@ -92,10 +92,10 @@ begin
     AL := resize(unsigned(BusA(3 downto 0) & P_In(Flag_C)), 7) + resize(unsigned(BusB(3 downto 0) & "1"), 7);
     AH := resize(unsigned(BusA(7 downto 4) & AL(5)), 7) + resize(unsigned(BusB(7 downto 4) & "1"), 7);
 
--- pragma translate_off
+--synthesis translate_off
       if is_x(std_logic_vector(AL)) then AL := "0000000"; end if;
       if is_x(std_logic_vector(AH)) then AH := "0000000"; end if;
--- pragma translate_on
+--synthesis translate_on
 
     if AL(4 downto 1) = 0 and AH(4 downto 1) = 0 then
       ADC_Z <= '1';
@@ -113,9 +113,9 @@ begin
     ADC_N <= AH(4);
     ADC_V <= (AH(4) xor BusA(7)) and not (BusA(7) xor BusB(7));
 
--- pragma translate_off
+--synthesis translate_off
       if is_x(std_logic_vector(AH)) then AH := "0000000"; end if;
--- pragma translate_on
+--synthesis translate_on
 
     if AH(5 downto 1) > 9 and P_In(Flag_D) = '1' and BCD_en = '1' then
       AH(6 downto 1) := AH(6 downto 1) + 6;
@@ -149,10 +149,10 @@ begin
     AL := resize(unsigned(BusA(3 downto 0) & C), 7) - resize(unsigned(BusB(3 downto 0) & "1"), 6);
     AH := resize(unsigned(BusA(7 downto 4) & "0"), 6) - resize(unsigned(BusB(7 downto 4) & AL(5)), 6);
 
-    -- pragma translate_off
+--synthesis translate_off
     if is_x(std_logic_vector(AL)) then AL := "0000000"; end if;
     if is_x(std_logic_vector(AH)) then AH := "000000"; end if;
-    -- pragma translate_on
+--synthesis translate_on
 
     if AL(4 downto 1) = 0 and AH(4 downto 1) = 0 then
       SBC_Z <= '1';
