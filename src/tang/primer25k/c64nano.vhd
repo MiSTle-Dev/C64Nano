@@ -116,9 +116,9 @@ signal c64_data_out : unsigned(7 downto 0);
 signal sdram_data   : unsigned(7 downto 0);
 signal dout         : std_logic_vector(7 downto 0);
 signal idle         : std_logic;
-signal dram_addr    : std_logic_vector(23 downto 0);
+signal dram_addr    : std_logic_vector(24 downto 0);
 signal ram_ready    : std_logic;
-signal addr         : std_logic_vector(23 downto 0);
+signal addr         : std_logic_vector(24 downto 0);
 signal cs           : std_logic;
 signal we           : std_logic;
 signal din          : std_logic_vector(7 downto 0);
@@ -252,7 +252,7 @@ signal dma_din        : unsigned(7 downto 0);
 signal dma_we         : std_logic;
 signal ext_cycle      : std_logic;
 signal ext_cycle_d    : std_logic;
-signal reu_ram_addr   : std_logic_vector(23 downto 0);
+signal reu_ram_addr   : std_logic_vector(24 downto 0);
 signal reu_ram_dout   : std_logic_vector(7 downto 0);
 signal reu_ram_we     : std_logic;
 signal reu_irq        : std_logic;
@@ -265,7 +265,7 @@ signal reu_ram_ce     : std_logic;
 signal cart_ce        : std_logic;
 signal cart_we        : std_logic;
 signal cart_data      : std_logic_vector(7 downto 0);
-signal cart_addr      : std_logic_vector(23 downto 0);
+signal cart_addr      : std_logic_vector(24 downto 0);
 signal exrom          : std_logic;
 signal game           : std_logic;
 signal romL           : std_logic;
@@ -301,7 +301,7 @@ signal system_pause    : std_logic;
 signal audio_div       : unsigned(8 downto 0);
 signal dcsclksel       : std_logic_vector(3 downto 0);
 signal ioctl_download  : std_logic := '0';
-signal ioctl_load_addr : std_logic_vector(23 downto 0);
+signal ioctl_load_addr : std_logic_vector(24 downto 0);
 signal ioctl_req_wr    : std_logic := '0';
 signal cart_id         : std_logic_vector(7 downto 0);
 signal cart_bank_num   : std_logic_vector(7 downto 0);
@@ -314,7 +314,7 @@ signal cart_blk_len    : std_logic_vector(15 downto 0);
 signal io_cycle        : std_logic;
 signal io_cycle_ce     : std_logic;
 signal io_cycle_we     : std_logic;
-signal io_cycle_addr   : std_logic_vector(23 downto 0);
+signal io_cycle_addr   : std_logic_vector(24 downto 0);
 signal io_cycle_data   : std_logic_vector(7 downto 0);
 signal load_crt        : std_logic := '0';
 signal load_ezflash    : std_logic := '0';
@@ -322,7 +322,7 @@ signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
 signal ioctl_data      : std_logic_vector(7 downto 0);
-signal ioctl_addr      : std_logic_vector(23 downto 0);
+signal ioctl_addr      : std_logic_vector(24 downto 0);
 signal cid             : std_logic_vector(7 downto 0);
 -- crt loader
 signal erase_to        : std_logic_vector(4 downto 0);
@@ -338,7 +338,7 @@ signal load_prg        : std_logic := '0';
 signal load_rom        : std_logic := '0';
 signal load_reu        : std_logic := '0';
 signal load_tap        : std_logic := '0';
-signal tap_play_addr   : std_logic_vector(23 downto 0);
+signal tap_play_addr   : std_logic_vector(24 downto 0);
 signal reset_wait      : std_logic := '0';
 signal old_download_r  : std_logic;
 signal old_upload      : std_logic := '0';
@@ -362,7 +362,7 @@ signal tap_download   : std_logic;
 signal tap_reset      : std_logic;
 signal tap_loaded     : std_logic;
 signal tap_play_btn   : std_logic;
-signal tap_last_addr  : std_logic_vector(23 downto 0);
+signal tap_last_addr  : std_logic_vector(24 downto 0);
 signal tap_wrreq      : std_logic_vector(1 downto 0);
 signal tap_wrfull     : std_logic;
 signal tap_start      : std_logic;
@@ -471,10 +471,10 @@ signal ezfl_save_en     : std_logic := '0';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
-constant CRT_ADDR      : std_logic_vector(23 downto 0) := x"200000";
-constant TAP_ADDR      : std_logic_vector(23 downto 0) := x"400000";
-constant REU_ADDR      : std_logic_vector(23 downto 0) := x"800000";-- 2Mb max
-constant GEORAM_ADDR   : std_logic_vector(23 downto 0) := x"C00000";-- 4Mb max
+constant CRT_ADDR      : std_logic_vector(24 downto 0) := 25x"0200000";-- 2MB max
+constant TAP_ADDR      : std_logic_vector(24 downto 0) := 25x"0400000";   -- 4MB max
+constant REU_ADDR      : std_logic_vector(24 downto 0) := 25x"1000000";-- 16MB max
+constant GEORAM_ADDR   : std_logic_vector(24 downto 0) := 25x"C00000";   -- 4MB max
 
 component CLKDIV
     generic (
@@ -864,7 +864,7 @@ port map(
     refresh   => idle,          -- chipset requests a refresh cycle
     din       => din,           -- data input from chipset/cpu
     dout      => dout,
-    addr      => '0' & addr,    -- 25 bit word address
+    addr      => addr,          -- 25 bit word address
     ce        => cs,            -- cpu/chipset requests read/wrie
     we        => we             -- cpu/chipset requests write
   );
@@ -1382,7 +1382,7 @@ port map(
     dma_we    => dma_we,
   
     ram_cycle => ext_cycle,
-    ram_addr(23 downto 0) => reu_ram_addr,
+    ram_addr  => reu_ram_addr,
     ram_dout  => reu_ram_dout,
     ram_din   => dout,
     ram_we    => reu_ram_we,
@@ -1452,7 +1452,7 @@ port map
     mem_write_out => cart_we,
     mem_in      => sdram_data,
     mem_out     => cart_wrdata,
-    mem_addr(23 downto 0) => cart_addr,
+    mem_addr    => cart_addr,
     mem_req     => cart_mem_req,
     mem_cycle   => io_cycle,
     IO_rom      => io_rom,
@@ -1627,12 +1627,13 @@ begin
       if load_prg = '1' then
         -- PRG header
         -- Load address low-byte
-        if ioctl_addr = x"000000" then
+        if ioctl_addr = std_logic_vector(to_unsigned(0, ioctl_addr 'length)) then
           ioctl_load_addr(7 downto 0) <= ioctl_data;
           inj_end(7 downto 0)  <= ioctl_data;
           -- Load address high-byte
-        elsif ioctl_addr = x"000001" then
-          ioctl_load_addr(23 downto 8) <= x"00" & ioctl_data;
+        elsif ioctl_addr = std_logic_vector(to_unsigned(1, ioctl_addr 'length)) then
+          ioctl_load_addr(ioctl_load_addr'high downto 8) <=
+            (ioctl_load_addr(ioctl_load_addr'high downto (8 + ioctl_data'length))'range => '0') & ioctl_data;
           inj_end(15 downto 8) <= ioctl_data;
         else
           ioctl_req_wr <= '1';
@@ -1641,7 +1642,7 @@ begin
       end if;
 
       if load_crt = '1' then
-        if ioctl_addr = x"000000" then
+        if ioctl_addr = std_logic_vector(to_unsigned(0, ioctl_addr 'length)) then
           ioctl_load_addr <= CRT_ADDR;
           cart_blk_len <= (others => '0');
           cart_hdr_cnt <= (others => '0');
@@ -1707,18 +1708,18 @@ begin
       end if;
 
       if load_tap = '1' then
-        if ioctl_addr = x"000000" then ioctl_load_addr <= TAP_ADDR; end if;
-        if ioctl_addr = x"00000C" then tap_version <= ioctl_data(1 downto 0); end if;
+        if ioctl_addr = std_logic_vector(to_unsigned(0, ioctl_addr 'length)) then ioctl_load_addr <= TAP_ADDR; end if;
+        if ioctl_addr = std_logic_vector(to_unsigned(12, ioctl_addr 'length)) then tap_version <= ioctl_data(1 downto 0); end if;
         ioctl_req_wr <= '1';
       end if;
 
       if load_reu = '1' then
-        if ioctl_addr = x"000000" then ioctl_load_addr <= REU_ADDR; end if;
+        if ioctl_addr = std_logic_vector(to_unsigned(0, ioctl_addr 'length)) then ioctl_load_addr <= REU_ADDR; end if;
         ioctl_req_wr <= '1';
       end if;
 
       if load_ezflash = '1' then
-        if ioctl_addr = x"000000" then
+        if ioctl_addr = std_logic_vector(to_unsigned(0, ioctl_addr 'length)) then
           ioctl_load_addr <= CRT_ADDR;
           cart_id <= std_logic_vector(to_unsigned(32, cart_id'length));-- EZFlash
           cart_exrom <= '1'; -- Ultimax mode for easy compatibility
