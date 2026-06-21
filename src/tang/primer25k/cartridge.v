@@ -69,10 +69,10 @@ assign     {exrom, game} = force_ultimax ? 2'b10 : {exrom_overide, game_overide}
 logic [6:0] lobanks[0:63] /* synthesis syn_preserve = 1 */;
 logic [6:0] hibanks[0:63] /* synthesis syn_preserve = 1 */;
 
-logic [7:0]  bank_cnt = 0;
-logic [63:0] lobanks_map = 0;
-logic [63:0] hibanks_map = 0;
-logic        old_loading = 0;
+logic [7:0]  bank_cnt;
+logic [63:0] lobanks_map;
+logic [63:0] hibanks_map;
+logic        old_loading;
 
 always_ff @(posedge clk32) begin
 	old_loading <= cart_loading;
