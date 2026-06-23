@@ -16,7 +16,8 @@ entity c64nano_top is
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
    MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
-   U6551 : integer := 1  -- 0:no, 1:yes optional 6551 UART
+   U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
+   C1541 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
   (
@@ -234,7 +235,7 @@ signal int_ack        : std_logic_vector(7 downto 0);
 signal spi_io_din     : std_logic;
 signal spi_io_ss      : std_logic;
 signal spi_io_dout    : std_logic;
-signal spi_ext        : std_logic;
+signal spi_ext        : std_logic := '0';
 signal disk_g64       : std_logic;
 signal disk_g64_d     : std_logic;
 signal c1541_reset    : std_logic;
@@ -469,6 +470,8 @@ signal ext_old          : std_logic := '0';
 signal ext_crt          : std_logic := '0';
 signal ezfl_save_en     : std_logic := '0';
 signal reset_keys       : std_logic := '0';
+attribute syn_preserve : integer;
+attribute syn_preserve of boot_button_detected : signal is 1;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -517,24 +520,11 @@ begin
 -- the external FPGA Companion has been seen
   jtagseln <= '1' when (not pll_locked_pal or boot_button_detected or spi_ext or bl616_jtagsel) = '0' else '0';
 
-  process (clk)
-  begin
-    if rising_edge(clk) then
-      if pll_locked_pal = '0' then
-        spi_ext <= '0';
-      elsif pmod_companion_ss = '0' then
-        spi_ext <= '1';
-      end if;
-    end if;
-  end process;
-
-  spi_io_din <= pmod_companion_din when spi_ext = '1' else spi_dat;
-  spi_io_ss <= pmod_companion_ss when spi_ext = '1' else spi_csn;
-  spi_io_clk <= pmod_companion_clk when spi_ext = '1' else spi_sclk;
+  spi_io_din <= spi_dat;
+  spi_io_ss <= spi_csn;
+  spi_io_clk <= spi_sclk;
   spi_dir <= spi_io_dout;
-  spi_irqn <= uart_tx_i when spi_ext = '1' else spi_intn;
-  pmod_companion_dout <= spi_io_dout;
-  pmod_companion_intn <= spi_intn;
+  spi_irqn <=  spi_intn;
 
   midi_rx <= uart_ext_rx;
   uart_ext_tx <= midi_tx when midi_en = '1' else uart_tx_i;
@@ -666,57 +656,70 @@ process(clk_sys, pll_locked)
   end if;
 end process;
 
-c1541_sd_inst : entity work.c1541_sd
-port map
- (
-    clk32         => clk_sys,
-    reset         => disk_reset,
-    pause         => loader_busy,
-    ce            => '0',
-    ds            => int_iec_drv,
+yes_c1541: if C1541 /= 0 generate
+  c1541_sd_inst : entity work.c1541_sd
+  port map
+  (
+      clk32         => clk_sys,
+      reset         => disk_reset,
+      pause         => loader_busy,
+      ce            => '0',
+      ds            => int_iec_drv,
 
-    disk_num      => (others =>'0'),
-    disk_change   => sd_change, 
-    disk_mount    => img_present,
-    disk_readonly => system_floppy_wprot(0),
-    disk_g64      => disk_g64,
+      disk_num      => (others =>'0'),
+      disk_change   => sd_change, 
+      disk_mount    => img_present,
+      disk_readonly => system_floppy_wprot(0),
+      disk_g64      => disk_g64,
 
-    iec_atn_i     => c64_iec_atn,
-    iec_data_i    => c64_iec_data and ext_iec_data,
-    iec_clk_i     => c64_iec_clk and ext_iec_clk,
+      iec_atn_i     => c64_iec_atn,
+      iec_data_i    => c64_iec_data and ext_iec_data,
+      iec_clk_i     => c64_iec_clk and ext_iec_clk,
 
-    iec_data_o    => drive_iec_data_o,
-    iec_clk_o     => drive_iec_clk_o,
+      iec_data_o    => drive_iec_data_o,
+      iec_clk_o     => drive_iec_clk_o,
 
-    -- Userport parallel bus to 1541 disk
-    par_data_i    => drive_par_i,
-    par_stb_i     => drive_stb_i,
-    par_data_o    => drive_par_o,
-    par_stb_o     => drive_stb_o,
+      -- Userport parallel bus to 1541 disk
+      par_data_i    => drive_par_i,
+      par_stb_i     => drive_stb_i,
+      par_data_o    => drive_par_o,
+      par_stb_o     => drive_stb_o,
 
-    sd_lba        => disk_lba,
-    sd_rd         => c1541_sd_rd,
-    sd_wr         => c1541_sd_wr,
-    sd_ack        => sd_busy,
-    sd_done       => sd_done,
+      sd_lba        => disk_lba,
+      sd_rd         => c1541_sd_rd,
+      sd_wr         => c1541_sd_wr,
+      sd_ack        => sd_busy,
+      sd_done       => sd_done,
 
-    sd_buff_addr  => sd_byte_index,
-    sd_buff_dout  => sd_rd_data,
-    sd_buff_din   => disk_sd_wr_data,
-    sd_buff_wr    => sd_rd_byte_strobe,
+      sd_buff_addr  => sd_byte_index,
+      sd_buff_dout  => sd_rd_data,
+      sd_buff_din   => disk_sd_wr_data,
+      sd_buff_wr    => sd_rd_byte_strobe,
 
-    led           => led1541,
-    ext_en        => ext_en,
-    c1541rom_cs   => c1541rom_cs,
-    c1541rom_addr => c1541rom_addr,
-    c1541rom_data => c1541rom_data
-);
+      led           => led1541,
+      ext_en        => ext_en,
+      c1541rom_cs   => c1541rom_cs,
+      c1541rom_addr => c1541rom_addr,
+      c1541rom_data => c1541rom_data
+  );
+  sd_lba <= loader_lba when loader_busy = '1' else disk_lba;
+  sd_wr_data <= loader_sd_wr_data when loader_busy = '1' else disk_sd_wr_data;
+  sd_rd(0) <= c1541_sd_rd;
+  sd_wr(0) <= c1541_sd_wr;
+  ext_en <= '1' when dos_sel(0) = '0' else '0'; -- dolphindos, speeddos
+else generate
+  sd_lba <= loader_lba;
+  sd_wr_data <= loader_sd_wr_data;
+  sd_rd(0) <= '0';
+  sd_wr(0) <= '0';
+  drive_par_o <= (others => '1');
+  drive_stb_o <= '1';
+  disk_sd_wr_data <= (others => '0'); 
+	drive_iec_data_o <= '1';
+	drive_iec_clk_o <= '1';
+  ext_en <= '0';
+end generate yes_c1541;
 
-sd_lba <= loader_lba when loader_busy = '1' else disk_lba;
-sd_wr_data <= loader_sd_wr_data when loader_busy = '1' else disk_sd_wr_data;
-sd_rd(0) <= c1541_sd_rd;
-sd_wr(0) <= c1541_sd_wr;
-ext_en <= '1' when dos_sel(0) = '0' else '0'; -- dolphindos, speeddos
 sdc_iack <= int_ack(3);
 
 sd_card_inst: entity work.sd_card
