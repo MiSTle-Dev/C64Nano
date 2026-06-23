@@ -483,6 +483,8 @@ signal loader_sd_wr_data: std_logic_vector(7 downto 0);
 signal ext_old          : std_logic := '0';
 signal ext_crt          : std_logic := '0';
 signal ezfl_save_en     : std_logic := '0';
+attribute syn_preserve  : integer;
+attribute syn_preserve of spi_ext : signal is 1;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -1320,9 +1322,10 @@ end process;
 uart_en <= system_up9600(2) or system_up9600(1);
 uart_oe <= not ram_we and uart_cs and uart_en;
 io_data <=  unsigned(cart_data) when cart_oe = '1' else
+            unsigned(reu_dout)  when reu_oe = '1' else
             unsigned(midi_data) when (midi_oe and midi_en) = '1' else
-            uart_data when uart_oe = '1' else
-            unsigned(reu_dout);
+            unsigned(uart_data) when uart_oe = '1' else
+            x"00" when c64_addr(4) = '0' else x"FF";
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
 sid_fc_lr <= std_logic_vector(to_unsigned(16#600#, sid_fc_lr'length) - unsigned("000" & sid_fc_offset & "0000000")) when sid_filter(2) = '1' else (others => '0');
 
@@ -1722,12 +1725,13 @@ begin
       if load_prg = '1' then
         -- PRG header
         -- Load address low-byte
-        if ioctl_addr = x"000000" then
+        if ioctl_addr = std_logic_vector(to_unsigned(0, ioctl_addr 'length)) then
           ioctl_load_addr(7 downto 0) <= ioctl_data;
           inj_end(7 downto 0)  <= ioctl_data;
           -- Load address high-byte
-        elsif ioctl_addr = x"000001" then
-          ioctl_load_addr(23 downto 8) <= x"00" & ioctl_data;
+        elsif ioctl_addr = std_logic_vector(to_unsigned(1, ioctl_addr 'length)) then
+          ioctl_load_addr(ioctl_load_addr'high downto 8) <=
+            (ioctl_load_addr(ioctl_load_addr'high downto (8 + ioctl_data'length))'range => '0') & ioctl_data;
           inj_end(15 downto 8) <= ioctl_data;
         else
           ioctl_req_wr <= '1';
@@ -1736,7 +1740,7 @@ begin
       end if;
 
       if load_crt = '1' then
-        if ioctl_addr = x"000000" then
+        if ioctl_addr = std_logic_vector(to_unsigned(0, ioctl_addr 'length)) then
           ioctl_load_addr <= CRT_ADDR;
           cart_blk_len <= (others => '0');
           cart_hdr_cnt <= (others => '0');
@@ -1802,18 +1806,18 @@ begin
       end if;
 
       if load_tap = '1' then
-        if ioctl_addr = x"000000" then ioctl_load_addr <= TAP_ADDR; end if;
-        if ioctl_addr = x"00000C" then tap_version <= ioctl_data(1 downto 0); end if;
+        if ioctl_addr = std_logic_vector(to_unsigned(0, ioctl_addr 'length)) then ioctl_load_addr <= TAP_ADDR; end if;
+        if ioctl_addr = std_logic_vector(to_unsigned(12, ioctl_addr 'length)) then tap_version <= ioctl_data(1 downto 0); end if;
         ioctl_req_wr <= '1';
       end if;
 
       if load_reu = '1' then
-        if ioctl_addr = x"000000" then ioctl_load_addr <= REU_ADDR; end if;
+        if ioctl_addr = std_logic_vector(to_unsigned(0, ioctl_addr 'length)) then ioctl_load_addr <= REU_ADDR; end if;
         ioctl_req_wr <= '1';
       end if;
 
       if load_ezflash = '1' then
-        if ioctl_addr = x"000000" then
+        if ioctl_addr = std_logic_vector(to_unsigned(0, ioctl_addr 'length)) then
           ioctl_load_addr <= CRT_ADDR;
           cart_id <= std_logic_vector(to_unsigned(32, cart_id'length));-- EZFlash
           cart_exrom <= '1'; -- Ultimax mode for easy compatibility
