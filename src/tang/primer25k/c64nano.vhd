@@ -447,8 +447,6 @@ signal cart_id_hi       : unsigned(7 downto 0);
 signal ioctl_req_rd     : std_logic := '0';
 signal ioctl_rd         : std_logic := '0';
 signal ioctl_din        : unsigned(7 downto 0);
-signal ioctl_data_latched : unsigned(7 downto 0) := (others => '0');
-signal ioctl_req_prg    : std_logic := '0';
 signal start_strk       : std_logic :='0';
 signal key              : std_logic_vector(7 downto 0) := (others => '0');
 signal key_strobe       : std_logic := '0';
@@ -1595,12 +1593,9 @@ begin
           io_cycle_data <= (others => ioctl_load_addr(6));
         elsif inj_meminit = '1' then 
           io_cycle_data <= inj_meminit_data;
-        elsif ioctl_req_prg = '1' then
-          io_cycle_data <= ioctl_data_latched;
         else 
           io_cycle_data <= ioctl_data;
         end if;
-        ioctl_req_prg <= '0';
       end if;
 
       if ioctl_req_rd = '1' then
@@ -1644,9 +1639,7 @@ begin
             (ioctl_load_addr(ioctl_load_addr'high downto (8 + ioctl_data'length))'range => '0') & ioctl_data;
           inj_end(15 downto 8) <= ioctl_data;
         else
-          ioctl_data_latched <= ioctl_data;
           ioctl_req_wr <= '1';
-          ioctl_req_prg <= '1';
           inj_end <= inj_end + 1;
         end if;
       end if;

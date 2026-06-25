@@ -267,21 +267,20 @@ always_ff @(posedge clk) begin
 					load_flt <= rd_sel[4]; 
 					load_reu <= rd_sel[5];
 					load_ezflash <= rd_sel[6];
-					ch_timeout <= 32'd110000; // 32'd1508863;
+					ch_timeout <= 'd110000;
 					ioctl_addr <= '0;
 					ioctl_download <= '1;
 					addr <= '0;
-					sd_lba <= 32'd0;
-					core_wait_cnt <= 5'd0;
+					sd_lba <= '0;
+					core_wait_cnt <= '0;
 					io_state <= WAIT4CORE;
 			end
 
 		WAIT4CORE: begin
-				if(ch_timeout > 0) ch_timeout <= ch_timeout - 1'd1;
-				if(ch_timeout == 0 && ~ioctl_wait) 
-				begin
+				if(ch_timeout > 0) ch_timeout <= ch_timeout - 'd1;
+				if(ch_timeout == 0 && ~ioctl_wait) begin
 					sd_rd <= rd_sel;
-					cnt <= 9'd0;
+					cnt <= '0;
 					io_state <= READ_WAIT4SD;
 				end
 			end
@@ -291,33 +290,34 @@ always_ff @(posedge clk) begin
 				io_state <= READING;
 
 		READING: begin
-				if(addr < img_size[img_select])
+				if(addr <= img_size[img_select])
 					io_state <= READ_NEXT;
 				else 
 				begin
-					ioctl_download <= 1'b0;
+					ioctl_download <= '0;
 					ioctl_addr <= '0;
 					io_state <= DESELECT;
 				end
 			end
 
 		READ_NEXT: begin
-				core_wait_cnt <= core_wait_cnt + 1'd1;
-				if(~ioctl_wait && &core_wait_cnt) 
-					begin
-						wr <= '1;
-						ioctl_addr <= addr;
-						addr <= addr + 1'd1;
-						cnt <= cnt + 1'd1;
-						if(cnt == 511) 
-							begin
-								sd_lba <= sd_lba + 1'd1;
-								ch_timeout <= 32'd1;
-								io_state <= WAIT4CORE;
-							end
-					end
+				core_wait_cnt <= core_wait_cnt + 'd1;
+				if(~ioctl_wait && &core_wait_cnt) begin
+					wr <= '1;
+					ioctl_addr <= addr;
+					addr <= addr + 'd1;
+					cnt <= cnt + 'd1;
+					if(cnt == 511 && (addr + 'd1) < img_size[img_select])
+						begin
+							sd_lba <= sd_lba + 'd1;
+							ch_timeout <= 'd1;
+							io_state <= WAIT4CORE;
+						end
 					else
 						io_state <= READING;
+				end
+				else
+					io_state <= READING;
 			end
 
 		DESELECT: begin
