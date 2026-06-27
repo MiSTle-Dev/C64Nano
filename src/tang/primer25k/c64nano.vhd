@@ -74,13 +74,6 @@ end;
 
 architecture Behavioral_top of c64nano_top is
 
--- unused
-signal pmod_companion_din  : std_logic :='1';
-signal pmod_companion_dout : std_logic;
-signal pmod_companion_ss   : std_logic;
-signal pmod_companion_clk  : std_logic;
-signal pmod_companion_intn : std_logic := '1';
-signal ext_drive_interface : std_logic;
 signal spare               : std_logic_vector(5 downto 0) := (others => '1'); -- JS1 Joystick D9
 signal midi_rx             : std_logic;
 signal midi_tx             : std_logic;
@@ -205,7 +198,6 @@ signal mouse_y        : signed(7 downto 0);
 signal mouse_strobe   : std_logic;
 signal freeze         : std_logic;
 signal c64_pause      : std_logic;
-signal old_sync       : std_logic;
 signal osd_status     : std_logic;
 signal ws2812_color   : std_logic_vector(23 downto 0);
 signal system_reset   : std_logic_vector(1 downto 0);
@@ -234,7 +226,7 @@ signal int_ack        : std_logic_vector(7 downto 0);
 signal spi_io_din     : std_logic;
 signal spi_io_ss      : std_logic;
 signal spi_io_dout    : std_logic;
-signal spi_ext        : std_logic := '0';
+signal spi_ext        : std_logic;
 signal disk_g64       : std_logic;
 signal disk_g64_d     : std_logic;
 signal c1541_reset    : std_logic;
@@ -345,7 +337,6 @@ signal old_upload      : std_logic := '0';
 signal reset_n         : std_logic;
 signal por             : std_logic;
 signal c64rom_wr       : std_logic;
-signal img_select      : std_logic_vector(2 downto 0);
 signal tap_version     : std_logic_vector(1 downto 0);
 signal vic_variant     : std_logic_vector(1 downto 0);
 signal cia_mode        : std_logic;
@@ -468,16 +459,15 @@ signal loader_sd_wr_data: unsigned(7 downto 0);
 signal ext_old          : std_logic := '0';
 signal ext_crt          : std_logic := '0';
 signal ezfl_save_en     : std_logic := '0';
-signal reset_keys       : std_logic := '0';
 attribute syn_preserve : integer;
 attribute syn_preserve of boot_button_detected : signal is 1;
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
 constant CRT_ADDR      : unsigned(24 downto 0) := 25x"0200000";-- 2MB max
-constant TAP_ADDR      : unsigned(24 downto 0) := 25x"0400000";   -- 4MB max
+constant TAP_ADDR      : unsigned(24 downto 0) := 25x"0400000";-- 4MB max
 constant REU_ADDR      : unsigned(24 downto 0) := 25x"1000000";-- 16MB max
-constant GEORAM_ADDR   : unsigned(24 downto 0) := 25x"C00000";   -- 4MB max
+constant GEORAM_ADDR   : unsigned(24 downto 0) := 25x"C00000"; -- 4MB max
 
 component CLKDIV
     generic (
@@ -1199,8 +1189,6 @@ hid_inst: entity work.hid
   color               => open
 );
 
-ext_drive_interface <= '1' when ext_iec_en /= "00" else '0';
-
 process(clk_sys)
 variable toX:	integer := 0;
 begin
@@ -1248,7 +1236,7 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
 
   usb_key      => key,
   kbd_strobe   => key_strobe,
-  kbd_reset    => (not reset_n) or reset_keys,
+  kbd_reset    => not reset_n,
   shift_mod    => not shift_mod,
 
   -- external memory
@@ -1812,13 +1800,10 @@ end process;
 process(clk_sys)
 begin
   if rising_edge(clk_sys) then
-    reset_keys <= '0';
-
     if reset_n = '0' then
       act <= (others => '0');
       key <= (others => '0');
       key_strobe <= kbd_strobe;
-      reset_keys <= '1';
     end if;
 
     if act /= to_unsigned(0, act'length) then
