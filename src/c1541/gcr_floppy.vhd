@@ -17,7 +17,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.numeric_std_unsigned.all;
 
 entity gcr_floppy is
 port(
@@ -26,17 +25,17 @@ port(
 	c1541_logic_dout : in  std_logic_vector(7 downto 0);   -- data from 1541 logic to ram 
 	mode   : in  std_logic;                      -- read/write
 	mtr    : in  std_logic;                      -- stepper motor on/off
-	freq   : in  std_logic_vector(1 downto 0);   -- motor (gcr_bit) frequency
+	freq   : in  unsigned(1 downto 0);           -- motor (gcr_bit) frequency
 	sync_n : out std_logic;                      -- reading SYNC bytes
 	byte_n : out std_logic;                      -- byte ready
 	
-	track_num   : in  std_logic_vector(5 downto 0);
-	id1         : in  std_logic_vector(7 downto 0);
-	id2         : in  std_logic_vector(7 downto 0);
-	raw_freq    : in  std_logic_vector(1 downto 0);
+	track_num   : in  unsigned(5 downto 0);
+	id1         : in  unsigned(7 downto 0);
+	id2         : in  unsigned(7 downto 0);
+	raw_freq    : in  unsigned(1 downto 0);
 	mounted     : in  std_logic;
 	raw         : in  std_logic;
-	raw_track_len : in  std_logic_vector(15 downto 0);
+	raw_track_len : in  unsigned(15 downto 0);
 
 	ram_addr    : out std_logic_vector(12 downto 0);
 	ram_do      : in  std_logic_vector(7 downto 0);
@@ -52,20 +51,20 @@ architecture struct of gcr_floppy is
 
 signal bit_clk_en  : std_logic;
 signal bit_clk_div : unsigned(7 downto 0);
-signal sync_cnt    : std_logic_vector(5 downto 0) := (others => '0');
-signal byte_cnt    : std_logic_vector(8 downto 0) := (others => '0');
+signal sync_cnt    : unsigned(5 downto 0) := (others => '0');
+signal byte_cnt    : unsigned(8 downto 0) := (others => '0');
 signal byte_in     : std_logic_vector(7 downto 0);
 signal byte_out    : std_logic_vector(7 downto 0);
 signal byte_we     : std_logic;
-signal byte_addr   : std_logic_vector(12 downto 0);
+signal byte_addr   : unsigned(12 downto 0);
 signal nibble      : std_logic := '0';
-signal gcr_bit_cnt : std_logic_vector(3 downto 0) := (others => '0');
-signal bit_cnt     : std_logic_vector(2 downto 0) := (others => '0');
+signal gcr_bit_cnt : unsigned(3 downto 0) := (others => '0');
+signal bit_cnt     : unsigned(2 downto 0) := (others => '0');
 
 signal sync_in_n   : std_logic;
 signal byte_in_n   : std_logic;
 
-signal sector      : std_logic_vector(4 downto 0) := (others => '0');
+signal sector      : unsigned(4 downto 0) := (others => '0');
 signal state       : std_logic                    := '0';
 
 signal data_header : std_logic_vector(7 downto 0);
@@ -79,11 +78,11 @@ signal gcr_byte    : std_logic_vector(7 downto 0);
 signal mode_r1     : std_logic;
 signal mode_r2     : std_logic;
 
-signal old_track   : std_logic_vector(5 downto 0);
+signal old_track   : unsigned(5 downto 0);
 
 signal raw_bit_clk_en : std_logic;
 signal raw_bit_clk_div: unsigned(7 downto 0);
-signal raw_byte_cnt   : std_logic_vector(12 downto 0);
+signal raw_byte_cnt   : unsigned(12 downto 0);
 signal raw_bit_cnt    : unsigned(2 downto 0);
 signal raw_byte_in    : std_logic_vector( 7 downto 0);
 signal raw_byte_we    : std_logic;
@@ -101,7 +100,7 @@ signal gcr_lut : gcr_array :=
 	 "10010","10011","01011","11011",
 	 "10110","10111","01111","10101");
 	 
-signal sector_max : std_logic_vector(4 downto 0);
+signal sector_max : unsigned(4 downto 0);
 
 signal gcr_byte_out   : std_logic_vector(7 downto 0);
 signal gcr_bit_out    : std_logic;
@@ -116,7 +115,7 @@ signal lfsr : std_logic_vector(3 downto 0) := "0001";
 
 begin
 
-ram_addr <=       raw_byte_cnt when raw = '1' else byte_addr;
+ram_addr <=       std_logic_vector(raw_byte_cnt) when raw = '1' else std_logic_vector(byte_addr);
 ram_we <=          raw_byte_we when raw = '1' else byte_we;
 ram_di <=     c1541_logic_dout when raw = '1' else byte_out;
 c1541_logic_din <= raw_byte_in when raw = '1' else byte_in;
@@ -125,38 +124,38 @@ sync_n <= '1' when ram_ready = '0' or mtr = '0' else
 	sync_in_n_raw when raw = '1' else
 	sync_in_n;
 
-dbg_sector <= sector;
+dbg_sector <= std_logic_vector(sector);
 
 with byte_cnt select
   data_header <= 
-		X"08"                          when "000000000",
-	  ("00" & track_num) xor ("000" & sector) xor id1 xor id2 when "000000001",
-	  "000"&sector                    when "000000010",
-	  "00"&track_num                  when "000000011",
-	  id2                             when "000000100",
-	  id1                             when "000000101",
+		X"08"                          when to_unsigned(0, byte_cnt'length),
+	  ("00" & std_logic_vector(track_num)) xor ("000" & std_logic_vector(sector)) xor std_logic_vector(id1) xor std_logic_vector(id2) when to_unsigned(1, byte_cnt'length),
+	  "000"&std_logic_vector(sector)  when to_unsigned(2, byte_cnt'length),
+	  "00"&std_logic_vector(track_num) when to_unsigned(3, byte_cnt'length),
+	  std_logic_vector(id2)           when to_unsigned(4, byte_cnt'length),
+	  std_logic_vector(id1)           when to_unsigned(5, byte_cnt'length),
 	  X"0F"                           when others;
 
 with byte_cnt select
 	data_body <=
-		X"07"     when std_logic_vector(to_unsigned(  0, byte_cnt'length)),
-		data_cks  when std_logic_vector(to_unsigned(257, byte_cnt'length)),
-		X"00"     when std_logic_vector(to_unsigned(258, byte_cnt'length)),
-		X"00"     when std_logic_vector(to_unsigned(259, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(260, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(261, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(262, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(263, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(264, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(265, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(266, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(267, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(268, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(269, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(270, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(271, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(272, byte_cnt'length)),
-		X"0F"     when std_logic_vector(to_unsigned(273, byte_cnt'length)),
+		X"07"     when to_unsigned(0, byte_cnt'length),
+		data_cks  when to_unsigned(257, byte_cnt'length),
+		X"00"     when to_unsigned(258, byte_cnt'length),
+		X"00"     when to_unsigned(259, byte_cnt'length),
+		X"0F"     when to_unsigned(260, byte_cnt'length),
+		X"0F"     when to_unsigned(261, byte_cnt'length),
+		X"0F"     when to_unsigned(262, byte_cnt'length),
+		X"0F"     when to_unsigned(263, byte_cnt'length),
+		X"0F"     when to_unsigned(264, byte_cnt'length),
+		X"0F"     when to_unsigned(265, byte_cnt'length),
+		X"0F"     when to_unsigned(266, byte_cnt'length),
+		X"0F"     when to_unsigned(267, byte_cnt'length),
+		X"0F"     when to_unsigned(268, byte_cnt'length),
+		X"0F"     when to_unsigned(269, byte_cnt'length),
+		X"0F"     when to_unsigned(270, byte_cnt'length),
+		X"0F"     when to_unsigned(271, byte_cnt'length),
+		X"0F"     when to_unsigned(272, byte_cnt'length),
+		X"0F"     when to_unsigned(273, byte_cnt'length),
 		ram_do    when others;
 	
 with state select
@@ -167,14 +166,14 @@ with nibble select
 		gcr_lut(to_integer(unsigned(data(7 downto 4)))) when '0',
 		gcr_lut(to_integer(unsigned(data(3 downto 0)))) when others;
 
-gcr_bit <= gcr_nibble(to_integer(unsigned(gcr_bit_cnt)));
+gcr_bit <= gcr_nibble(to_integer(gcr_bit_cnt));
 
-sector_max <=  "10100" when unsigned(track_num) < to_unsigned(18, track_num'length) else
-			   "10010" when unsigned(track_num) < to_unsigned(25, track_num'length) else
-			   "10001" when unsigned(track_num) < to_unsigned(31, track_num'length) else
-               "10000";
+sector_max <=  to_unsigned(20, sector_max'length) when track_num < to_unsigned(18, track_num'length) else
+			   to_unsigned(18, sector_max'length) when track_num < to_unsigned(25, track_num'length) else
+			   to_unsigned(17, sector_max'length) when track_num < to_unsigned(31, track_num'length) else
+               to_unsigned(16, sector_max'length);
 
-gcr_bit_out <= gcr_byte_out(to_integer(unsigned(not bit_cnt)));
+gcr_bit_out <= gcr_byte_out(to_integer(not bit_cnt));
 
 with gcr_nibble_out select
 	nibble_out <= 	X"0" when "01010",--"01010",
@@ -195,15 +194,15 @@ with gcr_nibble_out select
 						X"F" when others; --"10101",			
 
 with freq select
-	bit_clk_div <= to_unsigned(16#67#, bit_clk_div'length) when "11",
-				   to_unsigned(16#6F#, bit_clk_div'length) when "10",
-				   to_unsigned(16#77#, bit_clk_div'length) when "01",
+	bit_clk_div <= to_unsigned(16#67#, bit_clk_div'length) when to_unsigned(3, freq'length),
+				   to_unsigned(16#6F#, bit_clk_div'length) when to_unsigned(2, freq'length),
+				   to_unsigned(16#77#, bit_clk_div'length) when to_unsigned(1, freq'length),
 				   to_unsigned(16#7F#, bit_clk_div'length) when others;
 
 with raw_freq select
-raw_bit_clk_div <= to_unsigned(16#67#, raw_bit_clk_div'length) when "11",
-				   to_unsigned(16#6F#, raw_bit_clk_div'length) when "10",
-				   to_unsigned(16#77#, raw_bit_clk_div'length) when "01",
+raw_bit_clk_div <= to_unsigned(16#67#, raw_bit_clk_div'length) when to_unsigned(3, raw_freq'length),
+				   to_unsigned(16#6F#, raw_bit_clk_div'length) when to_unsigned(2, raw_freq'length),
+				   to_unsigned(16#77#, raw_bit_clk_div'length) when to_unsigned(1, raw_freq'length),
 				   to_unsigned(16#7F#, raw_bit_clk_div'length) when others;
 
 process (clk32)
@@ -251,7 +250,7 @@ begin
 	end if;
 end process;
 
-sync_in_n_raw <= '0' when shift_reg(17 downto 8) = "11"&x"FF" and unsigned(raw_track_len) /= 0 and mode = '1' else '1';
+sync_in_n_raw <= '0' when shift_reg(17 downto 8) = "11"&x"FF" and raw_track_len /= 0 and mode = '1' else '1';
 
 -- G64 handling
 raw_read_write_process : process(clk32)
@@ -259,7 +258,7 @@ begin
 	if rising_edge(clk32) then
 		raw_byte_we <= '0';
 		if mtr = '0' or mounted = '0' or raw = '0' then
-			raw_byte_cnt <= std_logic_vector(to_unsigned(1026, raw_byte_cnt'length));
+			raw_byte_cnt <= to_unsigned(1026, raw_byte_cnt'length);
 			synced_bit_cnt <= (others => '0');
 			raw_bit_cnt <= (others => '0');
 			byte_in_n_raw <= '1';
@@ -282,7 +281,7 @@ begin
 					synced_bit_cnt <= synced_bit_cnt + 1;
 				end if;
 
-				if sync_in_n_raw = '0' or ram_ready = '0' or unsigned(raw_track_len) = 0 then
+				if sync_in_n_raw = '0' or ram_ready = '0' or raw_track_len = 0 then
 					synced_bit_cnt <= (others => '0');
 				end if;
 			end if;
@@ -296,12 +295,12 @@ begin
 				end if;
 
 				if raw_bit_cnt = to_unsigned(7, raw_bit_cnt'length) then
-					if unsigned(raw_track_len) /= 0 then
+					if raw_track_len /= 0 then
 						raw_byte_we <= not mode;
 					end if;
-					raw_byte_cnt <= std_logic_vector(unsigned(raw_byte_cnt) + 1);
-					if unsigned(raw_byte_cnt) >= unsigned(raw_track_len) + 1 and unsigned(raw_track_len) /= 0 then
-					raw_byte_cnt <= std_logic_vector(to_unsigned(2, raw_byte_cnt'length));
+					raw_byte_cnt <= raw_byte_cnt + 1;
+					if raw_byte_cnt >= raw_track_len + 1 and raw_track_len /= 0 then
+					raw_byte_cnt <= to_unsigned(2, raw_byte_cnt'length);
 					end if;
 				end if;
 			end if;
@@ -351,30 +350,30 @@ begin
 					gcr_byte        <= (others => '0');
 					data_cks        <= (others => '0');
 
-					if sync_cnt = std_logic_vector(to_unsigned(39, sync_cnt'length)) then
+					if sync_cnt = to_unsigned(39, sync_cnt'length) then
 						sync_cnt <= (others => '0');
 						sync_in_n <= '1';
 					else
-						sync_cnt <= std_logic_vector(unsigned(sync_cnt) + 1);
+						sync_cnt <= sync_cnt + 1;
 					end if;
 
 				end if;
 
 				if sync_in_n = '1' or mode = '0' then
 
-					gcr_bit_cnt <= std_logic_vector(unsigned(gcr_bit_cnt) + 1);
-					if gcr_bit_cnt = X"4" then
+					gcr_bit_cnt <= gcr_bit_cnt + 1;
+					if gcr_bit_cnt = to_unsigned(4, gcr_bit_cnt'length) then
 						gcr_bit_cnt <= (others => '0');
 						if nibble = '1' then 
 							nibble    <= '0';
 							byte_addr <= sector & byte_cnt(7 downto 0);
-							if byte_cnt = std_logic_vector(to_unsigned(0, byte_cnt'length)) then
+							if byte_cnt = to_unsigned(0, byte_cnt'length) then
 								data_cks <= (others => '0');
 							else
 								data_cks <= data_cks xor data;
 							end if;
 							if mode = '1' or (mode = '0' and autorise_count = '1') then
-								byte_cnt <= std_logic_vector(unsigned(byte_cnt) + 1);
+								byte_cnt <= byte_cnt + 1;
 							end if;
 						else
 							nibble <= '1';
@@ -382,38 +381,38 @@ begin
 								autorise_write <= '1';
 								autorise_count <= '1';
 							end if;
-							if byte_cnt >= std_logic_vector(to_unsigned(256, byte_cnt'length)) then
+							if byte_cnt >= to_unsigned(256, byte_cnt'length) then
 								autorise_write <= '0';
 								autorise_count <= '0';
 							end if;
 						end if;
 					end if;
 
-					bit_cnt <= std_logic_vector(unsigned(bit_cnt) + 1);
+					bit_cnt <= bit_cnt + 1;
 					byte_in_n  <= '1';
-					if bit_cnt = X"7" then
+					if bit_cnt = to_unsigned(7, bit_cnt'length) then
 						byte_in_n <= '0';
 						gcr_byte_out <= c1541_logic_dout;
-						if mode = '0' and state = '1' and byte_cnt = std_logic_vector(to_unsigned(256, byte_cnt'length)) then
-							gcr_tail(to_integer(unsigned(sector))) <= c1541_logic_dout;
+						if mode = '0' and state = '1' and byte_cnt = to_unsigned(256, byte_cnt'length) then
+							gcr_tail(to_integer(sector)) <= c1541_logic_dout;
 						end if;
 					end if;
 
 					if state = '0' then
 						-- header
-						if byte_cnt = std_logic_vector(to_unsigned(15, byte_cnt'length)) and unsigned(bit_cnt) = 0 then
+						if byte_cnt = to_unsigned(15, byte_cnt'length) and bit_cnt = 0 then
 							sync_in_n <= '0';
 							state<= '1';
 						end if;
 					else
 						-- data
-						if byte_cnt = std_logic_vector(to_unsigned(273, byte_cnt'length)) then 
+						if byte_cnt = to_unsigned(273, byte_cnt'length) then 
 							sync_in_n <= '0';
 							state <= '0';
 							if sector = sector_max then 
 								sector <= (others=>'0');
 							else
-								sector <= std_logic_vector(unsigned(sector) + 1);
+								sector <= sector + 1;
 							end if;
 						end if;
 					end if;
@@ -421,10 +420,10 @@ begin
 					-- demux byte from floppy (ram)
 					gcr_byte <= gcr_byte(6 downto 0) & gcr_bit;
 
-					if bit_cnt = X"7" then
-						if mode = '1' and state = '1' and gcr_tail(to_integer(unsigned(sector))) /= X"00" and
-						(byte_cnt = std_logic_vector(to_unsigned(258, byte_cnt'length))) then 
-							byte_in <= gcr_tail(to_integer(unsigned(sector)));
+					if bit_cnt = to_unsigned(7, bit_cnt'length) then
+						if mode = '1' and state = '1' and gcr_tail(to_integer(sector)) /= X"00" and
+						(byte_cnt = to_unsigned(258, byte_cnt'length)) then 
+							byte_in <= gcr_tail(to_integer(sector));
 						else
 							byte_in <= gcr_byte(6 downto 0) & gcr_bit;
 						end if;
@@ -433,7 +432,7 @@ begin
 					-- serialise/convert byte to floppy (ram)
 					gcr_nibble_out <= gcr_nibble_out(3 downto 0) & gcr_bit_out;
 
-					if gcr_bit_cnt = X"0" then
+					if gcr_bit_cnt = to_unsigned(0, gcr_bit_cnt'length) then
 						if nibble = '0' then 
 							byte_out(3 downto 0) <= nibble_out;
 						else
@@ -441,7 +440,7 @@ begin
 						end if;
 					end if;
 
-					if gcr_bit_cnt = X"1" and nibble = '0' then
+					if gcr_bit_cnt = to_unsigned(1, gcr_bit_cnt'length) and nibble = '0' then
 						if autorise_write = '1' then
 							byte_we <= '1';
 						end if;
