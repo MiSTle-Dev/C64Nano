@@ -182,7 +182,7 @@ always_ff @(posedge clk) begin
 
 		WRITE_WAIT4SD: begin
 			if(sd_done) begin
-				if(addr < 25'h100000) begin  // 1Mbyte
+				if(addr < 'h100000) begin  // 1Mbyte
 					io_state <= WRITE_WAIT4CORE;
 					cnt <= '0;
 					sd_lba <= sd_lba + 1;
