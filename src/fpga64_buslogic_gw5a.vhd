@@ -157,12 +157,7 @@ begin
         adb => std_logic_vector(cpuAddr(12 downto 0))
     );
 
-process(clk)
-begin
-	if rising_edge(clk) then
-		romData <= romData_Kernal when cpuAddr(14) = '1' else romData_Basic;
-	end if;
-end process;
+romData <= romData_Kernal when cpuAddr(14) = '1' else romData_Basic;
 
 	--begin
 	process(all)

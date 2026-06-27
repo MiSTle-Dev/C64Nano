@@ -51,7 +51,7 @@ end gcr_floppy;
 architecture struct of gcr_floppy is
 
 signal bit_clk_en  : std_logic;
-signal bit_clk_div : std_logic_vector(7 downto 0);
+signal bit_clk_div : unsigned(7 downto 0);
 signal sync_cnt    : std_logic_vector(5 downto 0) := (others => '0');
 signal byte_cnt    : std_logic_vector(8 downto 0) := (others => '0');
 signal byte_in     : std_logic_vector(7 downto 0);
@@ -82,12 +82,12 @@ signal mode_r2     : std_logic;
 signal old_track   : std_logic_vector(5 downto 0);
 
 signal raw_bit_clk_en : std_logic;
-signal raw_bit_clk_div: std_logic_vector(7 downto 0);
+signal raw_bit_clk_div: unsigned(7 downto 0);
 signal raw_byte_cnt   : std_logic_vector(12 downto 0);
-signal raw_bit_cnt    : std_logic_vector( 2 downto 0);
+signal raw_bit_cnt    : unsigned(2 downto 0);
 signal raw_byte_in    : std_logic_vector( 7 downto 0);
 signal raw_byte_we    : std_logic;
-signal synced_bit_cnt : std_logic_vector( 2 downto 0);
+signal synced_bit_cnt : unsigned(2 downto 0);
 signal shift_reg      : std_logic_vector(17 downto 0);
 signal sync_in_n_raw  : std_logic;
 signal byte_in_n_raw  : std_logic;
@@ -130,7 +130,7 @@ dbg_sector <= sector;
 with byte_cnt select
   data_header <= 
 		X"08"                          when "000000000",
-	  "00"&track_num xor "000"&sector xor id1 xor id2 when "000000001",
+	  ("00" & track_num) xor ("000" & sector) xor id1 xor id2 when "000000001",
 	  "000"&sector                    when "000000010",
 	  "00"&track_num                  when "000000011",
 	  id2                             when "000000100",
@@ -169,9 +169,9 @@ with nibble select
 
 gcr_bit <= gcr_nibble(to_integer(unsigned(gcr_bit_cnt)));
 
-sector_max <=  "10100" when track_num < std_logic_vector(to_unsigned(18,6)) else
-               "10010" when track_num < std_logic_vector(to_unsigned(25,6)) else
-               "10001" when track_num < std_logic_vector(to_unsigned(31,6)) else
+sector_max <=  "10100" when unsigned(track_num) < to_unsigned(18, track_num'length) else
+			   "10010" when unsigned(track_num) < to_unsigned(25, track_num'length) else
+			   "10001" when unsigned(track_num) < to_unsigned(31, track_num'length) else
                "10000";
 
 gcr_bit_out <= gcr_byte_out(to_integer(unsigned(not bit_cnt)));
@@ -195,20 +195,20 @@ with gcr_nibble_out select
 						X"F" when others; --"10101",			
 
 with freq select
-    bit_clk_div <= x"67" when "11",
-                   x"6F" when "10",
-                   x"77" when "01",
-                   x"7F" when others;
+	bit_clk_div <= to_unsigned(16#67#, bit_clk_div'length) when "11",
+				   to_unsigned(16#6F#, bit_clk_div'length) when "10",
+				   to_unsigned(16#77#, bit_clk_div'length) when "01",
+				   to_unsigned(16#7F#, bit_clk_div'length) when others;
 
 with raw_freq select
-raw_bit_clk_div <= x"67" when "11",
-                   x"6F" when "10",
-                   x"77" when "01",
-                   x"7F" when others;
+raw_bit_clk_div <= to_unsigned(16#67#, raw_bit_clk_div'length) when "11",
+				   to_unsigned(16#6F#, raw_bit_clk_div'length) when "10",
+				   to_unsigned(16#77#, raw_bit_clk_div'length) when "01",
+				   to_unsigned(16#7F#, raw_bit_clk_div'length) when others;
 
 process (clk32)
-	variable bit_clk_cnt : std_logic_vector(7 downto 0) := (others => '0');
-	variable raw_bit_clk_cnt : std_logic_vector(7 downto 0) := (others => '0');
+	variable bit_clk_cnt : unsigned(7 downto 0) := (others => '0');
+	variable raw_bit_clk_cnt : unsigned(7 downto 0) := (others => '0');
 begin
 	if rising_edge(clk32) then
 
@@ -221,22 +221,22 @@ begin
 			bit_clk_cnt := (others => '0');
 			raw_bit_clk_cnt := (others => '0');
 		elsif mtr = '1' then
-			if unsigned(bit_clk_cnt) = 0 then
+			if bit_clk_cnt = 0 then
 				bit_clk_en <= '1';
 				bit_clk_cnt := bit_clk_div;
 			else
-				bit_clk_cnt := std_logic_vector(unsigned(bit_clk_cnt) - 1);
+				bit_clk_cnt := bit_clk_cnt - 1;
 			end if;
 
-			if unsigned(raw_bit_clk_cnt) = 0 then
+			if raw_bit_clk_cnt = 0 then
 				raw_bit_clk_en <= '1';
 				raw_bit_clk_cnt := raw_bit_clk_div;
 			else
-				raw_bit_clk_cnt := std_logic_vector(unsigned(raw_bit_clk_cnt) - 1);
+				raw_bit_clk_cnt := raw_bit_clk_cnt - 1;
 			end if;
 
 			if ((byte_in_n = '0' and raw = '0') or (byte_in_n_raw = '0' and raw = '1')) and ram_ready = '1' then
-				if unsigned(bit_clk_cnt) > X"10" and unsigned(bit_clk_cnt) < X"5E" then
+				if bit_clk_cnt > to_unsigned(16, bit_clk_cnt'length) and bit_clk_cnt < to_unsigned(94, bit_clk_cnt'length) then
 					byte_n <= '0';
 				end if;
 			end if;
@@ -274,12 +274,12 @@ begin
 					if shift_reg(10 downto 7) = "0000" then
 						shift_reg(8) <= '1';
 					end if;
-					if synced_bit_cnt = "111" then
+					if synced_bit_cnt = to_unsigned(7, synced_bit_cnt'length) then
 						byte_in_n_raw <= '0';
 						raw_byte_in <= shift_reg(15 downto 8);
 					end if;
 
-					synced_bit_cnt <= std_logic_vector(unsigned(synced_bit_cnt) + 1);
+					synced_bit_cnt <= synced_bit_cnt + 1;
 				end if;
 
 				if sync_in_n_raw = '0' or ram_ready = '0' or unsigned(raw_track_len) = 0 then
@@ -288,14 +288,14 @@ begin
 			end if;
 
 			if raw_bit_clk_en = '1' then
-				raw_bit_cnt <= std_logic_vector(unsigned(raw_bit_cnt) + 1);
-				if unsigned(raw_bit_cnt) = 0 then
+				raw_bit_cnt <= raw_bit_cnt + 1;
+				if raw_bit_cnt = 0 then
 					shift_reg(7 downto 0) <= ram_do;
 				else
 					shift_reg(7 downto 0) <= shift_reg(6 downto 0) & '0';
 				end if;
 
-				if raw_bit_cnt = "111" then
+				if raw_bit_cnt = to_unsigned(7, raw_bit_cnt'length) then
 					if unsigned(raw_track_len) /= 0 then
 						raw_byte_we <= not mode;
 					end if;
