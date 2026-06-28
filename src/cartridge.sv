@@ -906,7 +906,7 @@ assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof) | ezrom_ce;
 //RAM banks are mapped to 0x010000 (64K max)
 //ROM banks are mapped to 0x200000-0x3FFFFF (2MB max)
 function automatic logic [9:0] get_bank(input logic [7:0] bank, input logic ram);
-	get_bank = ram ? {6'b000001, bank[2:0]} : {2'b01, bank[7:0]};
+	get_bank = ram ? {6'b000001, bank[2:0]} : {2'b10, bank[7:0]};
 endfunction
 
 logic [24:0] addr_out;
