@@ -1669,7 +1669,7 @@ port map (
   ioctl_upload_req  => ezfl_save,
   ioctl_upload      => ioctl_upload,
   ioctl_din         => ioctl_din,
-  ioctl_addr        => ioctl_addr,
+  ioctl_addr(23 downto 0) => ioctl_addr,
   ioctl_dout        => ioctl_data,
   ioctl_wr          => ioctl_wr,
   ioctl_rd          => ioctl_rd,

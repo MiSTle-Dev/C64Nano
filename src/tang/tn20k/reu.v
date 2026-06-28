@@ -2,6 +2,8 @@
 //	REU implementation.
 // (C)2021 Alexey Melnikov
 //
+// modified for TN20k use (REU mapped above 4MB in dram and limit to 512k)  2024 Stefan Voss
+//
 
 module reu
 (
@@ -75,11 +77,12 @@ always @(posedge clk) begin
 	irq <= (|(status[6:5] & intr[6:5])) & intr[7];
 
 	error = !op_act[0] && data[0] != data[1];
-	addr_mask = ((cfg == 1) ? 24'h7FFFF : (cfg == 2) ? 24'h1FFFFF : 24'hFFFFFF);
+//	addr_mask = ((cfg == 1) ? 24'h7FFFF : (cfg == 2) ? 24'h1FFFFF : 24'hFFFFFF);
+	addr_mask = ((cfg == 1) ? 24'h7FFFF : (cfg == 2) ? 24'h1FFFFF : 24'h1FFFFF);
 
 	old_cs <= cpu_cs;
 
-	if(reset || !cfg) begin
+	if(reset || (cfg == 2'b00)) begin
 		status     <= 0;
 		cmd        <= 'h10;
 		addr_c64   <= 0;
@@ -170,7 +173,8 @@ always @(posedge clk) begin
 					end
 					else if(op_dev) begin
 						if (~ram_cycle) begin
-							ram_addr  <= {1'b1, addr_ram};
+//							ram_addr  <= {1'b1, addr_ram};
+							ram_addr[24:0]  <= {3'b001, addr_ram[21:0] }; // REU mapped above 4MB in dram
 							ram_we    <= op_act[0];
 							ram_dout  <= data[op_dat];
 							state     <= STATE_PROC_RAM;

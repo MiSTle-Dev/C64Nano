@@ -671,8 +671,8 @@ always_ff @(posedge clk32) begin
 					IOF_wr_ena <= 1;
 					exrom_overide <= (cart_id==32);
 					game_overide  <= ~cart_boot;
-					bank_lo <= lobanks_map[0] ? lobanks[0] : 7'd0;
-					bank_hi <= hibanks_map[0] ? hibanks[0] : 7'd1;
+					bank_lo <= lobanks[0];
+					bank_hi <= hibanks[0];
 					bank_no <= 0;
 					ezrom_en <= 1;
 				end
@@ -684,8 +684,8 @@ always_ff @(posedge clk32) begin
 					end
 					else begin
 						bank_no <= data_in[5:0];
-						bank_lo <= lobanks_map[data_in[5:0]] ? lobanks[data_in[5:0]] : {data_in[5:0], 1'b0};
-						bank_hi <= hibanks_map[data_in[5:0]] ? hibanks[data_in[5:0]] : {data_in[5:0], 1'b1};
+						bank_lo <= lobanks[data_in[5:0]];
+						bank_hi <= hibanks[data_in[5:0]];
 					end
 				end
 			end
@@ -879,10 +879,10 @@ ez_rom ez_rom
 	.mem_we(ezrom_we)
 );
 
-logic [21:0] ezmem_addr;
+logic [24:0] ezmem_addr;
 logic        ezmem_we;
 // adjusted to 2MB CRT ROM offset 
-assign ezmem_addr = {2'b10, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
+assign ezmem_addr = {5'b00010, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
 assign ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
 
 assign mem_addr = (ezmem_oe) ? ezmem_addr : addr_out;

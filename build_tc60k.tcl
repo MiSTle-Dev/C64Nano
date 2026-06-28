@@ -3,7 +3,7 @@ set_device GW5AT-LV60PG484AC1/I0 -device_version B
 add_file src/am29f040.sv
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/cartridge.v
+add_file src/cartridge.sv
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
 add_file src/gowin_dpb/sector_dpram.v
@@ -91,8 +91,6 @@ set_option -use_jtag_as_gpio 1
 set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -bit_compress 1
-set_option -vccx 1.8
-set_option -vcc 0.9
 set_option -multi_boot 0
 set_option -mspi_jump 0
 set_option -place_option 2

@@ -36,7 +36,7 @@ module loader_sd_card
 	input  logic        ioctl_upload_req,
 	output logic        ioctl_upload,
 	input  logic [7:0]  ioctl_din,
-	output logic [23:0] ioctl_addr,
+	output logic [24:0] ioctl_addr,
 	output logic [7:0]  ioctl_dout,
 	output logic        ioctl_wr,
 	output logic        ioctl_rd,
@@ -59,17 +59,18 @@ typedef enum logic [3:0] {
 } io_state_t;
 
 io_state_t io_state;
-logic [23:0] addr;
+logic [24:0] addr;
 logic wr;
 logic [8:0] cnt;
 logic [1:0] core_wait_cnt;
-logic [23:0] img_size [0:7];
+logic [24:0] img_size [0:7];
 logic img_present [0:7];
 logic img_presentD [0:7];
 logic [6:0] rd_sel;
 logic boot_crt;
 logic boot_bin;
 logic boot_prg;
+logic boot_tap;
 logic boot_flt;
 logic boot_reu;
 logic boot_ezflash;
@@ -88,7 +89,7 @@ always_ff @(posedge clk) begin
 		if (sd_img_mounted[i]) 
 		begin
 			img_present[i] <= |sd_img_size;
-			img_size[i] <= sd_img_size[23:0];
+			img_size[i] <= sd_img_size[24:0];
 		end 
 	end
 
@@ -103,8 +104,8 @@ always_ff @(posedge clk) begin
 	write_strobe <= 0;
 
 	if(sd_busy) begin
-		sd_rd <= '0;
-		sd_wr <= '0;
+		sd_rd <= 7'b0;
+		sd_wr <= 7'b0;
 	end
 
 	old_upload_req <= ioctl_upload_req;
@@ -118,9 +119,9 @@ always_ff @(posedge clk) begin
 		ioctl_upload <= 0;
 		ioctl_rd <= 0;
 		write_strobe <= 0;
-		sd_rd <= '0;
-		sd_wr <= '0;
-		sd_lba <= '0;
+		sd_rd <= 7'b0;
+		sd_wr <= 7'b0;
+		sd_lba <= 32'h0;
 		wr <= 0;
 		load_crt <= 0;
 		load_prg <= 0;
@@ -130,9 +131,9 @@ always_ff @(posedge clk) begin
 		load_reu <= 0;
 		load_ezflash <= 0;
 		ioctl_download <= 0;
-		ioctl_addr <= '0;
-		addr <= '0;
-		leds <= '0;
+		ioctl_addr <= 25'h0;
+		addr <= 25'h0;
+		leds <= 5'b0;
 		loader_busy <= 0;
 		boot_crt <= 0;
 		boot_bin <= 0;
@@ -140,10 +141,11 @@ always_ff @(posedge clk) begin
 		boot_flt <= 0;
 		boot_reu <= 0;
 		boot_ezflash <= 0;
-		rd_sel <= '0;
-		img_select <= '0;
-		cnt <= '0;
-		core_wait_cnt <= '0;
+		boot_tap <= 0;
+		rd_sel <= 7'b0;
+		img_select <= 3'b0;
+		cnt <= 9'b0;
+		core_wait_cnt <= 2'b0;
 		io_state <= START;
 	end
 	else
@@ -182,16 +184,17 @@ always_ff @(posedge clk) begin
 
 		WRITE_WAIT4SD: begin
 			if(sd_done) begin
-				if(addr < 'h100000) begin  // 1Mbyte
+				if(addr < 25'h100000) begin  // 1Mbyte
 					io_state <= WRITE_WAIT4CORE;
-					cnt <= '0;
+					cnt <= 9'b0;
 					sd_lba <= sd_lba + 1;
 				end
 				else
 				begin
 					ioctl_upload <= 0;
-					ioctl_addr <= '0;
+					ioctl_addr <= 25'h0;
 					io_state <= START;
+					loader_busy <= 0;
 				end
 			end
 		end
@@ -204,46 +207,53 @@ always_ff @(posedge clk) begin
 						io_state <= WRITE_WAIT4CORE;
 						ioctl_rd <= 1;
 						ioctl_upload <= 1;
-						addr <= '0;
-						sd_lba <= '0;
-						core_wait_cnt <= '0;
-						cnt <= '0;
+						addr <= 25'h0;
+						sd_lba <= 32'h0;
+						core_wait_cnt <= 2'b0;
+						cnt <= 9'b0;
 					end
 				else if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))) begin
 						img_select <= 3;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0000100;
-					boot_bin <= 1;
+						boot_bin <= 1;
+						loader_busy <= 1;
 					end
 				else if((|img_size[1]) && ((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_crt))) begin
 						img_select <= 1; 
 						io_state <= GO4IT; 
 						rd_sel <= 7'b0000001;
-					boot_crt <= 1;
+						boot_crt <= 1;
+						loader_busy <= 1;
 					end
 				else if((|img_size[2]) && ((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_prg))) begin 
 						img_select <= 2;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0000010;
-					boot_prg <= 1;
+						boot_prg <= 1;
+						loader_busy <= 1;
 					end
 				else if((|img_size[5]) && ((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flt))) begin
 						img_select <= 5;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0010000;
-					boot_flt <= 1;
+						boot_flt <= 1;
+						loader_busy <= 1;
 					end
 //				else if((img_present[4] && ~img_presentD[4]) || (img_present[4] && ~boot_tap))
 				else if((|img_size[4]) && img_present[4] && ~img_presentD[4]) begin
 						img_select <= 4;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0001000;
+						boot_tap <= 1;
+						loader_busy <= 1;
 					end
 				else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu))) begin
 						img_select <= 6;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0100000;
-					boot_reu <= 1;
+						boot_reu <= 1;
+						loader_busy <= 1;
 					end
 				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
 				//		img_select <= 0;
@@ -252,12 +262,12 @@ always_ff @(posedge clk) begin
 						img_select <= 7;
 						io_state <= GO4IT;
 						rd_sel <= 7'b1000000;
-					boot_ezflash <= 1;
+						boot_ezflash <= 1;
+						loader_busy <= 1;
 					end
 			end
 
 		GO4IT: begin
-					loader_busy <= 1;
 					load_crt <= rd_sel[0];
 					load_prg <= rd_sel[1];
 					load_rom <= rd_sel[2]; 
@@ -265,18 +275,18 @@ always_ff @(posedge clk) begin
 					load_flt <= rd_sel[4]; 
 					load_reu <= rd_sel[5];
 					load_ezflash <= rd_sel[6];
-					ioctl_addr <= '0;
+					ioctl_addr <= 25'h0;
 					ioctl_download <= 1;
-					addr <= '0;
-					sd_lba <= '0;
-					core_wait_cnt <= '0;
+					addr <= 25'h0;
+					sd_lba <= 32'h0;
+					core_wait_cnt <= 2'h0;
 					io_state <= WAIT4CORE;
 			end
 
 		WAIT4CORE: begin
 				if(~ioctl_wait) begin
 					sd_rd <= rd_sel;
-					cnt <= '0;
+					cnt <= 9'b0;
 					io_state <= READ_WAIT4SD;
 				end
 			end
@@ -291,7 +301,7 @@ always_ff @(posedge clk) begin
 				else 
 				begin
 					ioctl_download <= 0;
-					ioctl_addr <= '0;
+					ioctl_addr <= 25'h0;
 					io_state <= DESELECT;
 				end
 			end

@@ -3,7 +3,7 @@ set_device GW5A-LV25MG121NC1/I0 -name GW5A-25A
 add_file src/am29f040.sv
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/tang/primer25k/cartridge.sv
+add_file src/cartridge.sv
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
 add_file src/gowin_dpb/sector_dpram.v
@@ -30,7 +30,7 @@ add_file src/misc/video.v
 add_file src/misc/video_analyzer.v
 add_file src/misc/ws2812.v
 add_file src/mos6526.v
-add_file src/tang/primer25k/reu.v
+add_file src/reu.v
 add_file src/sdram.v
 add_file src/c1541/c1541_logic.vhd
 add_file src/c1541/c1541_sd.vhd
@@ -61,7 +61,7 @@ add_file src/tang/primer25k/gowin_pll_ntsc_mod.vhd
 add_file src/tang/primer25k/pll_init.v
 add_file src/tang/primer25k/c64nano.cst
 add_file src/tang/primer25k/c64nano.sdc
-add_file src/tang/primer25k/loader_sd_card.sv
+add_file src/loader_sd_card.sv
 add_file src/fifo_sc_hs/FIFO_SC_HS_Top_gw5a.vhd
 add_file src/c1530.vhd
 add_file src/sid/sid_dac.sv

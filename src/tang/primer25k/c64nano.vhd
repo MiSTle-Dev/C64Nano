@@ -693,8 +693,8 @@ yes_c1541: if C1541 /= 0 generate
   );
   sd_lba <= loader_lba when loader_busy = '1' else disk_lba;
   sd_wr_data <= loader_sd_wr_data when loader_busy = '1' else disk_sd_wr_data;
-  sd_rd(0) <= c1541_sd_rd;
-  sd_wr(0) <= c1541_sd_wr;
+  sd_rd(0) <= '0' when loader_busy = '1' else c1541_sd_rd;
+  sd_wr(0) <= '0' when loader_busy = '1' else c1541_sd_wr;
   ext_en <= '1' when dos_sel(0) = '0' else '0'; -- dolphindos, speeddos
 else generate
   sd_lba <= loader_lba;
@@ -1630,9 +1630,7 @@ begin
           ioctl_req_wr <= '1';
           inj_end <= inj_end + 1;
         end if;
-      end if;
-
-      if load_crt = '1' then
+      elsif load_crt = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
           ioctl_load_addr <= CRT_ADDR;
           cart_blk_len <= (others => '0');
@@ -1696,20 +1694,14 @@ begin
             ioctl_req_wr <= '1';
           end if;
         end if;
-      end if;
-
-      if load_tap = '1' then
+      elsif load_tap = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= TAP_ADDR; end if;
         if ioctl_addr = to_unsigned(12, ioctl_addr'length) then tap_version <= std_logic_vector(ioctl_data(1 downto 0)); end if;
         ioctl_req_wr <= '1';
-      end if;
-
-      if load_reu = '1' then
+      elsif load_reu = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= REU_ADDR; end if;
         ioctl_req_wr <= '1';
-      end if;
-
-      if load_ezflash = '1' then
+      elsif load_ezflash = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
           ioctl_load_addr <= CRT_ADDR;
           cart_id <= to_unsigned(32, cart_id'length);-- EZFlash

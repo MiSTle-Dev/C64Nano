@@ -4,7 +4,7 @@ add_file src/tang/tn20k/am29f040.sv
 add_file src/gowin_rpll/gowin_rpll_flash.vhd
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/tang/tn20k/cartridge.v
+add_file src/tang/tn20k/cartridge.sv
 add_file src/dualshock2.v
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
@@ -32,7 +32,7 @@ add_file src/misc/video.v
 add_file src/misc/video_analyzer.v
 add_file src/misc/ws2812.v
 add_file src/mos6526.v
-add_file src/reu.v
+add_file src/tang/tn20k/reu.v
 add_file src/sdram8.v
 add_file src/c1541/c1541_logic.vhd
 add_file src/c1541/c1541_sd.vhd
