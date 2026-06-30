@@ -89,8 +89,8 @@ set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -multi_boot 0
 set_option -mspi_jump 0
-set_option -place_option 2
-set_option -route_option 1
+#set_option -place_option 2
+#set_option -route_option 1
 set_option -ireg_in_iob 1
 set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1

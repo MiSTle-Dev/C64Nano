@@ -92,17 +92,11 @@ set_option -user_code 00000001
 set_option -bit_compress 1
 set_option -multi_boot 0
 set_option -mspi_jump 0
-set_option -place_option 2
-set_option -route_option 1
+#set_option -place_option 2
+#set_option -route_option 1
 set_option -ireg_in_iob 1
 set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1
-set_option -power_on_reset_monitor 1
-set_option -timing_driven 1
-set_option -cst_warn_to_error 1
-set_option -rpt_auto_place_io_info 1
-set_option -convert_sdp32_36_to_sdp16_18 1
-set_option -correct_hold_violation 1
 set_option -loading_rate 70.000
 
 #run syn
