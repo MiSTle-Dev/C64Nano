@@ -66,8 +66,8 @@ logic        exrom_overide;
 logic        game_overide;
 assign     {exrom, game} = force_ultimax ? 2'b10 : {exrom_overide, game_overide};
 
-logic [6:0] lobanks[0:63] /* synthesis syn_preserve = 1 */;
-logic [6:0] hibanks[0:63] /* synthesis syn_preserve = 1 */;
+logic [6:0] lobanks[0:63];
+logic [6:0] hibanks[0:63];
 
 logic [7:0]  bank_cnt;
 logic [63:0] lobanks_map;
@@ -313,20 +313,11 @@ always_ff @(posedge clk32) begin
 		// BANK is written to lower 6 bits of $DE00 - bit 8 is always set
 		// best to mirror banks at $8000 and $A000
 		5:	begin
-				if(!init_n) begin
-					exrom_overide <= 0;
-					game_overide  <= 0;
-				end
+				exrom_overide <= 0;
+				game_overide  <= (bank_cnt > 32);
 				if(ioe_wr) begin
 					bank_lo <= data_in[5:0];
 					bank_hi <= data_in[5:0];
-				end
-				// Autodetect Ocean Type B (512k)
-				// Only $8000 is used, while $A000 is RAM
-				if(cart_bank_wr) begin
-					if(cart_bank_num>=32) begin
-						game_overide <= 1;
-					end
 				end
 			end
 

@@ -1,3 +1,4 @@
+
 module sid_envelope
 (
 	input            clock,
