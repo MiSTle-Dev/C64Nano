@@ -82,7 +82,7 @@ always @(posedge clock) begin
 end
 
 
-wire [7:0] wave6581_p_t[0:2047] = 
+reg[7:0] wave6581_p_t[0:2047] = 
 '{
 	'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00,
 	'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00,
@@ -212,10 +212,10 @@ wire [7:0] wave6581_p_t[0:2047] =
 	'he0, 'hf0, 'hf0, 'hf8, 'hf0, 'hf8, 'hf8, 'hfa, 'hf0, 'hf8, 'hf8, 'hfb, 'hf8, 'hfb, 'hfb, 'hfb,
 	'he0, 'hf0, 'hf0, 'hf8, 'hf0, 'hf8, 'hfc, 'hfc, 'hf8, 'hfc, 'hfc, 'hfd, 'hfc, 'hfd, 'hfd, 'hfd,
 	'hf8, 'hfc, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff
-};
+} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
 
 
-wire [7:0] wave6581_ps_[0:2047] = 
+reg [7:0] wave6581_ps_[0:2047] = 
 '{
 	'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00,
 	'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00,
@@ -345,10 +345,10 @@ wire [7:0] wave6581_ps_[0:2047] =
 	'h00, 'h00, 'h00, 'h70, 'h40, 'h70, 'h70, 'h7d, 'h40, 'h70, 'h78, 'h7d, 'h78, 'h7d, 'h7d, 'h7d,
 	'h00, 'h40, 'h40, 'h78, 'h60, 'h78, 'h78, 'h7e, 'h60, 'h78, 'h78, 'h7e, 'h7c, 'h7e, 'h7e, 'h7e,
 	'h70, 'h7c, 'h7c, 'h7f, 'h7e, 'h7f, 'h7f, 'h7f, 'h7e, 'h7f, 'h7f, 'h7f, 'h7f, 'h7f, 'h7f, 'h7f
-};
+} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
 
 
-wire [7:0] wave8580_p_t[0:2047] =
+reg [7:0] wave8580_p_t[0:2047] =
 '{
 	'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00,
 	'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00,
@@ -478,10 +478,10 @@ wire [7:0] wave8580_p_t[0:2047] =
 	'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hfa, 'hfa, 'hfb, 'hfb, 'hfb,
 	'hf8, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfd, 'hfd, 'hfd,
 	'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff
-};
+} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
 
 
-wire [7:0] wave8580_ps_[0:4095] =
+reg [7:0] wave8580_ps_[0:4095] =
 '{
 	'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00,
 	'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00, 'h00,
@@ -739,7 +739,7 @@ wire [7:0] wave8580_ps_[0:4095] =
 	'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfd, 'hfc, 'hfc, 'hfc, 'hfd, 'hfd, 'hfd, 'hfd, 'hfd,
 	'hfc, 'hfc, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe,
 	'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff
-};
+} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1314,7 +1314,7 @@ reg  [15:0] f6581_curve[4*1024] =
 } /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
 
 //reDIP-SID curve
-wire [14:0] f6581_adj[1024] =
+reg [14:0] f6581_adj[0:1023] =
 '{
        0,     28,     56,     85,    113,    141,    169,    198,
      226,    254,    282,    310,    339,    367,    395,    423,
@@ -1444,6 +1444,6 @@ wire [14:0] f6581_adj[1024] =
     9818,   9818,   9818,   9819,   9819,   9819,   9820,   9820,
     9821,   9821,   9821,   9822,   9822,   9822,   9823,   9823,
     9823,   9824,   9824,   9824,   9825,   9825,   9825,   9826
-};
+} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
 
 endmodule

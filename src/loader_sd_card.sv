@@ -49,7 +49,6 @@ typedef enum logic [3:0] {
 	READ_WAIT4SD,
 	READING,
 	READ_NEXT,
-	DESELECT,
 	START,
 	WRITE_WAIT4CORE,
 	WRITING,
@@ -265,6 +264,19 @@ always_ff @(posedge clk) begin
 						boot_ezflash <= 1;
 						loader_busy <= 1;
 					end
+				else begin
+						loader_busy <= 0;
+						ioctl_upload <= 0;
+						ioctl_download <= 0;
+						ioctl_addr <= 25'h0;
+						load_crt <= 0;
+						load_prg <= 0;
+						load_rom <= 0;
+						load_tap <= 0;
+						load_flt <= 0;
+						load_reu <= 0;
+						load_ezflash <= 0;
+					end
 			end
 
 		GO4IT: begin
@@ -276,7 +288,6 @@ always_ff @(posedge clk) begin
 					load_reu <= rd_sel[5];
 					load_ezflash <= rd_sel[6];
 					ioctl_addr <= 25'h0;
-					ioctl_download <= 1;
 					addr <= 25'h0;
 					sd_lba <= 32'h0;
 					core_wait_cnt <= 2'h0;
@@ -284,6 +295,7 @@ always_ff @(posedge clk) begin
 			end
 
 		WAIT4CORE: begin
+				ioctl_download <= 1;
 				if(~ioctl_wait) begin
 					sd_rd <= rd_sel;
 					cnt <= 9'b0;
@@ -301,8 +313,7 @@ always_ff @(posedge clk) begin
 				else 
 				begin
 					ioctl_download <= 0;
-					ioctl_addr <= 25'h0;
-					io_state <= DESELECT;
+					io_state <= START;
 				end
 			end
 
@@ -325,17 +336,6 @@ always_ff @(posedge clk) begin
 					io_state <= READING;
 			end
 
-		DESELECT: begin
-				load_crt <= 0;
-				load_prg <= 0;
-				load_rom <= 0;
-				load_tap <= 0;
-				load_flt <= 0;
-				load_reu <= 0;
-				load_ezflash <= 0;
-				loader_busy <= 0;
-				io_state <= START;
-			end
 
 		default: ;
 
