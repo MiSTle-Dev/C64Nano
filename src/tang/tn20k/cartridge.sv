@@ -66,8 +66,8 @@ logic        exrom_overide;
 logic        game_overide;
 assign     {exrom, game} = force_ultimax ? 2'b10 : {exrom_overide, game_overide};
 
-logic [6:0] lobanks[0:63] /* synthesis syn_preserve = 1 */;
-logic [6:0] hibanks[0:63] /* synthesis syn_preserve = 1 */;
+logic [6:0] lobanks[0:63];
+logic [6:0] hibanks[0:63];
 
 logic [7:0]  bank_cnt;
 logic [63:0] lobanks_map;
@@ -313,20 +313,11 @@ always_ff @(posedge clk32) begin
 		// BANK is written to lower 6 bits of $DE00 - bit 8 is always set
 		// best to mirror banks at $8000 and $A000
 		5:	begin
-				if(!init_n) begin
-					exrom_overide <= 0;
-					game_overide  <= 0;
-				end
+				exrom_overide <= 0;
+				game_overide  <= (bank_cnt > 32);
 				if(ioe_wr) begin
 					bank_lo <= data_in[5:0];
 					bank_hi <= data_in[5:0];
-				end
-				// Autodetect Ocean Type B (512k)
-				// Only $8000 is used, while $A000 is RAM
-				if(cart_bank_wr) begin
-					if(cart_bank_num>=32) begin
-						game_overide <= 1;
-					end
 				end
 			end
 
@@ -879,10 +870,10 @@ ez_rom ez_rom
 	.mem_we(ezrom_we)
 );
 
-logic [21:0] ezmem_addr;
+logic [24:0] ezmem_addr;
 logic        ezmem_we;
 // adjusted to 2MB CRT ROM offset 
-assign ezmem_addr = {2'b10, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
+assign ezmem_addr = {1'b0, 4'h2, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
 assign ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
 
 assign mem_addr = (ezmem_oe) ? ezmem_addr : addr_out;
@@ -904,7 +895,7 @@ assign cs_iof = IOF && (mem_write ? IOF_wr_ena : IOF_ena);
 assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof) | ezrom_ce;
 
 //RAM banks are mapped to 0x010000 (64K max)
-//ROM banks are mapped to 0x200000 (2MB max)
+//ROM banks are mapped to 0x200000-0x3FFFFF (2MB max)
 function automatic logic [8:0] get_bank(input logic [7:0] bank, input logic ram);
 	get_bank = ram ? {6'b000001, bank[2:0]} : {1'b1, bank[7:0]};
 endfunction
