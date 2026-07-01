@@ -333,7 +333,6 @@ signal load_tap        : std_logic := '0';
 signal tap_play_addr   : unsigned(24 downto 0);
 signal reset_wait      : std_logic := '0';
 signal old_download_r  : std_logic;
-signal old_upload      : std_logic := '0';
 signal reset_n         : std_logic;
 signal por             : std_logic;
 signal c64rom_wr       : std_logic;
@@ -459,8 +458,9 @@ signal loader_sd_wr_data: unsigned(7 downto 0);
 signal ext_old          : std_logic := '0';
 signal ext_crt          : std_logic := '0';
 signal ezfl_save_en     : std_logic := '0';
-attribute syn_preserve : integer;
+attribute syn_preserve  : integer;
 attribute syn_preserve of boot_button_detected : signal is 1;
+signal tap_io_cycle     : std_logic := '0';
 
 -- 64k core ram                      0x000000
 -- cartridge RAM banks are mapped to 0x010000
@@ -835,7 +835,7 @@ din <= cart_wrdata
            when io_cycle = '1' else
        reu_ram_dout
            when ext_cycle = '1' else
-       cart_wrdata;
+       cart_wrdata; -- c64_data_out;
 
 
 dram_inst: entity work.sdram
@@ -1563,7 +1563,6 @@ process(clk_sys)
 begin
   if rising_edge(clk_sys) then
     old_download <= ioctl_download;
-    old_upload <= ioctl_upload;
     io_cycleD <= io_cycle;
     cart_hdr_wr <= '0';
     detach_reset_d <= detach_reset;
@@ -1571,7 +1570,7 @@ begin
     if io_cycle = '0' and io_cycleD = '1' then
       io_cycle_ce <= '1';
       io_cycle_we <= '0';
-      io_cycle_addr <= tap_play_addr + TAP_ADDR;
+      if tap_io_cycle = '1' then io_cycle_addr <= tap_play_addr + TAP_ADDR; end if;
       if ioctl_req_wr = '1' then
         ioctl_req_wr <= '0';
         io_cycle_we <= '1';
@@ -1598,11 +1597,10 @@ begin
       ioctl_rd_en <= '0';
     end if;
 
-    if old_upload = '0' and ioctl_upload = '1' then
-      ioctl_load_addr <= CRT_ADDR;
-    end if;
-
     if ioctl_rd = '1' then
+      if(ioctl_addr = to_unsigned(0, ioctl_addr'length)) then
+        ioctl_load_addr <= CRT_ADDR;
+      end if;
       ioctl_req_rd <= '1';
     end if;
 
@@ -1630,11 +1628,13 @@ begin
           ioctl_req_wr <= '1';
           inj_end <= inj_end + 1;
         end if;
+
       elsif load_crt = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
           ioctl_load_addr <= CRT_ADDR;
           cart_blk_len <= (others => '0');
           cart_hdr_cnt <= (others => '0');
+     --   cart_attached <= '0';
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#16#, ioctl_addr'length) then
@@ -1694,13 +1694,16 @@ begin
             ioctl_req_wr <= '1';
           end if;
         end if;
+
       elsif load_tap = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= TAP_ADDR; end if;
         if ioctl_addr = to_unsigned(12, ioctl_addr'length) then tap_version <= std_logic_vector(ioctl_data(1 downto 0)); end if;
         ioctl_req_wr <= '1';
+
       elsif load_reu = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= REU_ADDR; end if;
         ioctl_req_wr <= '1';
+
       elsif load_ezflash = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
           ioctl_load_addr <= CRT_ADDR;
@@ -1898,6 +1901,7 @@ end process;
 tap_download <= ioctl_download and load_tap;
 tap_reset <= '1' when reset_n = '0' or tap_download = '1' or tap_last_addr = to_unsigned(0, tap_last_addr'length) or cass_finish = '1' or (cass_run = '1'and ((tap_last_addr - tap_play_addr) < to_unsigned(80, tap_last_addr'length))) else '0';
 tap_loaded <= '1' when tap_play_addr < tap_last_addr else '0';
+tap_io_cycle <= not tap_wrfull and tap_loaded;
 
 process(clk_sys)
 begin
@@ -1913,7 +1917,7 @@ begin
         tap_start <= tap_download;
       else
         tap_start <= '0';
-        if io_cycle = '0' and io_cycle_rD = '1' and tap_wrfull = '0' and tap_loaded = '1' then
+        if io_cycle = '0' and io_cycle_rD = '1' and tap_io_cycle = '1' then
             read_cyc <= '1';
           end if;
         if io_cycle = '1' and io_cycle_rD = '1' and read_cyc = '1' then

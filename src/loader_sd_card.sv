@@ -103,8 +103,8 @@ always_ff @(posedge clk) begin
 	write_strobe <= 0;
 
 	if(sd_busy) begin
-		sd_rd <= 7'b0;
-		sd_wr <= 7'b0;
+		sd_rd <= 7'd0;
+		sd_wr <= 7'd0;
 	end
 
 	old_upload_req <= ioctl_upload_req;
@@ -118,8 +118,8 @@ always_ff @(posedge clk) begin
 		ioctl_upload <= 0;
 		ioctl_rd <= 0;
 		write_strobe <= 0;
-		sd_rd <= 7'b0;
-		sd_wr <= 7'b0;
+		sd_rd <= 7'd0;
+		sd_wr <= 7'd0;
 		sd_lba <= 32'h0;
 		wr <= 0;
 		load_crt <= 0;
@@ -130,9 +130,9 @@ always_ff @(posedge clk) begin
 		load_reu <= 0;
 		load_ezflash <= 0;
 		ioctl_download <= 0;
-		ioctl_addr <= 25'h0;
-		addr <= 25'h0;
-		leds <= 5'b0;
+		ioctl_addr <= 25'd0;
+		addr <= 25'd0;
+		leds <= 5'd0;
 		loader_busy <= 0;
 		boot_crt <= 0;
 		boot_bin <= 0;
@@ -141,10 +141,10 @@ always_ff @(posedge clk) begin
 		boot_reu <= 0;
 		boot_ezflash <= 0;
 		boot_tap <= 0;
-		rd_sel <= 7'b0;
-		img_select <= 3'b0;
-		cnt <= 9'b0;
-		core_wait_cnt <= 2'b0;
+		rd_sel <= 7'd0;
+		img_select <= 3'd0;
+		cnt <= 9'd0;
+		core_wait_cnt <= 2'd0;
 		io_state <= START;
 	end
 	else
@@ -206,10 +206,10 @@ always_ff @(posedge clk) begin
 						io_state <= WRITE_WAIT4CORE;
 						ioctl_rd <= 1;
 						ioctl_upload <= 1;
-						addr <= 25'h0;
-						sd_lba <= 32'h0;
-						core_wait_cnt <= 2'b0;
-						cnt <= 9'b0;
+						addr <= 25'd0;
+						sd_lba <= 32'd0;
+						core_wait_cnt <= 2'd0;
+						cnt <= 9'd0;
 					end
 				else if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))) begin
 						img_select <= 3;
@@ -268,7 +268,7 @@ always_ff @(posedge clk) begin
 						loader_busy <= 0;
 						ioctl_upload <= 0;
 						ioctl_download <= 0;
-						ioctl_addr <= 25'h0;
+						ioctl_addr <= 25'd0;
 						load_crt <= 0;
 						load_prg <= 0;
 						load_rom <= 0;
@@ -287,10 +287,10 @@ always_ff @(posedge clk) begin
 					load_flt <= rd_sel[4]; 
 					load_reu <= rd_sel[5];
 					load_ezflash <= rd_sel[6];
-					ioctl_addr <= 25'h0;
-					addr <= 25'h0;
-					sd_lba <= 32'h0;
-					core_wait_cnt <= 2'h0;
+					ioctl_addr <= 25'd0;
+					addr <= 25'd0;
+					sd_lba <= 32'd0;
+					core_wait_cnt <= 2'd0;
 					io_state <= WAIT4CORE;
 			end
 
@@ -298,7 +298,7 @@ always_ff @(posedge clk) begin
 				ioctl_download <= 1;
 				if(~ioctl_wait) begin
 					sd_rd <= rd_sel;
-					cnt <= 9'b0;
+					cnt <= 9'd0;
 					io_state <= READ_WAIT4SD;
 				end
 			end
