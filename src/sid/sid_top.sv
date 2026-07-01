@@ -1,7 +1,7 @@
 
 module sid_top 
 #(
-	parameter MULTI_FILTERS = 1,
+	parameter MULTI_FILTERS = 1, 
 	parameter DUAL = 0,
 	parameter N = DUAL ? 2 : 1
 )
@@ -73,32 +73,16 @@ wire        voice_1_PA_MSB[N];
 wire        voice_2_PA_MSB[N];
 wire        voice_3_PA_MSB[N];
 
-reg  [7:0] _st_out[N*3];
-reg  [7:0] p_t_out[N*3];
-reg  [7:0] ps__out[N*3];
-reg  [7:0] pst_out[N*3];
+logic [7:0] _st_out[N*3];
+logic [7:0] p_t_out[N*3];
+logic [7:0] ps__out[N*3];
+logic [7:0] pst_out[N*3];
 wire [11:0] acc_t[N*3];
 
 reg  [17:0] audio[N];
 
 reg   [7:0] bus_data[N];
 reg  [12:0] Fc_offset[N];
-
-wire  [7:0] f__st_out;
-wire  [7:0] f_p_t_out;
-wire  [7:0] f_ps__out;
-wire  [7:0] f_pst_out;
-
-reg  [11:0] f_acc_t;
-reg   [3:0] state;
-
-wire [15:0] F0;
-wire n = DUAL && state[3];
-wire [17:0] faudio;
-
-assign data_out = cs[0] ? bus_data[0] : bus_data[N-1];
-assign audio_l = audio[0];
-assign audio_r = audio[N-1];
 
 generate
 	genvar i;
@@ -237,7 +221,14 @@ generate
 	end
 endgenerate
 
-
+wire [15:0] F0;
+	wire  [7:0] f__st_out;
+	wire  [7:0] f_p_t_out;
+	wire  [7:0] f_ps__out;
+	wire  [7:0] f_pst_out;
+	reg  [11:0] f_acc_t;
+	reg   [3:0] state;
+wire n = DUAL && state[3];
 
 sid_tables #(MULTI_FILTERS) sid_tables
 (
@@ -259,8 +250,6 @@ sid_tables #(MULTI_FILTERS) sid_tables
 	.ld_data(ld_data),
 	.ld_wr(ld_wr)
 );
-
-
 
 always @(posedge clk) begin
 	reg [2:0] v;
@@ -290,7 +279,7 @@ always @(posedge clk) begin
 	endcase
 end
 
-
+wire [17:0] faudio;
 
 sid_filter sid_filter
 (
@@ -311,13 +300,19 @@ sid_filter sid_filter
 
 always @(posedge clk) begin
 	reg [17:0] audio0;
-	if(state == 6)  audio0 <= faudio;
-	if(state == 14) begin
+	// faudio is two states later than upstream (was 6) because sid_filter
+	// pipelines the compressor across filter-states 5-7 to close timing; the
+	// first-pass result lands at state 8 and the DUAL slot at 15 (was 14).
+	if(state == 8)  audio0 <= faudio;
+	if(state == 15) begin
 		audio[n] <= faudio;
 		audio[0] <= audio0;
 	end
 end
 
+assign data_out = cs[0] ? bus_data[0] : bus_data[N-1];
 
+assign audio_l = audio[0];
+assign audio_r = audio[N-1];
 
 endmodule

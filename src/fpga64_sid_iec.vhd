@@ -899,6 +899,7 @@ begin
 					when "00" => turbo_m <= "010";
 					when "01" => turbo_m <= "110";
 					when "10" => turbo_m <= "111";
+					when "11" => turbo_m <= "111"; -- unused
 					when others => turbo_m <= "111";
 				end case;
 			end if;

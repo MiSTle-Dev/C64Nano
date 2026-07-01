@@ -26,7 +26,7 @@ module sid_voice
 
 localparam        [12:0] WAVEFORM_DC_6581 = 13'h380;         // OSC3 = 'h38 at 5.94V.
 localparam        [12:0] WAVEFORM_DC_8580 = 13'h800;         // No DC offsets in the MOS8580.
-localparam signed [21:0] VOICE_DC_6581    = 22'sd212160; // 22'('h340*'hff);// Measured from samples.
+localparam signed [21:0] VOICE_DC_6581    = 22'('h340*'hff); // Measured from samples.
 localparam signed [21:0] VOICE_DC_8580    = 22'h0;           // No DC offsets in the MOS8580.
 
 localparam WF_0_TTL_6581  = 23'd200000;  // Waveform 0 TTL ~200ms
@@ -108,7 +108,7 @@ always @(posedge clock) begin
 			end
 			else begin
 				noise_age <= 0;
-            if (~clk_d) begin
+				if (clk && !clk_d) begin
 					lfsr_noise <= {lfsr_noise[21:0], (reset | test_ctrl | lfsr_noise[22]) ^ lfsr_noise[17]};
 				end
 				else if (control[7] & |control[6:4]) begin
@@ -174,35 +174,27 @@ reg [7:0] wave_out;
 always @(posedge clock) if(ce_1m) wave_out <= norm[11:4] | comb;
 
 // DAC with floating input simulation
-reg [23:0] keep_cnt = 24'd0;
-reg signed  [8:0] env_dac  =  9'sd0;
-reg signed [12:0] dac_out  = 13'sd0;
-reg signed [21:0] dca_out  = 22'sd0;
-wire [11:0] comb_sh4_u12 = {comb, 4'b0000};
-wire [11:0] dac_in_u12   = norm_dac | comb_sh4_u12;
-wire signed [12:0] dac_in_s13 = {1'b0, dac_in_u12};
-wire [23:0] keep_reload  = mode ? WF_0_TTL_6581 : WF_0_TTL_8580;
-wire signed [12:0] wf_dc = mode ? WAVEFORM_DC_8580 : WAVEFORM_DC_6581;
-wire signed  [8:0] env_sel = mode ? envelope : env_6581;
-wire signed [21:0] voice_dc = mode ? VOICE_DC_8580 : VOICE_DC_6581;
-
+reg signed [21:0] dca_out;
+reg        [23:0] keep_cnt;
+reg signed  [8:0] env_dac;
+reg signed [12:0] dac_out;
+wire signed [12:0] wave_sum   = $signed({1'b0, (norm_dac | {comb, 4'b0})});
+wire signed [12:0] waveform_dc = mode ? $signed(WAVEFORM_DC_8580) : $signed(WAVEFORM_DC_6581);
+wire signed [21:0] voice_dc    = mode ? VOICE_DC_8580 : VOICE_DC_6581;
+wire signed [21:0] voice_mul   = $signed(dac_out) * $signed(env_dac);
 always @(posedge clock) begin
-    if (ce_1m) begin
 
-        if (control[7:4] != 4'b0000) begin
-            keep_cnt <= keep_reload;
-            dac_out  <= dac_in_s13 - wf_dc;
-        end
-        else if (keep_cnt != 24'd0) begin
-            keep_cnt <= keep_cnt - 24'd1;
-        end
-        else begin
-            dac_out  <= 13'sd0;
-        end
+	if(ce_1m) begin
+		if(control[7:4]) begin
+			keep_cnt <= mode ? WF_0_TTL_6581 : WF_0_TTL_8580;
+			dac_out  <= wave_sum - waveform_dc;
+		end
+		else if(keep_cnt) keep_cnt <= keep_cnt - 1'd1;
+		else dac_out <= 0;
 
-        env_dac <= env_sel;
-        dca_out <= voice_dc + (dac_out * env_dac);
-    end
+		env_dac <= mode ? envelope : env_6581;
+		dca_out <= voice_dc + voice_mul;
+	end
 end
 
 endmodule

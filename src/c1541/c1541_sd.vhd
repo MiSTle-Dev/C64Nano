@@ -82,28 +82,28 @@ signal c1541_logic_din   : std_logic_vector(7 downto 0); -- data read
 signal c1541_logic_dout  : std_logic_vector(7 downto 0); -- data to write
 signal mode   : std_logic;                    -- read/write
 signal mode_r : std_logic;                    -- read/write
-signal stp    : std_logic_vector(1 downto 0); -- stepper motor control
-signal stp_r  : std_logic_vector(1 downto 0); -- stepper motor control
+signal stp    : unsigned(1 downto 0);         -- stepper motor control
+signal stp_r  : unsigned(1 downto 0);         -- stepper motor control
 signal mtr    : std_logic ;                   -- stepper motor on/off
-signal freq   : std_logic_vector(1 downto 0); -- motor (gcr_bit) frequency
+signal freq   : unsigned(1 downto 0);         -- motor (gcr_bit) frequency
 signal sync_n : std_logic;                    -- reading SYNC bytes
 signal byte_n : std_logic;                    -- byte ready
 signal act    : std_logic;                    -- activity LED
 signal act_r  : std_logic;                    -- activity LED
 
-signal track_num_dbl     : std_logic_vector(6 downto 0);
-signal new_track_num_dbl : std_logic_vector(6 downto 0);
+signal track_num_dbl     : unsigned(6 downto 0);
+signal new_track_num_dbl : unsigned(6 downto 0);
 signal sd_busy           : std_logic;
 
 signal save_track      : std_logic;
 signal track_modified   : std_logic;
-signal save_track_stage : std_logic_vector(3 downto 0);
-signal id1 : std_logic_vector(7 downto 0);
-signal id2 : std_logic_vector(7 downto 0);
-signal disk_freq : std_logic_vector(1 downto 0);
+signal save_track_stage : unsigned(3 downto 0);
+signal id1 : unsigned(7 downto 0);
+signal id2 : unsigned(7 downto 0);
+signal disk_freq : unsigned(1 downto 0);
 signal raw_disk : std_logic;
-signal raw_track_len : std_logic_vector(15 downto 0);
-signal max_track : std_logic_vector(6 downto 0);
+signal raw_track_len : unsigned(15 downto 0);
+signal max_track : unsigned(6 downto 0);
 signal wps_flag : std_logic;
 signal change_timer : integer;
 signal mounted : std_logic := '0';
@@ -111,7 +111,7 @@ signal tr00_sense_n : std_logic;
 
 begin
 	
-tr00_sense_n <='0' when new_track_num_dbl = 7x"00" else '1';
+tr00_sense_n <='0' when new_track_num_dbl = to_unsigned(0, new_track_num_dbl'length) else '1';
 
   c1541 : entity work.c1541_logic
   generic map
@@ -143,9 +143,9 @@ tr00_sense_n <='0' when new_track_num_dbl = 7x"00" else '1';
     di              => c1541_logic_din,  -- data read 
     do              => c1541_logic_dout, -- data to write
     mode            => mode,     -- read/write
-    stp             => stp,      -- stepper motor control
+    std_logic_vector(stp) => stp,      -- stepper motor control
     mtr             => mtr,      -- motor on/off
-    freq            => freq,     -- motor frequency
+    std_logic_vector(freq) => freq,     -- motor frequency
     sync_n          => sync_n,   -- reading SYNC bytes
     byte_n          => byte_n,   -- byte ready
     wps_n           => not wps_flag,      -- write-protect sense (0 = protected)
@@ -274,40 +274,40 @@ begin
 		act_r <= act;
 		mode_r <= mode;
 		if reset = '1' then
-			track_num_dbl <= "0100100";--"0000010";
+			track_num_dbl <= to_unsigned(16#24#, track_num_dbl'length);--"0000010";
 			track_modified <= '0';
 			save_track <= '0';
-			save_track_stage <= X"0";
+			save_track_stage <= to_unsigned(0, save_track_stage'length);
 		else
 			if mtr = '1' then
-				if(  (stp_r = "00" and stp = "10")
-					or (stp_r = "10" and stp = "01")
-					or (stp_r = "01" and stp = "11")
-					or (stp_r = "11" and stp = "00")) then
-						if unsigned(track_num_dbl) < unsigned(max_track) then
-							track_num_dbl <= std_logic_vector(unsigned(track_num_dbl) + 1);
+				if(  (stp_r = to_unsigned(0, stp_r'length) and stp = to_unsigned(2, stp'length))
+					or (stp_r = to_unsigned(2, stp_r'length) and stp = to_unsigned(1, stp'length))
+					or (stp_r = to_unsigned(1, stp_r'length) and stp = to_unsigned(3, stp'length))
+					or (stp_r = to_unsigned(3, stp_r'length) and stp = to_unsigned(0, stp'length))) then
+						if track_num_dbl < max_track then
+							track_num_dbl <= track_num_dbl + 1;
 							if track_modified = '1' then
-								if save_track_stage = X"0" then
-									save_track_stage <= X"1";
+								if save_track_stage = to_unsigned(0, save_track_stage'length) then
+									save_track_stage <= to_unsigned(1, save_track_stage'length);
 								end if;	
 							else
-								new_track_num_dbl <= std_logic_vector(unsigned(track_num_dbl) + 1);
+								new_track_num_dbl <= track_num_dbl + 1;
 							end if;	
 						end if;
 				end if;
 				
-				if(  (stp_r = "00" and stp = "11")
-					or (stp_r = "10" and stp = "00")
-					or (stp_r = "01" and stp = "10")
-					or (stp_r = "11" and stp = "01")) then 
-						if unsigned(track_num_dbl) > to_unsigned(2, track_num_dbl'length) then
-							track_num_dbl <= std_logic_vector(unsigned(track_num_dbl) - 1);
+				if(  (stp_r = to_unsigned(0, stp_r'length) and stp = to_unsigned(3, stp'length))
+					or (stp_r = to_unsigned(2, stp_r'length) and stp = to_unsigned(0, stp'length))
+					or (stp_r = to_unsigned(1, stp_r'length) and stp = to_unsigned(2, stp'length))
+					or (stp_r = to_unsigned(3, stp_r'length) and stp = to_unsigned(1, stp'length))) then 
+						if track_num_dbl > to_unsigned(2, track_num_dbl'length) then
+							track_num_dbl <= track_num_dbl - 1;
 							if track_modified = '1' then
-								if save_track_stage = X"0" then
-									save_track_stage <= X"1";
+								if save_track_stage = to_unsigned(0, save_track_stage'length) then
+									save_track_stage <= to_unsigned(1, save_track_stage'length);
 								end if;	
 							else
-								new_track_num_dbl <= std_logic_vector(unsigned(track_num_dbl) - 1);
+								new_track_num_dbl <= track_num_dbl - 1;
 							end if;	
 						end if;
 				end if;
@@ -318,34 +318,34 @@ begin
 			end if;		
 			
 			if act = '0' and act_r = '1' then -- stopping activity
-				if track_modified = '1' and save_track_stage = X"0" then
-					save_track_stage <= X"1";
+				if track_modified = '1' and save_track_stage = to_unsigned(0, save_track_stage'length) then
+					save_track_stage <= to_unsigned(1, save_track_stage'length);
 				end if;	
 			end if;
 				
 			-- save track state machine
 			case save_track_stage is
-			when X"0" => 
+			when x"0" => 
 				new_track_num_dbl <= track_num_dbl;
-			when X"1" =>
+			when x"1" =>
 				save_track <= '1';
 				if sd_busy = '1' then
-					save_track_stage <= X"2";
+					save_track_stage <= to_unsigned(2, save_track_stage'length);
 				end if;
-			when X"2" =>
-					save_track_stage <= X"3";
-			when X"3" =>
-					save_track_stage <= X"4";
-			when X"4" =>
+			when x"2" =>
+					save_track_stage <= to_unsigned(3, save_track_stage'length);
+			when x"3" =>
+					save_track_stage <= to_unsigned(4, save_track_stage'length);
+			when x"4" =>
 				save_track <= '0'; -- must released save_track for spi_controler				
 				if sd_busy = '0' then 
-					save_track_stage <= X"5";
+					save_track_stage <= to_unsigned(5, save_track_stage'length);
 				end if;
-			when X"5" =>
+			when x"5" =>
 				track_modified <= '0';
-				save_track_stage <= X"0";	
+				save_track_stage <= to_unsigned(0, save_track_stage'length);	
 			when others => 
-				save_track_stage <= X"0";						
+				save_track_stage <= to_unsigned(0, save_track_stage'length);						
 			end case;
 			
 		end if; -- reset

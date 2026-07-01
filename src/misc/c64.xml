@@ -132,6 +132,7 @@
  <listentry label="Off" value="0"/>
  <listentry label="512KB" value="1"/>
  <listentry label="2MB" value="2"/>
+ <listentry label="16MB" value="3"/>
       </list>
       <list label="REU wrap:" id="4" default="0">
  <listentry label="512KB" value="0"/>

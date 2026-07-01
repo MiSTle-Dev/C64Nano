@@ -175,13 +175,7 @@ begin
 romData <= romData_Kernal when cpuAddr(14) = '1' else romData_Basic;
 
 	--begin
-	process(ramData, vicData, sidData, colorData,
-              cia1Data, cia2Data, charData, romData,
-		      cs_romHLoc, cs_romLLoc, cs_romLoc, cs_CharLoc,
-			  cs_ramLoc, cs_vicLoc, cs_sidLoc, cs_colorLoc,
-			  cs_cia1Loc, cs_cia2Loc, lastVicData,
-			  cs_ioELoc, cs_io7Loc, cs_ioFLoc,
-			  io_rom, io_ext, io_data)
+	process(all)
 	begin
 		-- If no hardware is addressed the bus is floating.
 		-- It will contain the last data read by the VIC. (if a C64 is shielded correctly)
@@ -223,7 +217,7 @@ romData <= romData_Kernal when cpuAddr(14) = '1' else romData_Basic;
 
 	ultimax <= exrom and (not game);
 
-	process(cpuHasBus, cpuAddr, ultimax, cpuWe, bankSwitch, exrom, game, aec, vicAddr)
+	process(all)
 	begin
 		currentAddr <= (others => '1');
 		systemWe <= '0';

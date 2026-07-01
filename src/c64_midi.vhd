@@ -82,7 +82,7 @@ begin
 		end if;
 	end process;
 
-	process(Mode, IOE, A, RnW, acia_irq_n) begin
+	process(all) begin
 		acia_rxtxclk_sel <= '0';
 		acia_sel <= '0';
 		acia_rw <= '1';
