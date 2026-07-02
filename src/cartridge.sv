@@ -5,7 +5,12 @@
 */
 
 module cartridge
-(
+#(
+	parameter [24:0] RAM_ADDR = 25'h0000000,
+	parameter [24:0] CRM_ADDR = 25'h0010000,
+	parameter [24:0] CRT_ADDR = 25'h0200000,
+	parameter [24:0] GEO_ADDR = 25'h0C00000
+)(
 	input  logic        clk32,				// 32mhz clock source
 	input  logic        reset_n,				// reset signal
 
@@ -897,7 +902,7 @@ assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof) | ezrom_ce;
 //RAM banks are mapped to 0x010000 (64K max)
 //ROM banks are mapped to 0x200000-0x3FFFFF (2MB max)
 function automatic logic [8:0] get_bank(input logic [7:0] bank, input logic ram);
-	get_bank = ram ? {6'b000001, bank[2:0]} : {1'b1, bank[7:0]};
+	get_bank = ram ? {6'(CRM_ADDR>>16), bank[2:0]} : {4'(CRT_ADDR>>21), bank[7:0]};
 endfunction
 
 logic [24:0] addr_out;
@@ -910,7 +915,7 @@ always_comb begin
 
 	//prohibit to write in ultimax mode into underlaying (actually non-existent) RAM
 	mem_write_out = (~(((romL & ~romL_we) | (romH & ~romH_we)) & exrom_overide & ~game_overide) & mem_write) | ezmem_we;
-	addr_out = addr_in;
+	addr_out = {9'(RAM_ADDR>>18), addr_in};
 
 	if(reset_n) begin
 		if(romH & (romH_we | ~mem_write)) addr_out[24:13] =  get_bank(bank_hi, romH_we);
@@ -937,7 +942,7 @@ always_comb begin
 //					addr_out[23:0] = {8'd0, 1'b1, 3'b000, mf_portb[4:0], addr_in[7:0]};
 //				end
 			99: if(IOE) begin
-					addr_out[24:8] = {3'b011, geo_bank};
+					addr_out[24:8] = {3'(GEO_ADDR>>22), geo_bank};
 				end
 		default:;
 		endcase

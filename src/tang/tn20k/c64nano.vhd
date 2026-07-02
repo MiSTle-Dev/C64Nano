@@ -352,7 +352,6 @@ signal load_tap        : std_logic := '0';
 signal tap_play_addr   : unsigned(23 downto 0);
 signal reset_wait      : std_logic := '0';
 signal old_download_r  : std_logic;
-signal old_upload      : std_logic := '0';
 signal reset_n         : std_logic;
 signal por             : std_logic;
 signal c64rom_wr       : std_logic;
@@ -483,14 +482,15 @@ signal ext_crt          : std_logic := '0';
 signal ezfl_save_en     : std_logic := '0';
 attribute syn_preserve  : integer;
 attribute syn_preserve of spi_ext : signal is 1;
+signal tap_io_cycle     : std_logic := '0';
 
--- 64k core ram                      0x000000
--- cartridge RAM banks are mapped to 0x010000
-constant CRT_ADDR      : unsigned(23 downto 0) := x"200000";
-constant TAP_ADDR      : unsigned(23 downto 0) := x"400000";
+constant RAM_ADDR      : unsigned(23 downto 0) := 24x"0000000";-- System RAM: 64k
+constant CRM_ADDR      : unsigned(23 downto 0) := 24x"0010000";-- Cartridge RAM: 64k
+constant CRT_ADDR      : unsigned(23 downto 0) := 24x"0200000";-- Cartridge: 2M
+constant TAP_ADDR      : unsigned(23 downto 0) := 24x"0400000";-- Tape buffer
+constant GEO_ADDR      : unsigned(23 downto 0) := 24x"0400000";-- GeoRAM: 4M
+constant REU_ADDR      : unsigned(23 downto 0) := 24x"0400000";-- REU: 2M !!!
 -- TAP, REU and GEORAM and overlap with TAP load due to TN20k DRAM constrains (mutual exclusive)
-constant REU_ADDR      : unsigned(23 downto 0) := x"400000";
-constant GEORAM_ADDR   : unsigned(23 downto 0) := x"400000";
 
 component CLKDIV
     generic (
@@ -1475,6 +1475,9 @@ reu_oe  <= '1' when IOF = '1' and reu_cfg /= "00" else '0';
 reu_ram_ce <= not ext_cycle_d and ext_cycle and dma_req;
 
 reu_inst: entity work.reu
+generic map(
+  REU_ADDR => unsigned('0' & REU_ADDR)
+)
 port map(
     clk       => clk_sys,
     reset     => not reset_n,
@@ -1529,8 +1532,13 @@ port map(
 cid <= cart_id when cart_attached = '1' else x"63" when georam ='1' else x"FF";
 
 cartridge_inst: entity work.cartridge
-port map
-  (
+generic map(
+  RAM_ADDR => unsigned('0' & RAM_ADDR),
+  CRM_ADDR => unsigned('0' & CRM_ADDR),
+  CRT_ADDR => unsigned('0' & CRT_ADDR),
+  GEO_ADDR => unsigned('0' & GEO_ADDR)
+)
+port map(
     clk32           => clk_sys,
     reset_n         => reset_n,
   
@@ -1679,7 +1687,6 @@ process(clk_sys)
 begin
   if rising_edge(clk_sys) then
     old_download <= ioctl_download;
-    old_upload <= ioctl_upload;
     io_cycleD <= io_cycle;
     cart_hdr_wr <= '0';
     detach_reset_d <= detach_reset;
@@ -1687,7 +1694,7 @@ begin
     if io_cycle = '0' and io_cycleD = '1' then
       io_cycle_ce <= '1';
       io_cycle_we <= '0';
-      io_cycle_addr <= tap_play_addr + TAP_ADDR;
+      if tap_io_cycle = '1' then io_cycle_addr <= tap_play_addr + TAP_ADDR; end if;
       if ioctl_req_wr = '1' then
         ioctl_req_wr <= '0';
         io_cycle_we <= '1';
@@ -1714,11 +1721,10 @@ begin
       ioctl_rd_en <= '0';
     end if;
 
-    if old_upload = '0' and ioctl_upload = '1' then
-      ioctl_load_addr <= CRT_ADDR;
-    end if;
-
     if ioctl_rd = '1' then
+      if(ioctl_addr = to_unsigned(0, ioctl_addr'length)) then
+        ioctl_load_addr <= CRT_ADDR;
+      end if;
       ioctl_req_rd <= '1';
     end if;
 
@@ -1746,6 +1752,7 @@ begin
           ioctl_req_wr <= '1';
           inj_end <= inj_end + 1;
         end if;
+
       elsif load_crt = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
           ioctl_load_addr <= CRT_ADDR;
@@ -1810,13 +1817,16 @@ begin
             ioctl_req_wr <= '1';
           end if;
         end if;
+
       elsif load_tap = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= TAP_ADDR; end if;
         if ioctl_addr = to_unsigned(12, ioctl_addr'length) then tap_version <= std_logic_vector(ioctl_data(1 downto 0)); end if;
         ioctl_req_wr <= '1';
+
       elsif load_reu = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= REU_ADDR; end if;
         ioctl_req_wr <= '1';
+
       elsif load_ezflash = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
           ioctl_load_addr <= CRT_ADDR;
@@ -2014,6 +2024,7 @@ end process;
 tap_download <= ioctl_download and load_tap;
 tap_reset <= '1' when reset_n = '0' or tap_download = '1' or tap_last_addr = to_unsigned(0, tap_last_addr'length) or cass_finish = '1' or (cass_run = '1'and ((tap_last_addr - tap_play_addr) < to_unsigned(80, tap_last_addr'length))) else '0';
 tap_loaded <= '1' when tap_play_addr < tap_last_addr else '0';
+tap_io_cycle <= not tap_wrfull and tap_loaded;
 
 process(clk_sys)
 begin

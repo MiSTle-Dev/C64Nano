@@ -4,6 +4,9 @@
 //
 
 module reu
+#(
+	parameter [24:0] REU_ADDR = 25'h1000000
+)
 (
 	input             clk,
 	input             reset,
@@ -170,7 +173,7 @@ always @(posedge clk) begin
 					end
 					else if(op_dev) begin
 						if (~ram_cycle) begin
-							ram_addr  <= {1'b1, addr_ram};
+							ram_addr  <= REU_ADDR + {1'b0, addr_ram};
 							ram_we    <= op_act[0];
 							ram_dout  <= data[op_dat];
 							state     <= STATE_PROC_RAM;

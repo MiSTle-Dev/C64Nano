@@ -462,12 +462,12 @@ attribute syn_preserve  : integer;
 attribute syn_preserve of boot_button_detected : signal is 1;
 signal tap_io_cycle     : std_logic := '0';
 
--- 64k core ram                      0x000000
--- cartridge RAM banks are mapped to 0x010000
-constant CRT_ADDR      : unsigned(24 downto 0) := 25x"0200000";-- 2MB max
-constant TAP_ADDR      : unsigned(24 downto 0) := 25x"0400000";-- 4MB max
-constant REU_ADDR      : unsigned(24 downto 0) := 25x"1000000";-- 16MB max
-constant GEORAM_ADDR   : unsigned(24 downto 0) := 25x"C00000"; -- 4MB max
+constant RAM_ADDR      : unsigned(24 downto 0) := 25x"0000000";-- System RAM: 64k
+constant CRM_ADDR      : unsigned(24 downto 0) := 25x"0010000";-- Cartridge RAM: 64k
+constant CRT_ADDR      : unsigned(24 downto 0) := 25x"0200000";-- Cartridge: 2M
+constant TAP_ADDR      : unsigned(24 downto 0) := 25x"0400000";-- Tape buffer
+constant GEO_ADDR      : unsigned(24 downto 0) := 25x"0C00000";-- GeoRAM: 4M
+constant REU_ADDR      : unsigned(24 downto 0) := 25x"1000000";-- REU: 16M
 
 component CLKDIV
     generic (
@@ -494,7 +494,7 @@ component DCS
         CLKIN3: in std_logic;
         SELFORCE: in std_logic
     );
- end component;
+end component;
 
 begin
 
@@ -835,7 +835,7 @@ din <= cart_wrdata
            when io_cycle = '1' else
        reu_ram_dout
            when ext_cycle = '1' else
-       cart_wrdata; -- c64_data_out;
+       c64_data_out; -- cart_wrdata;
 
 
 dram_inst: entity work.sdram
@@ -1359,6 +1359,9 @@ reu_oe  <= '1' when IOF = '1' and reu_cfg /= "00" else '0';
 reu_ram_ce <= not ext_cycle_d and ext_cycle and dma_req;
 
 reu_inst: entity work.reu
+generic map(
+  REU_ADDR => REU_ADDR
+)
 port map(
     clk       => clk_sys,
     reset     => not reset_n,
@@ -1413,8 +1416,13 @@ port map(
 cid <= cart_id when cart_attached = '1' else x"63" when georam ='1' else x"FF";
 
 cartridge_inst: entity work.cartridge
-port map
-  (
+generic map(
+  RAM_ADDR => RAM_ADDR,
+  CRM_ADDR => CRM_ADDR,
+  CRT_ADDR => CRT_ADDR,
+  GEO_ADDR => GEO_ADDR
+)
+port map(
     clk32           => clk_sys,
     reset_n         => reset_n,
   
