@@ -88,8 +88,8 @@ end fpga64_buslogic;
 
 architecture rtl of fpga64_buslogic is
 	signal charData       : std_logic_vector(7 downto 0);
-	signal charData_std   : std_logic_vector(7 downto 0);
-	signal charData_jap   : std_logic_vector(7 downto 0);
+	--signal charData_std   : std_logic_vector(7 downto 0);
+	--signal charData_jap   : std_logic_vector(7 downto 0);
 	signal romData        : std_logic_vector(7 downto 0);
 	--signal romData_c64    : std_logic_vector(7 downto 0);
 	--signal romData_c64std : std_logic_vector(7 downto 0);
@@ -199,8 +199,6 @@ romData <= romData_Kernal when cpuAddr(14) = '1' else romData_Basic;
 		elsif cs_romLLoc = '1' then
 			dataToCpu <= ramData;
 		elsif cs_romHLoc = '1' then
-			dataToCpu <= ramData;
-		elsif cs_io7Loc = '1' and io_rom = '1' then
 			dataToCpu <= ramData;
 		elsif cs_ioELoc = '1' and io_rom = '1' then
 			dataToCpu <= ramData;

@@ -333,6 +333,7 @@ signal load_tap        : std_logic := '0';
 signal tap_play_addr   : unsigned(24 downto 0);
 signal reset_wait      : std_logic := '0';
 signal old_download_r  : std_logic;
+signal old_upload      : std_logic := '0';
 signal reset_n         : std_logic;
 signal por             : std_logic;
 signal c64rom_wr       : std_logic;
@@ -835,8 +836,7 @@ din <= cart_wrdata
            when io_cycle = '1' else
        reu_ram_dout
            when ext_cycle = '1' else
-       c64_data_out; -- cart_wrdata;
-
+       c64_data_out;
 
 dram_inst: entity work.sdram
 port map(
@@ -1571,6 +1571,7 @@ process(clk_sys)
 begin
   if rising_edge(clk_sys) then
     old_download <= ioctl_download;
+    old_upload <= ioctl_upload;
     io_cycleD <= io_cycle;
     cart_hdr_wr <= '0';
     detach_reset_d <= detach_reset;
@@ -1579,6 +1580,7 @@ begin
       io_cycle_ce <= '1';
       io_cycle_we <= '0';
       if tap_io_cycle = '1' then io_cycle_addr <= tap_play_addr + TAP_ADDR; end if;
+      -- io_cycle_addr <= tap_play_addr + TAP_ADDR;
       if ioctl_req_wr = '1' then
         ioctl_req_wr <= '0';
         io_cycle_we <= '1';
@@ -1604,6 +1606,13 @@ begin
       io_cycle_we <= '0';
       ioctl_rd_en <= '0';
     end if;
+
+    --if old_upload = '0' and ioctl_upload = '1' then
+    --  ioctl_load_addr <= CRT_ADDR;
+    --  rd_cyc <= (others => '0');
+    --  ioctl_req_rd <= '0';
+    --  ioctl_rd_en <= '0';
+    --end if;
 
     if ioctl_rd = '1' then
       if(ioctl_addr = to_unsigned(0, ioctl_addr'length)) then
