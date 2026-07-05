@@ -113,7 +113,6 @@ logic romL_we = 0;
 logic romH_we = 0;
 
 logic old_ioe, old_iof;
-logic old_ez_romLH;
 
 always_ff @(posedge clk32) begin
 	old_ioe    <= IOE;
@@ -150,7 +149,7 @@ assign freeze_crt = freeze_ack & ~mod_key;
 
 logic cart_disable = 0;
 logic allow_bank;
-logic ram_bank;
+
 logic reu_map;
 logic clock_port;
 logic rom_kbb;
@@ -161,7 +160,7 @@ logic allow_freeze = 0;
 logic saved_d6 = 0;
 logic [15:0] count;
 logic        count_ena;
-logic [15:0] old_id;
+logic [7:0] old_id;
 
 // Magic Formel (type 14) - MC6821 PIA state
 //reg  [7:0] mf_porta;   // PIA Port A output (ROM bank + RAM enable)
@@ -878,7 +877,7 @@ ez_rom ez_rom
 logic [24:0] ezmem_addr;
 logic        ezmem_we;
 // adjusted to 2MB CRT ROM offset 
-assign ezmem_addr = {1'b0, 4'h2, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
+assign ezmem_addr = {5'h2, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
 assign ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
 
 assign mem_addr = (ezmem_oe) ? ezmem_addr : addr_out;

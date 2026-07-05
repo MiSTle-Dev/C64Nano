@@ -836,7 +836,7 @@ din <= cart_wrdata
            when io_cycle = '1' else
        reu_ram_dout
            when ext_cycle = '1' else
-       c64_data_out;
+       cart_wrdata;
 
 dram_inst: entity work.sdram
 port map(
@@ -1579,8 +1579,7 @@ begin
     if io_cycle = '0' and io_cycleD = '1' then
       io_cycle_ce <= '1';
       io_cycle_we <= '0';
-      if tap_io_cycle = '1' then io_cycle_addr <= tap_play_addr + TAP_ADDR; end if;
-      -- io_cycle_addr <= tap_play_addr + TAP_ADDR;
+      io_cycle_addr <= tap_play_addr + TAP_ADDR;
       if ioctl_req_wr = '1' then
         ioctl_req_wr <= '0';
         io_cycle_we <= '1';
@@ -1651,7 +1650,6 @@ begin
           ioctl_load_addr <= CRT_ADDR;
           cart_blk_len <= (others => '0');
           cart_hdr_cnt <= (others => '0');
-     --   cart_attached <= '0';
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#16#, ioctl_addr'length) then
