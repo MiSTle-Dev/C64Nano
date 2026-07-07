@@ -253,12 +253,12 @@ port map
 
 wps_flag <= disk_readonly when change_timer = 0 else not disk_readonly;
 
-process (clk32,reset)
+process (clk32)
 begin
-	if reset = '1' then
-		change_timer <= 0;
-	elsif rising_edge(clk32) then
-		if disk_change = '1' then
+	if rising_edge(clk32) then
+		if reset = '1' then
+			change_timer <= 0;
+		elsif disk_change = '1' then
 			mounted <= disk_mount;
 			change_timer <= 1000000;
 		elsif change_timer /= 0 then
