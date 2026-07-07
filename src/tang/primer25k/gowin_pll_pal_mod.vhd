@@ -6,7 +6,7 @@
 --Part Number: GW5A-LV25MG121NC1/I0
 --Device: GW5A-25
 --Device Version: A
---Created Time: Tue Jul  7 21:22:31 2026
+--Created Time: Tue Jul  7 23:00:52 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -19,6 +19,7 @@ entity Gowin_PLL_pal_MOD is
         clkout2: out std_logic;
         clkout3: out std_logic;
         clkout4: out std_logic;
+        clkout5: out std_logic;
         mdrdo: out std_logic_vector(7 downto 0);
         clkin: in std_logic;
         reset: in std_logic;
@@ -31,7 +32,6 @@ end Gowin_PLL_pal_MOD;
 
 architecture Behavioral of Gowin_PLL_pal_MOD is
 
-    signal clkout5: std_logic;
     signal clkout6: std_logic;
     signal clkfbout: std_logic;
     signal gw_gnd: std_logic;
@@ -168,7 +168,7 @@ begin
             ODIV2_SEL => 20,
             ODIV3_SEL => 20,
             ODIV4_SEL => 40,
-            ODIV5_SEL => 8,
+            ODIV5_SEL => 20,
             ODIV6_SEL => 8,
             MDIV_SEL => 25,
             MDIV_FRAC_SEL => 2,
@@ -178,7 +178,7 @@ begin
             CLKOUT2_EN => "TRUE",
             CLKOUT3_EN => "TRUE",
             CLKOUT4_EN => "TRUE",
-            CLKOUT5_EN => "FALSE",
+            CLKOUT5_EN => "TRUE",
             CLKOUT6_EN => "FALSE",
             CLKFB_SEL => "INTERNAL",
             CLKOUT0_DT_DIR => '1',
@@ -214,7 +214,7 @@ begin
             CLKOUT3_PE_FINE => 4,
             CLKOUT4_PE_COARSE => 0,
             CLKOUT4_PE_FINE => 0,
-            CLKOUT5_PE_COARSE => 0,
+            CLKOUT5_PE_COARSE => 10,
             CLKOUT5_PE_FINE => 0,
             CLKOUT6_PE_COARSE => 0,
             CLKOUT6_PE_FINE => 0,

@@ -912,7 +912,7 @@ din <= cart_wrdata
 dram_inst: entity work.sdram
 port map(
     -- SDRAM side interface
-    sd_clk    => O_sdram_clk,   -- sd clock
+    sd_clk    => open, -- O_sdram_clk,   -- sd clock
     sd_data   => IO_sdram_dq,   -- 32 bit bidirectional data bus
     sd_addr   => O_sdram_addr,  -- 11 bit multiplexed address bus
     sd_dqm    => O_sdram_dqm,   -- two byte masks
@@ -999,9 +999,10 @@ port map (
     clkin => clk,
     clkout0 => open,
     clkout1 => clk_pixel_x5, -- clk_pixel_x5_pal,
-    clkout2 => clk64, -- clk64_pal,
-    clkout3 => mspi_clk,
-    clkout4 => clk_sys, -- clk_sys_pal,
+    clkout2 => clk64, -- 0 deg clk64_pal,
+    clkout3 => mspi_clk, -- 135 deg
+    clkout4 => clk_sys, -- 0 deg clk_sys_pal,
+    clkout5 => O_sdram_clk, -- 180 deg
     lock => pll_locked_pal,
     mdclk => clk
 );
