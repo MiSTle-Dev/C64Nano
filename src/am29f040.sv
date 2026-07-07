@@ -101,7 +101,6 @@ logic [ADDR_WIDTH-1:0] mem_req_addr;
 logic            [7:0] mem_req_out;
 logic [ADDR_WIDTH-1:0] mem_req_cnt;
 logic           [31:0] busy_cnt;
-logic            [2:0] ce_stage;
 
 assign mem_addr = mem_req_addr;
 assign mem_out  = mem_req_out;
@@ -110,70 +109,56 @@ assign mem_we   = mem_req & mem_req_we & mem_cycle;
 
 always_comb begin
 	dq_out = mem_in;
-	dq_oe  = 1'b0;
+	dq_oe = 0;
 	case(state)
-		ST_READ_MEM,
-		ST_ERASE,
-		ST_DQ_WR: begin
-
-		end
-
 		ST_BUSY: begin
 			dq_out[3] = dq3_data;
-			dq_out[5] = 1'b0;
+			dq_out[5] = 0;
 			dq_out[6] = dq6_toggle; // DQ6 toggles while busy
-			dq_out[7] = dq7_data;   // DQ7 data polling
-			dq_oe = 1'b1;
+			dq_out[7] = dq7_data;   // DQ7 reflects programmed MSB when done; here we show target value while busy
+			dq_oe = 1;
 		end
 
 		ST_AUTOSEL: begin
-			     if (addr[7:0] == 8'h00) dq_out = MANUF_ID;
-			else if (addr[7:0] == 8'h01) dq_out = DEVICE_ID;
-			else                         dq_out = 8'h00; // protect bits not implemented
-			dq_oe = 1'b1;
+			     if (addr[7:0] == 0) dq_out = MANUF_ID;
+			else if (addr[7:0] == 1) dq_out = DEVICE_ID;
+			else dq_out = 8'h00;    // protect bits are not implemented
+			dq_oe = 1;
 		end
-
-		default: begin
-		end
+		
+		default:;
 	endcase
 end
 
 always_ff @(posedge clk or negedge reset_n) begin
+	logic [2:0] ce_stage;
+
 	if (!reset_n) begin
-		state        <= ST_READ_MEM;
-		unlock       <= U_IDLE;
-		mem_req      <= 1'b0;
-		mem_req_we   <= 1'b0;
-		mem_req_addr <= '0;
-		mem_req_out  <= 8'h00;
-		mem_req_cnt  <= '0;
-		busy_cnt     <= 32'd0;
-		ce_stage     <= 3'b000;
-		dq6_toggle   <= 1'b0;
-		dq7_data     <= 1'b0;
-		dq3_data     <= 1'b0;
+		state      <= ST_READ_MEM;
+		unlock     <= U_IDLE;
+		mem_req    <= 0;
 	end else begin
 
-		ce_stage <= {ce_stage[1:0], mem_req & ~mem_req_we & mem_cycle};
+		ce_stage <= {ce_stage[1:0], mem_req && ~mem_req_we && mem_cycle};
 		if(~ce_n) dq6_toggle <= ~dq6_toggle;
 
 		// Memory access
 		if(mem_req) begin
 			if(~mem_req_we && ce_stage[2]) begin
 				mem_req_out <= mem_req_out & mem_in;
-				mem_req_we  <= 1'b1;
+				mem_req_we <= 1;
 			end
 
 			if(mem_req_we && mem_cycle) begin
 				mem_req_addr <= mem_req_addr + 1'd1;
-				mem_req_cnt  <= mem_req_cnt - 1'd1;
-				if(mem_req_cnt == '0) mem_req <= 1'b0;
+				mem_req_cnt <= mem_req_cnt - 1'd1;
+				if(!mem_req_cnt) mem_req <= 0;
 			end
 		end
 
 		if(state == ST_BUSY) begin
-			if(busy_cnt != 32'd0) busy_cnt <= busy_cnt - 32'd1;
-			else if(!mem_req)     state    <= ST_READ_MEM;
+			if(busy_cnt) busy_cnt <= busy_cnt - 1;
+			else if(!mem_req) state <= ST_READ_MEM;
 		end
 
 		if(~ce_n && ~we_n) begin
@@ -193,25 +178,13 @@ always_ff @(posedge clk or negedge reset_n) begin
 						U_STEP2: begin
 							unlock <= U_IDLE;
 							// Third write determines command; must be to 0x555
-							// CMD_RESET, CMD_RESET2 or unknown command/address -> idle
+							// CMD_RESET, CMD_RESET2 or Unknown command or address -> idle
 							if (IS_UNLOCK_ADDR1) begin
 								case (dq_in)
 									CMD_AUTOSEL: state  <= ST_AUTOSEL;
-									CMD_PROG:    state  <= ST_DQ_WR;  // Next write is data/addr
-									CMD_ERASE:   unlock <= U_STEP3;   // Expect AA->55->80 then AA->55->30/10
-									CMD_RESET,
-									CMD_RESET2: begin
-										state  <= ST_READ_MEM;
-										unlock <= U_IDLE;
-									end
-									default: begin
-										state  <= ST_READ_MEM;
-										unlock <= U_IDLE;
-									end
+									CMD_PROG:    state  <= ST_DQ_WR; // Next write will be data/address
+									CMD_ERASE:   unlock <= U_STEP3; // Expect AA->55->(80) then AA->55->(30/10)
 								endcase
-							end else begin
-								state  <= ST_READ_MEM;
-								unlock <= U_IDLE;
 							end
 						end
 
@@ -223,10 +196,6 @@ always_ff @(posedge clk or negedge reset_n) begin
 							unlock <= U_IDLE;
 							if(UNLOCK2) state <= ST_ERASE;
 						end
-
-						default: begin
-							unlock <= U_IDLE;
-						end
 					endcase
 				end
 				
@@ -236,43 +205,36 @@ always_ff @(posedge clk or negedge reset_n) begin
 
 				ST_ERASE: begin
 					mem_req_out <= 8'hFF;
-					mem_req_we  <= 1'b1;
-					dq3_data    <= 1'b1;
-					dq7_data    <= 1'b0;
+					mem_req_we  <= 1;
+					dq3_data    <= 1;
+					dq7_data    <= 0;
 					state       <= ST_READ_MEM;
 					if (dq_in == CMD_ERASE_SECT) begin
-						busy_cnt     <= 32'(SECTOR_ERASE_LAT_CYC);
-						mem_req_addr <= addr & ~ADDR_WIDTH'(SECTOR_MASK);
-						mem_req_cnt  <= ADDR_WIDTH'(SECTOR_MASK);
-						mem_req      <= 1'b1;
+						busy_cnt     <= SECTOR_ERASE_LAT_CYC;
+						mem_req_addr <= addr & ~SECTOR_MASK[ADDR_WIDTH-1:0];
+						mem_req_cnt  <= SECTOR_MASK[ADDR_WIDTH-1:0];
+						mem_req      <= 1;
 						state        <= ST_BUSY;
 					end else if (IS_UNLOCK_ADDR1 && (dq_in == CMD_ERASE_CHIP)) begin
-						busy_cnt     <= 32'(CHIP_ERASE_LAT_CYC);
-						mem_req_addr <= '0;
+						busy_cnt     <= CHIP_ERASE_LAT_CYC;
+						mem_req_addr <= 0;
 						mem_req_cnt  <= '1;
-						mem_req      <= 1'b1;
+						mem_req      <= 1;
 						state        <= ST_BUSY;
 					end
 				end
 
 				ST_DQ_WR: begin
-					// Program: read-modify-write to target address
-					busy_cnt     <= 32'(PROG_LATENCY_CYC);
+					// Treat as program data write to target address
+					busy_cnt     <= PROG_LATENCY_CYC;
 					mem_req_addr <= addr;
-					mem_req_cnt  <= '0;
+					mem_req_cnt  <= 0;
 					mem_req_out  <= dq_in;
-					mem_req_we   <= 1'b0;
-					mem_req      <= 1'b1;
-					dq3_data     <= 1'b0;
+					mem_req_we   <= 0;
+					mem_req      <= 1;
+					dq3_data     <= 0;
 					dq7_data     <= ~dq_in[7];
 					state        <= ST_BUSY;
-				end
-
-				ST_BUSY: begin
-					// no new commands accepted while busy
-				end
-
-				default: begin
 				end
 			endcase
 		end
@@ -370,26 +332,19 @@ assign mem_req = mem0_req | mem1_req;
 logic mem_req_en;
 logic mem_cycle_q;
 always_ff @(posedge clk) begin
-	if(~reset_n) begin
-		mem_req_en  <= 1'b0;
-		mem_cycle_q <= 1'b0;
-	end else begin
-		if(~mem_req)             mem_req_en <= 1'b0;
-		else if(mem_req & mem_cycle) mem_req_en <= 1'b1;
-		mem_cycle_q <= mem_cycle;
-	end
+	if(~reset_n || ~mem_req) mem_req_en <= 0;
+	else if(mem_req & mem_cycle) mem_req_en <= 1;
+	mem_cycle_q <= mem_cycle;
 end
 
 assign mem_oe = ~mem_cycle_q & mem_cycle & mem_req_en;
 
 
 always_ff @(posedge clk) begin
-	if(~reset_n) begin
-		mem_rom_sel <= 1'b0;
-	end else if(mem_oe) begin
+	if(mem_oe) begin
 		if(mem0_req && mem1_req) mem_rom_sel <= ~mem_rom_sel;
-		else if(mem0_req)        mem_rom_sel <= 1'b0;
-		else if(mem1_req)        mem_rom_sel <= 1'b1;
+		else if(mem0_req) mem_rom_sel <= 0;
+		else if(mem1_req) mem_rom_sel <= 1;
 	end
 end
 

@@ -78,6 +78,8 @@ signal spare               : std_logic_vector(5 downto 0) := (others => '1'); --
 signal midi_rx             : std_logic;
 signal midi_tx             : std_logic;
 
+type unsigned_array_9b is array (natural range <>) of unsigned(8 downto 0);
+signal dac            : unsigned_array_9b(3 downto 0) := (others => (others => '0'));
 signal clk64          : std_logic;
 signal clk_sys        : std_logic;
 signal pll_locked     : std_logic;
@@ -86,6 +88,8 @@ signal clk64_ntsc     : std_logic;
 signal pll_locked_ntsc: std_logic;
 signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
+signal clk_sys_pal    : std_logic;
+signal clk_sys_ntsc   : std_logic;
 signal pll_locked_pal : std_logic;
 signal clk_pixel_x5_pal: std_logic;
 signal spi_io_clk     : std_logic;
@@ -101,9 +105,6 @@ attribute syn_keep of spi_io_clk        : signal is 1;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
 signal audio_data_r  : std_logic_vector(17 downto 0);
-signal audio_l       : std_logic_vector(17 downto 0);
-signal audio_r       : std_logic_vector(17 downto 0);
-
 -- external memory
 signal c64_addr     : unsigned(15 downto 0);
 signal c64_data_out : unsigned(7 downto 0);
@@ -462,6 +463,12 @@ signal ezfl_save_en     : std_logic := '0';
 attribute syn_preserve  : integer;
 attribute syn_preserve of boot_button_detected : signal is 1;
 signal tap_io_cycle     : std_logic := '0';
+signal dac_l, dac_r     : unsigned(8 downto 0);
+signal alo, aro         : signed(15 downto 0);
+signal sact             : unsigned(3 downto 0);
+signal system_digimax   : unsigned(1 downto 0);
+signal ioe_we, iof_we   : std_logic;
+signal old_ioe, old_iof : std_logic;
 
 constant RAM_ADDR      : unsigned(24 downto 0) := 25x"0000000";-- System RAM: 64k
 constant CRM_ADDR      : unsigned(24 downto 0) := 25x"0010000";-- Cartridge RAM: 64k
@@ -768,8 +775,72 @@ generic map (
 audio_div  <= to_unsigned(342,9) when ntscMode = '1' else to_unsigned(327,9);
 
 cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_finish;
-audio_l <= audio_data_l or ("00000" & cass_snd & "000000000000");
-audio_r <= audio_data_r or ("00000" & cass_snd & "000000000000");
+
+process(clk_sys)
+begin
+    if rising_edge(clk_sys) then
+        old_ioe <= IOE;
+        ioe_we <= (not old_ioe) and IOE and ram_we;
+
+        old_iof <= IOF;
+        iof_we <= (not old_iof) and IOF and ram_we;
+    end if;
+end process;
+
+process(clk_sys)
+    variable dac_index : integer range 0 to 3;
+    variable alm, arm : signed(16 downto 0);
+begin
+    if rising_edge(clk_sys) then
+        if system_digimax = "00" or reset_n = '0' then
+            dac <= (others => (others => '0'));
+            sact <= (others => '0');
+        elsif ((system_digimax(1) = '1' and iof_we = '1') or 
+               (system_digimax(1) = '0' and ioe_we = '1')) and c64_addr(2) = '0' then
+            dac_index := to_integer(unsigned(c64_addr(1 downto 0)));
+            dac(dac_index) <= resize(unsigned(c64_data_out), 9);
+            if unsigned(c64_data_out) /= 0 then
+                sact(to_integer(unsigned(c64_addr(1 downto 0)))) <= '1';
+            end if;
+        end if;
+
+        -- Guess mono/stereo/4-channel modes
+        if unsigned(act) < 2 then
+            dac_l <= unsigned(dac(0)) + unsigned(dac(0));
+            dac_r <= unsigned(dac(0)) + unsigned(dac(0));
+        elsif unsigned(sact) < 3 then
+            dac_l <= unsigned(dac(1)) + unsigned(dac(1));
+            dac_r <= unsigned(dac(0)) + unsigned(dac(0));
+        else
+            dac_l <= unsigned(dac(1)) + unsigned(dac(2));
+            dac_r <= unsigned(dac(0)) + unsigned(dac(3));
+        end if;
+
+        alm := signed(audio_data_l(17) & std_logic_vector(audio_data_l(17 downto 2))) 
+               + signed(std_logic_vector'("00") & std_logic_vector(dac_l) & std_logic_vector'("000000")) 
+               + signed((0 => cass_snd) & std_logic_vector'("000000000"));
+
+        arm := signed(audio_data_r(17) & std_logic_vector(audio_data_r(17 downto 2))) 
+               + signed(std_logic_vector'("00") & std_logic_vector(dac_r) & std_logic_vector'("000000")) 
+               + signed((0 => cass_snd) & std_logic_vector'("000000000"));
+        
+        if (alm(16) xor alm(15)) = '1' then
+            alo <= alm(16) & (alm(15) & alm(15) & alm(15) & alm(15) & alm(15) & alm(15) 
+                              & alm(15) & alm(15) & alm(15) & alm(15) & alm(15) & alm(15) 
+                              & alm(15) & alm(15) & alm(15));
+        else
+            alo <= alm(15 downto 0);
+        end if;
+
+        if (arm(16) xor arm(15)) = '1' then
+            aro <= arm(16) & (arm(15) & arm(15) & arm(15) & arm(15) & arm(15) & arm(15) 
+                              & arm(15) & arm(15) & arm(15) & arm(15) & arm(15) & arm(15) 
+                              & arm(15) & arm(15) & arm(15));
+        else
+            aro <= arm(15 downto 0);
+        end if;
+    end if;
+end process;
 
 video_inst: entity work.video 
 port map(
@@ -787,8 +858,8 @@ port map(
       g_in      => g(7 downto 4),
       b_in      => b(7 downto 4),
 
-      audio_l => audio_l,  -- interface C64 core specific
-      audio_r => audio_r,
+      audio_l => alo,
+      audio_r => aro,
       osd_status => osd_status,
 
       mcu_start => mcu_start,
@@ -878,6 +949,20 @@ ram_ready <= '1';
 -- dram         63000000 /  65000000
 -- core /pixel  31500000 /  32500000
 
+clk_switch_3: DCS
+	generic map (
+		DCS_MODE => "RISING"
+	)
+	port map (
+		CLKIN0   => clk_sys_pal,  -- main pll 1
+		CLKIN1   => clk_sys_ntsc, -- main pll 2
+		CLKIN2   => '0',
+		CLKIN3   => '0',
+		CLKSEL   => dcsclksel,
+		SELFORCE => '0' -- glitch less mode
+--		CLKOUT   => clk_sys -- switched clock
+	);
+
 clk_switch_2: DCS
 	generic map (
 		DCS_MODE => "RISING"
@@ -888,8 +973,8 @@ clk_switch_2: DCS
 		CLKIN2   => '0',
 		CLKIN3   => '0',
 		CLKSEL   => dcsclksel,
-		SELFORCE => '0', -- glitch less mode
-		CLKOUT   => clk64 -- switched clock
+		SELFORCE => '0' -- glitch less mode
+--		CLKOUT   => clk64 -- switched clock
 	);
   
 pll_locked <= pll_locked_pal and pll_locked_ntsc;
@@ -900,36 +985,26 @@ generic map (
     DCS_MODE => "RISING"
 )
 port map (
-    CLKOUT => clk_pixel_x5,
-    CLKSEL => dcsclksel,
     CLKIN0 => clk_pixel_x5_pal,
     CLKIN1 => clk_pixel_x5_ntsc,
     CLKIN2 => '0',
     CLKIN3 => '0',
+ --   CLKOUT => clk_pixel_x5,
+    CLKSEL => dcsclksel,
     SELFORCE => '1'
 );
 
-div_inst: CLKDIV
-generic map(
-  DIV_MODE => "2"
-)
-port map(
-    CLKOUT => clk_sys,
-    HCLKIN => clk64,
-    RESETN => pll_locked,
-    CALIB  => '0'
-);
-
 mainclock_pal: entity work.Gowin_PLL_pal
-    port map (
-        clkin => clk,
-        clkout0 => open,
-        clkout1 => clk_pixel_x5_pal,
-        clkout2 => clk64_pal,
-        clkout3 => mspi_clk,
-        lock => pll_locked_pal,
-        mdclk => clk
-    );
+port map (
+    clkin => clk,
+    clkout0 => open,
+    clkout1 => clk_pixel_x5, -- clk_pixel_x5_pal,
+    clkout2 => clk64, -- clk64_pal,
+    clkout3 => mspi_clk,
+    clkout4 => clk_sys, -- clk_sys_pal,
+    lock => pll_locked_pal,
+    mdclk => clk
+);
 
 mainclock_ntsc: entity work.Gowin_PLL_ntsc
 port map (
@@ -937,6 +1012,7 @@ port map (
     clkout0 => open,
     clkout1 => clk_pixel_x5_ntsc,
     clkout2 => clk64_ntsc,
+    clkout4 => clk_sys_ntsc,
     lock => pll_locked_ntsc,
     mdclk => clk
 );
@@ -1170,6 +1246,7 @@ hid_inst: entity work.hid
   system_boot_easyflash=> boot_easyflash,
   system_autosave     => autosave,
   system_save_cartridge => save_cartridge,
+  system_digimax        => system_digimax,
 
   -- port io (used to expose rs232)
   port_status       => serial_status,

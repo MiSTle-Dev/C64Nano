@@ -164,20 +164,20 @@ always_ff @(posedge clk) begin
 	end
 end
 
-`ifdef VERILATOR
+//`ifdef VERILATOR
 	assign sd_clk = ~clk;
-`else
-ODDR #(
-    .TXCLK_POL(1'b0),
-    .INIT(1'b0)
-) sdramclk_ddr (
-    .Q0(sd_clk),             // DDR output clock to SDRAM pin
-    .Q1(),
-    .D0(1'b0),               // value for one half-cycle
-    .D1(1'b1),               // value for the other half-cycle
-    .TX(1'b0),               // output always enabled
-    .CLK(clk)
-);
-`endif
+//`else
+//ODDR #(
+//    .TXCLK_POL(1'b0),
+//    .INIT(1'b0)
+//) sdramclk_ddr (
+//    .Q0(sd_clk),             // DDR output clock to SDRAM pin
+//    .Q1(),
+//    .D0(1'b0),               // value for one half-cycle
+//    .D1(1'b1),               // value for the other half-cycle
+//    .TX(1'b0),               // output always enabled
+//    .CLK(clk)
+//);
+//`endif
 
 endmodule

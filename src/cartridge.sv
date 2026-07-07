@@ -877,7 +877,7 @@ ez_rom ez_rom
 logic [24:0] ezmem_addr;
 logic        ezmem_we;
 // adjusted to 2MB CRT ROM offset 
-assign ezmem_addr = {5'h2, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
+assign ezmem_addr = {5'h02, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
 assign ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
 
 assign mem_addr = (ezmem_oe) ? ezmem_addr : addr_out;
@@ -898,10 +898,8 @@ assign cs_iof = IOF && (mem_write ? IOF_wr_ena : IOF_ena);
 
 assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof) | ezrom_ce;
 
-//RAM banks are mapped to 0x010000 (64K max)
-//ROM banks are mapped to 0x200000-0x3FFFFF (2MB max)
-function automatic logic [8:0] get_bank(input logic [7:0] bank, input logic ram);
-	get_bank = ram ? {6'(CRM_ADDR>>16), bank[2:0]} : {4'(CRT_ADDR>>21), bank[7:0]};
+function automatic logic [11:0] get_bank(input logic [7:0] bank, input logic ram);
+	get_bank = ram ? {9'(CRM_ADDR>>16), bank[2:0]} : {4'(CRT_ADDR>>21), bank[7:0]};
 endfunction
 
 logic [24:0] addr_out;

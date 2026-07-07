@@ -272,6 +272,11 @@
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
       </list>
+      <list label="DigiMax:" id="0" default="0">
+ <listentry label="Off" value="0"/>
+ <listentry label="DE00" value="1"/>
+ <listentry label="DF00" value="2"/>
+      </list>
  <button label="C1541 Reset" action="c1541_reset_hide"/>
  <button label="Cold Boot" action="cold_reset_hide"/>
     </menu>
