@@ -63,7 +63,7 @@ io_state_t io_state;
 logic [24:0] addr;
 logic wr;
 logic [8:0] cnt;
-logic [2:0] core_wait_cnt;
+logic [1:0] core_wait_cnt;
 logic [24:0] img_size [0:7];
 logic img_present [0:7];
 logic img_presentD [0:7];

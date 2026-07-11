@@ -1497,7 +1497,7 @@ port map(
     clk32           => clk_sys,
     reset_n         => reset_n,
   
-    cart_loading    => ioctl_download and (load_crt or load_ezflash),
+    cart_loading    => ioctl_download and load_crt,
     cart_id         => cid,
     cart_exrom      => cart_exrom,
     cart_game       => cart_game,
