@@ -88,8 +88,6 @@ signal clk64_ntsc     : std_logic;
 signal pll_locked_ntsc: std_logic;
 signal clk_pixel_x5_ntsc  : std_logic;
 signal clk64_pal      : std_logic;
-signal clk_sys_pal    : std_logic;
-signal clk_sys_ntsc   : std_logic;
 signal pll_locked_pal : std_logic;
 signal clk_pixel_x5_pal: std_logic;
 signal spi_io_clk     : std_logic;
@@ -110,7 +108,6 @@ signal c64_addr     : unsigned(15 downto 0);
 signal c64_data_out : unsigned(7 downto 0);
 signal sdram_data   : unsigned(7 downto 0);
 signal idle         : std_logic;
-signal dram_addr    : unsigned(24 downto 0);
 signal ram_ready    : std_logic;
 signal addr         : unsigned(24 downto 0);
 signal cs           : std_logic;
@@ -157,7 +154,6 @@ signal mouse_y_pos : signed(10 downto 0);
 
 signal ram_ce      :  std_logic;
 signal ram_we      :  std_logic;
-signal romCE       :  std_logic;
 
 signal ntscMode    :  std_logic;
 signal hsync       :  std_logic;
@@ -197,7 +193,6 @@ signal mouse_btns     : std_logic_vector(1 downto 0);
 signal mouse_x        : signed(7 downto 0);
 signal mouse_y        : signed(7 downto 0);
 signal mouse_strobe   : std_logic;
-signal freeze         : std_logic;
 signal c64_pause      : std_logic;
 signal osd_status     : std_logic;
 signal ws2812_color   : std_logic_vector(23 downto 0);
@@ -354,7 +349,6 @@ signal cass_snd       : std_logic;
 signal tap_download   : std_logic;
 signal tap_reset      : std_logic;
 signal tap_loaded     : std_logic;
-signal tap_play_btn   : std_logic;
 signal tap_last_addr  : unsigned(24 downto 0);
 signal tap_wrreq      : std_logic_vector(1 downto 0);
 signal tap_wrfull     : std_logic;
@@ -913,7 +907,7 @@ din <= cart_wrdata
 dram_inst: entity work.sdram
 port map(
     -- SDRAM side interface
-    sd_clk    => open, -- O_sdram_clk,   -- sd clock
+    sd_clk    => O_sdram_clk,   -- sd clock
     sd_data   => IO_sdram_dq,   -- 32 bit bidirectional data bus
     sd_addr   => O_sdram_addr,  -- 11 bit multiplexed address bus
     sd_dqm    => O_sdram_dqm,   -- two byte masks
@@ -950,20 +944,6 @@ ram_ready <= '1';
 -- dram         63000000 /  65000000
 -- core /pixel  31500000 /  32500000
 
-clk_switch_3: DCS
-	generic map (
-		DCS_MODE => "RISING"
-	)
-	port map (
-		CLKIN0   => clk_sys_pal,  -- main pll 1
-		CLKIN1   => clk_sys_ntsc, -- main pll 2
-		CLKIN2   => '0',
-		CLKIN3   => '0',
-		CLKSEL   => dcsclksel,
-		SELFORCE => '0' -- glitch less mode
---		CLKOUT   => clk_sys -- switched clock
-	);
-
 clk_switch_2: DCS
 	generic map (
 		DCS_MODE => "RISING"
@@ -974,8 +954,8 @@ clk_switch_2: DCS
 		CLKIN2   => '0',
 		CLKIN3   => '0',
 		CLKSEL   => dcsclksel,
-		SELFORCE => '0' -- glitch less mode
---		CLKOUT   => clk64 -- switched clock
+		SELFORCE => '0', -- glitch less mode
+		CLKOUT   => clk64 -- switched clock
 	);
   
 pll_locked <= pll_locked_pal and pll_locked_ntsc;
@@ -986,24 +966,36 @@ generic map (
     DCS_MODE => "RISING"
 )
 port map (
+
     CLKIN0 => clk_pixel_x5_pal,
     CLKIN1 => clk_pixel_x5_ntsc,
     CLKIN2 => '0',
     CLKIN3 => '0',
- --   CLKOUT => clk_pixel_x5,
-    CLKSEL => dcsclksel,
-    SELFORCE => '1'
+    SELFORCE => '1',
+    CLKOUT => clk_pixel_x5,
+    CLKSEL => dcsclksel
+);
+
+div_inst: CLKDIV
+generic map(
+  DIV_MODE => "2"
+)
+port map(
+    CLKOUT => clk_sys,
+    HCLKIN => clk64,
+    RESETN => pll_locked,
+    CALIB  => '0'
 );
 
 mainclock_pal: entity work.Gowin_PLL_pal
 port map (
     clkin => clk,
     clkout0 => open,
-    clkout1 => clk_pixel_x5, -- clk_pixel_x5_pal,
-    clkout2 => clk64, -- 0 deg clk64_pal,
+    clkout1 => clk_pixel_x5_pal,
+    clkout2 => clk64_pal,    -- 0 deg clk64_pal,
     clkout3 => mspi_clk, -- 135 deg
-    clkout4 => clk_sys, -- 0 deg clk_sys_pal,
-    clkout5 => O_sdram_clk, -- 180 deg
+    clkout4 => open,     -- 0 deg clk_sys_pal,
+    clkout5 => open,     -- 180 deg
     lock => pll_locked_pal,
     mdclk => clk
 );
@@ -1014,14 +1006,14 @@ port map (
     clkout0 => open,
     clkout1 => clk_pixel_x5_ntsc,
     clkout2 => clk64_ntsc,
-    clkout4 => clk_sys_ntsc,
+    clkout4 => open, -- 0 deg clk_sys_ntsc,
     lock => pll_locked_ntsc,
     mdclk => clk
 );
 
 leds_n <=  leds(1 downto 0);
-leds(0) <= led1541 or ioctl_download or ioctl_upload;
-leds(1) <= '1' when cart_id = x"20" else '0'; -- light up if EasyFlash cartridge is detected
+leds(0) <= led1541;
+leds(1) <= ioctl_download or ioctl_upload;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
@@ -1297,7 +1289,7 @@ io_data <=  unsigned(cart_data) when cart_oe = '1' else
             unsigned(reu_dout)  when reu_oe = '1' else
             unsigned(midi_data) when (midi_oe and midi_en) = '1' else
             unsigned(uart_data) when uart_oe = '1' else
-            x"00" when c64_addr(4) = '0' else x"FF";
+            x"FF";
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
 sid_fc_lr <= std_logic_vector(to_unsigned(16#600#, sid_fc_lr'length) - unsigned("000" & sid_fc_offset & "0000000")) when sid_filter(2) = '1' else (others => '0');
 
@@ -1515,6 +1507,7 @@ port map(
     cart_bank_addr  => ioctl_load_addr(20 downto 13),
     cart_bank_wr    => cart_hdr_wr,
     cart_boot       => boot_easyflash,
+    cart_premap     => load_ezflash,
 
     exrom           => exrom,
     game            => game,
@@ -1654,11 +1647,6 @@ begin
     io_cycleD <= io_cycle;
     cart_hdr_wr <= '0';
     detach_reset_d <= detach_reset;
-
-    if ezflash_bank_wr_pending = '1' then
-      cart_hdr_wr <= '1';
-      ezflash_bank_wr_pending <= '0';
-    end if;
 
     if io_cycle = '0' and io_cycleD = '1' then
       io_cycle_ce <= '1';
@@ -1811,23 +1799,11 @@ begin
           cart_game  <= '0';
           cart_bank_hi <= '0';
           cart_bank_num <= (others => '0');
---          cart_bank_16k <= '1';
           cart_bank_16k <= '0';
           cart_blk_len <= (others => '0');
           cart_hdr_cnt <= (others => '0');
-          ezflash_bank_wr_pending <= '1';
---        elsif ioctl_addr(13 downto 0) = to_unsigned(0, 14) then
---          cart_bank_num <= resize(ioctl_addr(19 downto 14), cart_bank_num'length);
---          cart_bank_hi <= '0';
---          cart_bank_16k <= '1';
---          ezflash_bank_wr_pending <= '1';
-        elsif ioctl_addr(12 downto 0) = to_unsigned(0, 13) then
-          cart_bank_num <= resize(ioctl_load_addr(19 downto 14), cart_bank_num'length);
-          cart_bank_hi <= ioctl_load_addr(13);
-          cart_bank_16k <= '0';
-          ezflash_bank_wr_pending <= '1';
         end if;
-        ioctl_req_wr <= '1';
+          ioctl_req_wr <= '1';
       end if;
     end if;
 

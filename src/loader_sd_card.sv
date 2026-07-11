@@ -63,7 +63,7 @@ io_state_t io_state;
 logic [24:0] addr;
 logic wr;
 logic [8:0] cnt;
-logic [1:0] core_wait_cnt;
+logic [2:0] core_wait_cnt;
 logic [24:0] img_size [0:7];
 logic img_present [0:7];
 logic img_presentD [0:7];
@@ -78,6 +78,7 @@ logic boot_ezflash;
 logic old_upload_req;
 logic upload_req;
 logic write_strobe;
+logic [7:0] upload_data;
 
 integer i;
 
@@ -134,6 +135,7 @@ always_ff @(posedge clk) begin
 		ioctl_download <= 0;
 		ioctl_addr <= 'd0;
 		addr <= 'd0;
+		upload_data <= 8'd0;
 		leds <= 5'd0;
 		loader_busy <= 0;
 		boot_crt <= 0;
@@ -147,7 +149,7 @@ always_ff @(posedge clk) begin
 		rd_sel <= 7'd0;
 		img_select <= 3'd0;
 		cnt <= 9'd0;
-		core_wait_cnt <= 2'd0;
+		core_wait_cnt <= '0;
 		io_state <= START;
 	end
 	else
@@ -161,6 +163,7 @@ always_ff @(posedge clk) begin
 		WRITE_WAIT4CORE: begin
 				core_wait_cnt <= core_wait_cnt + 1;
 				if(~ioctl_wait && &core_wait_cnt) begin
+					upload_data <= ioctl_din;
 					io_state <= WRITING;
 				end
 			end
@@ -173,6 +176,7 @@ always_ff @(posedge clk) begin
 			if(cnt == 511) io_state <= WRITE_FLUSH;
 			else begin
 				ioctl_rd <= 1;
+				core_wait_cnt <= '0;
 				io_state <= WRITE_WAIT4CORE;
 			end
 		end
@@ -196,6 +200,7 @@ always_ff @(posedge clk) begin
 					cnt <= 'd0;
 					sd_lba <= sd_lba + 1;
 					ioctl_rd <= 1;
+					core_wait_cnt <= '0;
 				end
 				else
 				begin
@@ -215,7 +220,7 @@ always_ff @(posedge clk) begin
 						ioctl_upload <= 1;
 						addr <= 'd0;
 						sd_lba <= 'd0;
-						core_wait_cnt <= 'd0;
+						core_wait_cnt <= '0;
 						cnt <= 'd0;
 					end
 				else if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))) begin
@@ -360,11 +365,11 @@ sector_dpram #(8, 9) trkbuf_inst_loader
 
 	.address_a(sd_byte_index),
 	.data_a(sd_rd_data),
-	.wren_a(sd_rd_byte_strobe && sd_busy),
+	.wren_a(sd_rd_byte_strobe),
 	.q_a(sd_wr_data),
 
 	.address_b(ioctl_addr[8:0]),
-	.data_b(ioctl_din),
+	.data_b(upload_data),
 	.wren_b(write_strobe),
 	.q_b(ioctl_dout)
 );
@@ -376,7 +381,7 @@ Gowin_DPB_track_buffer_b trkbuf_inst_loader(
 	.ocea(1'b1), 
 	.cea(1'b1), 
 	.reseta(1'b0), 
-	.wrea(sd_rd_byte_strobe && sd_busy),// sd module
+	.wrea(sd_rd_byte_strobe),// sd_rd_byte_strobe && sd_busy
 	.clkb(clk), 
 	.oceb(1'b1), 
 	.ceb(1'b1),
@@ -385,7 +390,7 @@ Gowin_DPB_track_buffer_b trkbuf_inst_loader(
 	.ada(sd_byte_index),  // sd module
 	.dina(sd_rd_data),    // sd module
 	.adb(ioctl_addr[8:0]),
-	.dinb(ioctl_din)      // data from ioctl to be written to SD card (write)
+	.dinb(upload_data)
 );
 `endif
 endmodule

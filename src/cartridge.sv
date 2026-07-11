@@ -24,7 +24,7 @@ module cartridge
 	input  logic [7:0]  cart_bank_addr,		// chip packet address
 	input  logic        cart_bank_wr,
 	input  logic        cart_boot,
-
+	input  logic        cart_premap,
 	output logic        exrom,				// exrom line
 	output logic        game,					// game line
 
@@ -78,9 +78,11 @@ logic [7:0]  bank_cnt;
 logic [63:0] lobanks_map;
 logic [63:0] hibanks_map;
 logic        old_loading;
+logic        old_cart_premap;
 
 always_ff @(posedge clk32) begin
 	old_loading <= cart_loading;
+	old_cart_premap <= cart_premap;
 
 	if(~old_loading & cart_loading) begin
 		bank_cnt <= 0;
@@ -100,6 +102,15 @@ always_ff @(posedge clk32) begin
 				hibanks_map[cart_bank_num[5:0]] <= 1;
 			end
 		end
+	end
+
+	if(!old_cart_premap && cart_premap) begin
+		for (int i = 0; i < 64; i++) begin
+			lobanks[i] <= {i[5:0], 1'b0};
+			hibanks[i] <= {i[5:0], 1'b1};
+		end
+		lobanks_map <= 64'hFFFFFFFFFFFFFFFF;
+		hibanks_map <= 64'hFFFFFFFFFFFFFFFF;
 	end
 end
 
