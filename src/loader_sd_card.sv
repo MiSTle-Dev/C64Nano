@@ -51,6 +51,7 @@ typedef enum logic [3:0] {
 	READ_NEXT,
 	DESELECT,
 	START,
+	WRITE_PREPARE,
 	WRITE_WAIT4CORE,
 	WRITING,
 	WRITE_FLUSH,
@@ -152,8 +153,12 @@ always_ff @(posedge clk) begin
 	else
 	begin
 	case(io_state)
+		WRITE_PREPARE: begin
+			ioctl_rd <= 1;
+			io_state <= WRITE_WAIT4CORE;
+		end
+
 		WRITE_WAIT4CORE: begin
-				ioctl_rd <= 0;
 				core_wait_cnt <= core_wait_cnt + 1;
 				if(~ioctl_wait && &core_wait_cnt) begin
 					io_state <= WRITING;
@@ -205,9 +210,8 @@ always_ff @(posedge clk) begin
 				if((|img_size[7]) && upload_req) begin //
 						upload_req <= 0;
 						loader_busy <= 1;
-						io_state <= WRITE_WAIT4CORE;
+						io_state <= WRITE_PREPARE;
 						ioctl_addr <= 'd0;
-						ioctl_rd <= 1;
 						ioctl_upload <= 1;
 						addr <= 'd0;
 						sd_lba <= 'd0;

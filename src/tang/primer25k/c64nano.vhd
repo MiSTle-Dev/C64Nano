@@ -303,6 +303,7 @@ signal cart_game       : std_logic;
 signal cart_attached   : std_logic := '0';
 signal cart_hdr_cnt    : unsigned(3 downto 0);
 signal cart_hdr_wr     : std_logic;
+signal ezflash_bank_wr_pending : std_logic := '0';
 signal cart_blk_len    : unsigned(15 downto 0);
 signal io_cycle        : std_logic;
 signal io_cycle_ce     : std_logic;
@@ -1654,6 +1655,11 @@ begin
     cart_hdr_wr <= '0';
     detach_reset_d <= detach_reset;
 
+    if ezflash_bank_wr_pending = '1' then
+      cart_hdr_wr <= '1';
+      ezflash_bank_wr_pending <= '0';
+    end if;
+
     if io_cycle = '0' and io_cycleD = '1' then
       io_cycle_ce <= '1';
       io_cycle_we <= '0';
@@ -1684,17 +1690,17 @@ begin
       ioctl_rd_en <= '0';
     end if;
 
-    --if old_upload = '0' and ioctl_upload = '1' then
-    --  ioctl_load_addr <= CRT_ADDR;
-    --  rd_cyc <= (others => '0');
-    --  ioctl_req_rd <= '0';
-    --  ioctl_rd_en <= '0';
-    --end if;
+    if old_upload = '0' and ioctl_upload = '1' then
+      ioctl_load_addr <= CRT_ADDR;
+      rd_cyc <= (others => '0');
+      ioctl_req_rd <= '0';
+      ioctl_rd_en <= '0';
+    end if;
 
     if ioctl_rd = '1' then
-      if(ioctl_addr = to_unsigned(0, ioctl_addr'length)) then
-        ioctl_load_addr <= CRT_ADDR;
-      end if;
+--      if(ioctl_addr = to_unsigned(0, ioctl_addr'length)) then
+--        ioctl_load_addr <= CRT_ADDR;
+--      end if;
       ioctl_req_rd <= '1';
     end if;
 
@@ -1804,11 +1810,22 @@ begin
           cart_exrom <= '1'; -- Ultimax mode for easy compatibility
           cart_game  <= '0';
           cart_bank_hi <= '0';
-          cart_bank_16k <= '0';
           cart_bank_num <= (others => '0');
+--          cart_bank_16k <= '1';
+          cart_bank_16k <= '0';
           cart_blk_len <= (others => '0');
           cart_hdr_cnt <= (others => '0');
-          cart_hdr_wr <= '1';
+          ezflash_bank_wr_pending <= '1';
+--        elsif ioctl_addr(13 downto 0) = to_unsigned(0, 14) then
+--          cart_bank_num <= resize(ioctl_addr(19 downto 14), cart_bank_num'length);
+--          cart_bank_hi <= '0';
+--          cart_bank_16k <= '1';
+--          ezflash_bank_wr_pending <= '1';
+        elsif ioctl_addr(12 downto 0) = to_unsigned(0, 13) then
+          cart_bank_num <= resize(ioctl_load_addr(19 downto 14), cart_bank_num'length);
+          cart_bank_hi <= ioctl_load_addr(13);
+          cart_bank_16k <= '0';
+          ezflash_bank_wr_pending <= '1';
         end if;
         ioctl_req_wr <= '1';
       end if;
@@ -1819,6 +1836,10 @@ begin
       cart_attached <= old_download;
       erase_cram <= '1';
       ext_crt <= ioctl_download and load_crt;
+    end if;
+
+    if ioctl_download = '0' then
+      ezflash_bank_wr_pending <= '0';
     end if;
 
     -- meminit for RAM injection
