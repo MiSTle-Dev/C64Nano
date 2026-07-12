@@ -85,6 +85,7 @@ logic boot_prg;
 //logic boot_tap;
 logic boot_flt;
 logic boot_reu;
+logic boot_ezflash;
 logic old_upload_req;
 logic upload_req;
 logic write_strobe;
@@ -272,6 +273,7 @@ always_ff @(posedge clk) begin
 		boot_prg <= 0;
 		boot_flt <= 0;
 		boot_reu <= 0;
+		boot_ezflash <= 0;
 		rd_sel <= 7'd0;
 		img_select <= 3'd0;
 		cnt <= 9'd0;
@@ -465,6 +467,12 @@ always_ff @(posedge clk) begin
 						io_state <= GO4IT;
 						rd_sel <= 7'b0100000;
 						boot_reu <= 1;
+					end
+				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
+				//		img_select <= 0;
+				//	end
+				else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_ezflash))) begin // EZFLASH
+						boot_ezflash <= 1;
 					end
 				else begin
 						loader_busy <= 0;

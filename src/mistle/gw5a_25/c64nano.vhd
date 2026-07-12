@@ -14,7 +14,7 @@ use IEEE.numeric_std.ALL;
 entity c64nano_top is
   generic
   (
-   DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
+   DUAL  : integer := 0; -- 0:no, 1:yes dual SID build option
    MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
    C1541 : integer := 1  -- 0:no, 1:yes optional 6551 UART
@@ -77,6 +77,9 @@ architecture Behavioral_top of c64nano_top is
 -- unused
 signal ext_drive_interface : std_logic;
 
+type unsigned_array_9b is array (natural range <>) of unsigned(8 downto 0);
+type u7_array_t is array (natural range <>) of unsigned(6 downto 0);
+signal dac            : unsigned_array_9b(3 downto 0) := (others => (others => '0'));
 signal clk64          : std_logic;
 signal clk_sys        : std_logic;
 signal pll_locked     : std_logic;
@@ -100,15 +103,11 @@ attribute syn_keep of spi_io_clk        : signal is 1;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
 signal audio_data_r  : std_logic_vector(17 downto 0);
-signal audio_l       : std_logic_vector(17 downto 0);
-signal audio_r       : std_logic_vector(17 downto 0);
-
 -- external memory
 signal c64_addr     : unsigned(15 downto 0);
 signal c64_data_out : unsigned(7 downto 0);
 signal sdram_data   : unsigned(7 downto 0);
 signal idle         : std_logic;
-signal dram_addr    : unsigned(23 downto 0);
 signal ram_ready    : std_logic;
 signal addr         : unsigned(23 downto 0);
 signal cs           : std_logic;
@@ -155,7 +154,6 @@ signal mouse_y_pos : signed(10 downto 0);
 
 signal ram_ce      :  std_logic;
 signal ram_we      :  std_logic;
-signal romCE       :  std_logic;
 
 signal ntscMode    :  std_logic;
 signal hsync       :  std_logic;
@@ -195,7 +193,6 @@ signal mouse_btns     : std_logic_vector(1 downto 0);
 signal mouse_x        : signed(7 downto 0);
 signal mouse_y        : signed(7 downto 0);
 signal mouse_strobe   : std_logic;
-signal freeze         : std_logic;
 signal c64_pause      : std_logic;
 signal osd_status     : std_logic;
 signal ws2812_color   : std_logic_vector(23 downto 0);
@@ -307,7 +304,6 @@ signal io_cycle_we     : std_logic;
 signal io_cycle_addr   : unsigned(23 downto 0);
 signal io_cycle_data   : unsigned(7 downto 0);
 signal load_crt        : std_logic := '0';
-signal load_ezflash    : std_logic := '0';
 signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
@@ -427,6 +423,11 @@ signal reu_wrap         : std_logic;
 signal c64_data_in      : unsigned(7 downto 0);
 signal cart_mem_req     : std_logic;
 signal cart_wrdata      : unsigned(7 downto 0);
+signal cart_lobanks     : u7_array_t(0 to 63);
+signal cart_hibanks     : u7_array_t(0 to 63);
+signal cart_bank_cnt    : unsigned(7 downto 0);
+signal cart_lobanks_map : unsigned(63 downto 0);
+signal cart_hibanks_map : unsigned(63 downto 0);
 signal cart_bank_hi     : std_logic;
 signal cart_bank_16k    : std_logic;
 signal rd_cyc           : unsigned(2 downto 0);
@@ -456,13 +457,21 @@ signal loader_sd_wr_data: unsigned(7 downto 0);
 signal ext_old          : std_logic := '0';
 signal ext_crt          : std_logic := '0';
 signal ezfl_save_en     : std_logic := '0';
+attribute syn_preserve  : integer;
+signal tap_io_cycle     : std_logic := '0';
+signal dac_l, dac_r     : unsigned(8 downto 0);
+signal alo, aro         : signed(15 downto 0);
+signal sact             : unsigned(3 downto 0);
+signal system_digimax   : unsigned(1 downto 0);
+signal ioe_we, iof_we   : std_logic;
+signal old_ioe, old_iof : std_logic;
 
--- 64k core ram                      0x000000
--- cartridge RAM banks are mapped to 0x010000
-constant CRT_ADDR      : unsigned(23 downto 0) := x"200000";
-constant TAP_ADDR      : unsigned(23 downto 0) := x"400000";
-constant REU_ADDR      : unsigned(23 downto 0) := x"800000";-- 2Mb max
-constant GEORAM_ADDR   : unsigned(23 downto 0) := x"C00000";-- 4Mb max
+constant RAM_ADDR      : unsigned(23 downto 0) := x"000000";-- System RAM: 64k
+constant CRM_ADDR      : unsigned(23 downto 0) := x"010000";-- Cartridge RAM: 64k
+constant CRT_ADDR      : unsigned(23 downto 0) := x"200000";-- Cartridge: 2M
+constant TAP_ADDR      : unsigned(23 downto 0) := x"400000";-- Tape buffer
+constant GEO_ADDR      : unsigned(23 downto 0) := x"C00000";-- GeoRAM: 4M
+constant REU_ADDR      : unsigned(23 downto 0) := x"800000";-- REU: 2M
 
 component CLKDIV
     generic (
@@ -489,7 +498,7 @@ component DCS
         CLKIN3: in std_logic;
         SELFORCE: in std_logic
     );
- end component;
+end component;
 
 begin
 
@@ -553,11 +562,11 @@ begin
 process(clk_sys, disk_reset)
 variable reset_cnt : integer range 0 to 2147483647;
   begin
-  if disk_reset = '1' then
-    disk_chg_trg <= '0';
-    reset_cnt := 64000000;
-  elsif rising_edge(clk_sys) then
-    if reset_cnt /= 0 then
+  if rising_edge(clk_sys) then
+    if disk_reset = '1' then
+      disk_chg_trg <= '0';
+      reset_cnt := 64000000;
+    elsif reset_cnt /= 0 then
       reset_cnt := reset_cnt - 1;
     elsif reset_cnt = 0 then
       disk_chg_trg <= '1';
@@ -674,8 +683,8 @@ yes_c1541: if C1541 /= 0 generate
   );
   sd_lba <= loader_lba when loader_busy = '1' else disk_lba;
   sd_wr_data <= loader_sd_wr_data when loader_busy = '1' else disk_sd_wr_data;
-  sd_rd(0) <= c1541_sd_rd;
-  sd_wr(0) <= c1541_sd_wr;
+  sd_rd(0) <= '0' when loader_busy = '1' else c1541_sd_rd;
+  sd_wr(0) <= '0' when loader_busy = '1' else c1541_sd_wr;
   ext_en <= '1' when dos_sel(0) = '0' else '0'; -- dolphindos, speeddos
 else generate
   sd_lba <= loader_lba;
@@ -748,8 +757,72 @@ generic map (
 audio_div  <= to_unsigned(342,9) when ntscMode = '1' else to_unsigned(327,9);
 
 cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_finish;
-audio_l <= audio_data_l or ("00000" & cass_snd & "000000000000");
-audio_r <= audio_data_r or ("00000" & cass_snd & "000000000000");
+
+process(clk_sys)
+begin
+    if rising_edge(clk_sys) then
+        old_ioe <= IOE;
+        ioe_we <= (not old_ioe) and IOE and ram_we;
+
+        old_iof <= IOF;
+        iof_we <= (not old_iof) and IOF and ram_we;
+    end if;
+end process;
+
+process(clk_sys)
+    variable dac_index : integer range 0 to 3;
+    variable alm, arm : signed(16 downto 0);
+begin
+    if rising_edge(clk_sys) then
+        if system_digimax = "00" or reset_n = '0' then
+            dac <= (others => (others => '0'));
+            sact <= (others => '0');
+        elsif ((system_digimax(1) = '1' and iof_we = '1') or 
+               (system_digimax(1) = '0' and ioe_we = '1')) and c64_addr(2) = '0' then
+            dac_index := to_integer(unsigned(c64_addr(1 downto 0)));
+            dac(dac_index) <= resize(unsigned(c64_data_out), 9);
+            if unsigned(c64_data_out) /= 0 then
+                sact(to_integer(unsigned(c64_addr(1 downto 0)))) <= '1';
+            end if;
+        end if;
+
+        -- Guess mono/stereo/4-channel modes
+        if unsigned(act) < 2 then
+            dac_l <= unsigned(dac(0)) + unsigned(dac(0));
+            dac_r <= unsigned(dac(0)) + unsigned(dac(0));
+        elsif unsigned(sact) < 3 then
+            dac_l <= unsigned(dac(1)) + unsigned(dac(1));
+            dac_r <= unsigned(dac(0)) + unsigned(dac(0));
+        else
+            dac_l <= unsigned(dac(1)) + unsigned(dac(2));
+            dac_r <= unsigned(dac(0)) + unsigned(dac(3));
+        end if;
+
+        alm := signed(audio_data_l(17) & std_logic_vector(audio_data_l(17 downto 2))) 
+               + signed(std_logic_vector'("00") & std_logic_vector(dac_l) & std_logic_vector'("000000")) 
+               + signed((0 => cass_snd) & std_logic_vector'("000000000"));
+
+        arm := signed(audio_data_r(17) & std_logic_vector(audio_data_r(17 downto 2))) 
+               + signed(std_logic_vector'("00") & std_logic_vector(dac_r) & std_logic_vector'("000000")) 
+               + signed((0 => cass_snd) & std_logic_vector'("000000000"));
+        
+        if (alm(16) xor alm(15)) = '1' then
+            alo <= alm(16) & (alm(15) & alm(15) & alm(15) & alm(15) & alm(15) & alm(15) 
+                              & alm(15) & alm(15) & alm(15) & alm(15) & alm(15) & alm(15) 
+                              & alm(15) & alm(15) & alm(15));
+        else
+            alo <= alm(15 downto 0);
+        end if;
+
+        if (arm(16) xor arm(15)) = '1' then
+            aro <= arm(16) & (arm(15) & arm(15) & arm(15) & arm(15) & arm(15) & arm(15) 
+                              & arm(15) & arm(15) & arm(15) & arm(15) & arm(15) & arm(15) 
+                              & arm(15) & arm(15) & arm(15));
+        else
+            aro <= arm(15 downto 0);
+        end if;
+    end if;
+end process;
 
 video_inst: entity work.video 
 port map(
@@ -767,8 +840,8 @@ port map(
       g_in      => g(7 downto 4),
       b_in      => b(7 downto 4),
 
-      audio_l => audio_l,  -- interface C64 core specific
-      audio_r => audio_r,
+      audio_l => alo,
+      audio_r => aro,
       osd_status => osd_status,
 
       mcu_start => mcu_start,
@@ -817,7 +890,6 @@ din <= cart_wrdata
        reu_ram_dout
            when ext_cycle = '1' else
        cart_wrdata;
-
 
 dram_inst: entity work.sdram
 port map(
@@ -881,13 +953,14 @@ generic map (
     DCS_MODE => "RISING"
 )
 port map (
-    CLKOUT => clk_pixel_x5,
-    CLKSEL => dcsclksel,
+
     CLKIN0 => clk_pixel_x5_pal,
     CLKIN1 => clk_pixel_x5_ntsc,
     CLKIN2 => '0',
     CLKIN3 => '0',
-    SELFORCE => '1'
+    SELFORCE => '1',
+    CLKOUT => clk_pixel_x5,
+    CLKSEL => dcsclksel
 );
 
 div_inst: CLKDIV
@@ -922,8 +995,8 @@ port map (
     mdclk => clk
 );
 
-leds(0) <= led1541 or ioctl_download or ioctl_upload;
-leds(1) <= '1' when cart_id = x"20" else '0'; -- light up if EasyFlash cartridge is detected
+leds(0) <= led1541;
+leds(1) <= ioctl_download or ioctl_upload;
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
@@ -1150,6 +1223,7 @@ hid_inst: entity work.hid
   system_boot_easyflash=> boot_easyflash,
   system_autosave     => autosave,
   system_save_cartridge => save_cartridge,
+  system_digimax        => system_digimax,
 
   -- port io (used to expose rs232)
   port_status       => serial_status,
@@ -1198,7 +1272,7 @@ io_data <=  unsigned(cart_data) when cart_oe = '1' else
             unsigned(reu_dout)  when reu_oe = '1' else
             unsigned(midi_data) when (midi_oe and midi_en) = '1' else
             unsigned(uart_data) when uart_oe = '1' else
-            x"00" when c64_addr(4) = '0' else x"FF";
+            x"FF";
 c64rom_wr <= load_rom and ioctl_download and ioctl_wr when ioctl_addr(16 downto 14) = "000" else '0';
 sid_fc_lr <= std_logic_vector(to_unsigned(16#600#, sid_fc_lr'length) - unsigned("000" & sid_fc_offset & "0000000")) when sid_filter(2) = '1' else (others => '0');
 
@@ -1339,6 +1413,9 @@ reu_oe  <= '1' when IOF = '1' and reu_cfg /= "00" else '0';
 reu_ram_ce <= not ext_cycle_d and ext_cycle and dma_req;
 
 reu_inst: entity work.reu
+generic map(
+  REU_ADDR => unsigned('0' & REU_ADDR)
+)
 port map(
     clk       => clk_sys,
     reset     => not reset_n,
@@ -1393,12 +1470,17 @@ port map(
 cid <= cart_id when cart_attached = '1' else x"63" when georam ='1' else x"FF";
 
 cartridge_inst: entity work.cartridge
-port map
-  (
+generic map(
+  RAM_ADDR => RAM_ADDR,
+  CRM_ADDR => CRM_ADDR,
+  CRT_ADDR => CRT_ADDR,
+  GEO_ADDR => GEO_ADDR
+)
+port map(
     clk32           => clk_sys,
     reset_n         => reset_n,
   
-    cart_loading    => ioctl_download and (load_crt or load_ezflash),
+    cart_loading    => ioctl_download and load_crt,
     cart_id         => cid,
     cart_exrom      => cart_exrom,
     cart_game       => cart_game,
@@ -1408,6 +1490,11 @@ port map
     cart_bank_addr  => ioctl_load_addr(20 downto 13),
     cart_bank_wr    => cart_hdr_wr,
     cart_boot       => boot_easyflash,
+    lobanks         => cart_lobanks,
+    hibanks         => cart_hibanks,
+    lobanks_map     => cart_lobanks_map,
+    hibanks_map     => cart_hibanks_map,
+    bank_cnt        => cart_bank_cnt,
 
     exrom           => exrom,
     game            => game,
@@ -1523,16 +1610,19 @@ port map (
   load_tap          => load_tap,
   load_flt          => load_flt,
   load_reu          => load_reu,
-  load_ezflash      => load_ezflash,
   sd_img_size       => sd_img_size,
-  leds              => open,
-  img_select        => open,
+
+  lobanks           => cart_lobanks,
+  hibanks           => cart_hibanks,
+  lobanks_map       => cart_lobanks_map,
+  hibanks_map       => cart_hibanks_map,
+  bank_cnt          => cart_bank_cnt,
 
   ioctl_download    => ioctl_download,
   ioctl_upload_req  => ezfl_save,
   ioctl_upload      => ioctl_upload,
   ioctl_din         => ioctl_din,
-  ioctl_addr        => ioctl_addr,
+  ioctl_addr(23 downto 0) => ioctl_addr,
   ioctl_dout        => ioctl_data,
   ioctl_wr          => ioctl_wr,
   ioctl_rd          => ioctl_rd,
@@ -1580,9 +1670,13 @@ begin
 
     if old_upload = '0' and ioctl_upload = '1' then
       ioctl_load_addr <= CRT_ADDR;
+      rd_cyc <= (others => '0');
+      ioctl_req_rd <= '0';
+      ioctl_rd_en <= '0';
     end if;
 
     if ioctl_rd = '1' then
+      ioctl_load_addr <= CRT_ADDR + resize(ioctl_addr, ioctl_load_addr'length);
       ioctl_req_rd <= '1';
     end if;
 
@@ -1591,7 +1685,6 @@ begin
     if rd_cyc(2) = '1' then
       ioctl_din <= sdram_data;
       ioctl_req_rd <= '0';
-      ioctl_load_addr <= ioctl_load_addr + 1;
     end if;
 
     if ioctl_wr = '1' then
@@ -1610,9 +1703,8 @@ begin
           ioctl_req_wr <= '1';
           inj_end <= inj_end + 1;
         end if;
-      end if;
 
-      if load_crt = '1' then
+      elsif load_crt = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
           ioctl_load_addr <= CRT_ADDR;
           cart_blk_len <= (others => '0');
@@ -1676,38 +1768,21 @@ begin
             ioctl_req_wr <= '1';
           end if;
         end if;
-      end if;
 
-      if load_tap = '1' then
+      elsif load_tap = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= TAP_ADDR; end if;
         if ioctl_addr = to_unsigned(12, ioctl_addr'length) then tap_version <= std_logic_vector(ioctl_data(1 downto 0)); end if;
         ioctl_req_wr <= '1';
-      end if;
 
-      if load_reu = '1' then
+      elsif load_reu = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= REU_ADDR; end if;
         ioctl_req_wr <= '1';
       end if;
 
-      if load_ezflash = '1' then
-        if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
-          ioctl_load_addr <= CRT_ADDR;
-          cart_id <= to_unsigned(32, cart_id'length);-- EZFlash
-          cart_exrom <= '1'; -- Ultimax mode for easy compatibility
-          cart_game  <= '0';
-          cart_bank_hi <= '0';
-          cart_bank_16k <= '0';
-          cart_bank_num <= (others => '0');
-          cart_blk_len <= (others => '0');
-          cart_hdr_cnt <= (others => '0');
-          cart_hdr_wr <= '1';
-        end if;
-        ioctl_req_wr <= '1';
-      end if;
     end if;
 
     -- cart added
-    if old_download /= ioctl_download and (load_crt or load_ezflash) = '1' then
+    if old_download /= ioctl_download and load_crt = '1' then
       cart_attached <= old_download;
       erase_cram <= '1';
       ext_crt <= ioctl_download and load_crt;
@@ -1848,7 +1923,7 @@ process(clk_sys)
         do_erase <= '1';
         reset_wait <= '1';
         reset_counter <= 255;
-      elsif ioctl_download = '1' and (load_crt or load_ezflash or load_rom) = '1' then
+      elsif ioctl_download = '1' and (load_crt or load_rom) = '1' then
         do_erase <= '1';
         reset_counter <= 255;
       elsif erasing = '1' then 
@@ -1886,6 +1961,7 @@ end process;
 tap_download <= ioctl_download and load_tap;
 tap_reset <= '1' when reset_n = '0' or tap_download = '1' or tap_last_addr = to_unsigned(0, tap_last_addr'length) or cass_finish = '1' or (cass_run = '1'and ((tap_last_addr - tap_play_addr) < to_unsigned(80, tap_last_addr'length))) else '0';
 tap_loaded <= '1' when tap_play_addr < tap_last_addr else '0';
+tap_io_cycle <= not tap_wrfull and tap_loaded;
 
 process(clk_sys)
 begin
@@ -1901,7 +1977,7 @@ begin
         tap_start <= tap_download;
       else
         tap_start <= '0';
-        if io_cycle = '0' and io_cycle_rD = '1' and tap_wrfull = '0' and tap_loaded = '1' then
+        if io_cycle = '0' and io_cycle_rD = '1' and tap_io_cycle = '1' then
             read_cyc <= '1';
           end if;
         if io_cycle = '1' and io_cycle_rD = '1' and read_cyc = '1' then

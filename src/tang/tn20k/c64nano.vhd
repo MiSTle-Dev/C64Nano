@@ -1917,14 +1917,14 @@ begin
     end if;
 
     -- cart added
-    if (old_download /= ioctl_download) and load_crt = '1' then
+    if old_download /= ioctl_download and load_crt = '1' then
       cart_attached <= old_download;
       erase_cram <= '1';
       ext_crt <= ioctl_download and load_crt;
     end if;
 
     -- meminit for RAM injection
-    if (old_download /= ioctl_download) and load_prg = '1' and inj_meminit = '0' then
+    if old_download /= ioctl_download and load_prg = '1' and inj_meminit = '0' then
       inj_meminit <= '1';
       ioctl_load_addr <= (others => '0');
     end if;
