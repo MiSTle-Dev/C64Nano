@@ -282,7 +282,7 @@
     </menu>
     <menu label="Storage">
       <fileselector label="Floppy:" ext="d64;g64" index="0" default="disk8.d64"/>
-      <fileselector label="CRT ROM:" ext="crt" index="1"/>
+      <fileselector label="CRT ROM:" ext="crt;sav" index="1"/>
       <fileselector label="PRG BASIC:" ext="prg" index="2"/>
       <fileselector label="C64 KERNAL:" ext="bin" index="3"/>
       <fileselector label="TAP TAPE:" ext="tap" index="4"/>
