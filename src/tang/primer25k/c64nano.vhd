@@ -306,6 +306,7 @@ signal io_cycle_we     : std_logic;
 signal io_cycle_addr   : unsigned(24 downto 0);
 signal io_cycle_data   : unsigned(7 downto 0);
 signal load_crt        : std_logic := '0';
+signal load_ezflash    : std_logic := '0';
 signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
@@ -1631,6 +1632,7 @@ port map (
   load_tap          => load_tap,
   load_flt          => load_flt,
   load_reu          => load_reu,
+  load_ezflash      => load_ezflash,
   sd_img_size       => sd_img_size,
 
   lobanks           => cart_lobanks,
@@ -1798,8 +1800,11 @@ begin
       elsif load_reu = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= REU_ADDR; end if;
         ioctl_req_wr <= '1';
-      end if;
 
+      elsif load_ezflash = '1' then
+          ioctl_load_addr <= CRT_ADDR; -- dummy
+          ioctl_req_wr <= '1';
+      end if;
     end if;
 
     -- cart added
@@ -1944,7 +1949,7 @@ process(clk_sys)
         do_erase <= '1';
         reset_wait <= '1';
         reset_counter <= 255;
-      elsif ioctl_download = '1' and (load_crt or load_rom) = '1' then
+      elsif ioctl_download = '1' and (load_crt or load_ezflash or load_rom) = '1' then
         do_erase <= '1';
         reset_counter <= 255;
       elsif erasing = '1' then 

@@ -27,9 +27,10 @@ module loader_sd_card
 	output logic        load_tap,
 	output logic        load_flt,
 	output logic        load_reu,
+	output logic        load_ezflash,
 	output logic        loader_busy,
 
-	input  logic [6:0]  lobanks[0:63],
+	input logic [6:0]   lobanks[0:63],
 	input logic [6:0]   hibanks[0:63],
 	input logic [63:0]  lobanks_map,
 	input logic [63:0]  hibanks_map,
@@ -256,6 +257,7 @@ always_ff @(posedge clk) begin
 		load_tap <= 0;
 		load_flt <= 0;
 		load_reu <= 0;
+		load_ezflash <= 0;
 		ioctl_download <= 0;
 		ioctl_addr <= 'd0;
 		addr <= 'd0;
@@ -471,7 +473,10 @@ always_ff @(posedge clk) begin
 				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
 				//		img_select <= 0;
 				//	end
-				else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_ezflash))) begin // EZFLASH
+				else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_ezflash))) begin // EZFLASH SAVE
+						img_select <= 7;
+						io_state <= GO4IT;
+						rd_sel <= 7'b1000000;
 						boot_ezflash <= 1;
 					end
 				else begin
@@ -484,6 +489,7 @@ always_ff @(posedge clk) begin
 						load_tap <= 0;
 						load_flt <= 0;
 						load_reu <= 0;
+						load_ezflash <= 0;
 					end
 			end
 
@@ -495,6 +501,7 @@ always_ff @(posedge clk) begin
 					load_tap <= rd_sel[3]; 
 					load_flt <= rd_sel[4]; 
 					load_reu <= rd_sel[5];
+					load_ezflash <= rd_sel[6];
 					ioctl_addr <= '0;
 					ioctl_download <= 1;
 					addr <= '0;
@@ -551,6 +558,7 @@ always_ff @(posedge clk) begin
 				load_tap <= 1'b0;
 				load_flt <= 1'b0;
 				load_reu <= 1'b0;
+				load_ezflash <= 1'b0;
 				loader_busy <= 1'b0;
 				io_state <= START;
 			end
