@@ -26,7 +26,7 @@ add_file src/misc/sd_card.v
 add_file src/misc/sd_rw.v
 add_file src/misc/sdcmd_ctrl.v
 add_file src/misc/sysctrl.v
-add_file src/tang/primer25k/video.v
+add_file src/misc/video.v
 add_file src/misc/video_analyzer.v
 add_file src/misc/ws2812.v
 add_file src/mos6526.v

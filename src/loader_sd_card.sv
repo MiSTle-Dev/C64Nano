@@ -32,6 +32,12 @@ module loader_sd_card
 	output logic [2:0]  img_select,
 	output logic [4:0]  leds,
 
+	input  logic [6:0]  lobanks[0:63],
+	input logic [6:0]   hibanks[0:63],
+	input logic [63:0]  lobanks_map,
+	input logic [63:0]  hibanks_map,
+	input logic [7:0]   bank_cnt,
+
 	output logic        ioctl_download,
 	input  logic        ioctl_upload_req,
 	output logic        ioctl_upload,

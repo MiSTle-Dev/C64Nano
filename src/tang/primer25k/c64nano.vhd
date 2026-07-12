@@ -79,6 +79,7 @@ signal midi_rx             : std_logic;
 signal midi_tx             : std_logic;
 
 type unsigned_array_9b is array (natural range <>) of unsigned(8 downto 0);
+type u7_array_t is array (natural range <>) of unsigned(6 downto 0);
 signal dac            : unsigned_array_9b(3 downto 0) := (others => (others => '0'));
 signal clk64          : std_logic;
 signal clk_sys        : std_logic;
@@ -298,7 +299,6 @@ signal cart_game       : std_logic;
 signal cart_attached   : std_logic := '0';
 signal cart_hdr_cnt    : unsigned(3 downto 0);
 signal cart_hdr_wr     : std_logic;
-signal ezflash_bank_wr_pending : std_logic := '0';
 signal cart_blk_len    : unsigned(15 downto 0);
 signal io_cycle        : std_logic;
 signal io_cycle_ce     : std_logic;
@@ -426,6 +426,11 @@ signal reu_wrap         : std_logic;
 signal c64_data_in      : unsigned(7 downto 0);
 signal cart_mem_req     : std_logic;
 signal cart_wrdata      : unsigned(7 downto 0);
+signal cart_lobanks     : u7_array_t(0 to 63);
+signal cart_hibanks     : u7_array_t(0 to 63);
+signal cart_bank_cnt    : unsigned(7 downto 0);
+signal cart_lobanks_map : unsigned(63 downto 0);
+signal cart_hibanks_map : unsigned(63 downto 0);
 signal cart_bank_hi     : std_logic;
 signal cart_bank_16k    : std_logic;
 signal rd_cyc           : unsigned(2 downto 0);
@@ -1507,7 +1512,11 @@ port map(
     cart_bank_addr  => ioctl_load_addr(20 downto 13),
     cart_bank_wr    => cart_hdr_wr,
     cart_boot       => boot_easyflash,
-    cart_premap     => '0', -- debug only
+    lobanks         => cart_lobanks,
+    hibanks         => cart_hibanks,
+    lobanks_map     => cart_lobanks_map,
+    hibanks_map     => cart_hibanks_map,
+    bank_cnt       => cart_bank_cnt,
 
     exrom           => exrom,
     game            => game,
@@ -1627,6 +1636,12 @@ port map (
   sd_img_size       => sd_img_size,
   leds              => open,
   img_select        => open,
+
+  lobanks           => cart_lobanks,
+  hibanks           => cart_hibanks,
+  lobanks_map       => cart_lobanks_map,
+  hibanks_map       => cart_hibanks_map,
+  bank_cnt          => cart_bank_cnt,
 
   ioctl_download    => ioctl_download,
   ioctl_upload_req  => ezfl_save,
@@ -1812,10 +1827,6 @@ begin
       cart_attached <= old_download;
       erase_cram <= '1';
       ext_crt <= ioctl_download and load_crt;
-    end if;
-
-    if ioctl_download = '0' then
-      ezflash_bank_wr_pending <= '0';
     end if;
 
     -- meminit for RAM injection
