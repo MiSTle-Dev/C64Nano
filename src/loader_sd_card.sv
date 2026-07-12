@@ -27,10 +27,7 @@ module loader_sd_card
 	output logic        load_tap,
 	output logic        load_flt,
 	output logic        load_reu,
-	output logic        load_ezflash,
 	output logic        loader_busy,
-	output logic [2:0]  img_select,
-	output logic [4:0]  leds,
 
 	input  logic [6:0]  lobanks[0:63],
 	input logic [6:0]   hibanks[0:63],
@@ -65,6 +62,14 @@ typedef enum logic [3:0] {
 	WRITE_WAIT4SD
 } io_state_t;
 
+typedef enum logic [1:0] {
+	UP_GLOBAL_HDR,
+	UP_CHIP_HDR,
+	UP_CHIP_DATA,
+	UP_DONE
+} upload_state_t;
+
+logic [2:0] img_select;
 io_state_t io_state;
 logic [24:0] addr;
 logic wr;
@@ -77,14 +82,132 @@ logic [6:0] rd_sel;
 logic boot_crt;
 logic boot_bin;
 logic boot_prg;
-logic boot_tap;
+//logic boot_tap;
 logic boot_flt;
 logic boot_reu;
-logic boot_ezflash;
 logic old_upload_req;
 logic upload_req;
 logic write_strobe;
 logic [7:0] upload_data;
+logic [8:0] buf_addr;
+upload_state_t upload_state;
+logic [5:0] upload_hdr_idx;
+logic [3:0] upload_chip_hdr_idx;
+logic [12:0] upload_chip_data_idx;
+logic [6:0] upload_chip_bank;
+logic       upload_chip_hi;
+logic [8:0] chip_sel;
+
+function automatic logic [7:0] crt_header_byte(input logic [5:0] idx);
+	begin
+		case(idx)
+			6'd0:  crt_header_byte = "C";
+			6'd1:  crt_header_byte = "6";
+			6'd2:  crt_header_byte = "4";
+			6'd3:  crt_header_byte = " ";
+			6'd4:  crt_header_byte = "C";
+			6'd5:  crt_header_byte = "A";
+			6'd6:  crt_header_byte = "R";
+			6'd7:  crt_header_byte = "T";
+			6'd8:  crt_header_byte = "R";
+			6'd9:  crt_header_byte = "I";
+			6'd10: crt_header_byte = "D";
+			6'd11: crt_header_byte = "G";
+			6'd12: crt_header_byte = "E";
+			6'd13: crt_header_byte = " ";
+			6'd14: crt_header_byte = " ";
+			6'd15: crt_header_byte = " ";
+			6'd16: crt_header_byte = 8'h00;
+			6'd17: crt_header_byte = 8'h00;
+			6'd18: crt_header_byte = 8'h00;
+			6'd19: crt_header_byte = 8'h40;
+			6'd20: crt_header_byte = 8'h01;
+			6'd21: crt_header_byte = 8'h00;
+			6'd22: crt_header_byte = 8'h00;
+			6'd23: crt_header_byte = 8'h20; // EasyFlash cartridge type
+			6'd24: crt_header_byte = 8'h01; // EXROM, Ultimax mode
+			6'd25: crt_header_byte = 8'h00; // GAME
+			6'd26: crt_header_byte = 8'h00;
+			6'd27: crt_header_byte = 8'h00;
+			6'd28: crt_header_byte = 8'h00;
+			6'd29: crt_header_byte = 8'h00;
+			6'd30: crt_header_byte = 8'h00;
+			6'd31: crt_header_byte = 8'h00;
+			6'd32: crt_header_byte = "E";
+			6'd33: crt_header_byte = "A";
+			6'd34: crt_header_byte = "S";
+			6'd35: crt_header_byte = "Y";
+			6'd36: crt_header_byte = "F";
+			6'd37: crt_header_byte = "L";
+			6'd38: crt_header_byte = "A";
+			6'd39: crt_header_byte = "S";
+			6'd40: crt_header_byte = "H";
+			6'd41: crt_header_byte = " ";
+			6'd42: crt_header_byte = "S";
+			6'd43: crt_header_byte = "A";
+			6'd44: crt_header_byte = "V";
+			6'd45: crt_header_byte = "E";
+			default: crt_header_byte = " ";
+		endcase
+	end
+endfunction
+
+function automatic logic [7:0] chip_header_byte(input logic [3:0] idx, input logic [6:0] bank, input logic hi);
+	begin
+		case(idx)
+			4'd0:  chip_header_byte = "C";
+			4'd1:  chip_header_byte = "H";
+			4'd2:  chip_header_byte = "I";
+			4'd3:  chip_header_byte = "P";
+			4'd4:  chip_header_byte = 8'h00;
+			4'd5:  chip_header_byte = 8'h00;
+			4'd6:  chip_header_byte = 8'h20;
+			4'd7:  chip_header_byte = 8'h10; // 16-byte CHIP header + 8k payload
+			4'd8:  chip_header_byte = 8'h00;
+			4'd9:  chip_header_byte = 8'h02; // ROM chip type
+			4'd10: chip_header_byte = 8'h00;
+			4'd11: chip_header_byte = {1'b0, bank};
+			4'd12: chip_header_byte = hi ? 8'hA0 : 8'h80;
+			4'd13: chip_header_byte = 8'h00;
+			4'd14: chip_header_byte = 8'h20;
+			4'd15: chip_header_byte = 8'h00;
+			default: chip_header_byte = 8'h00;
+		endcase
+	end
+endfunction
+
+function automatic logic [8:0] find_chip_from(input logic [6:0] start_bank, input logic start_hi);
+	int unsigned b;
+	int unsigned start_u;
+	begin : find_loop
+		find_chip_from = 9'd0;
+		start_u = {25'd0, start_bank};
+		for(b = 0; b < 64; b = b + 1) begin
+			if(b >= start_u) begin
+				if(b == start_u) begin
+					if(!start_hi && lobanks_map[b[5:0]]) begin
+						find_chip_from = {1'b1, b[6:0], 1'b0};
+						disable find_loop;
+					end
+					if(hibanks_map[b[5:0]]) begin
+						find_chip_from = {1'b1, b[6:0], 1'b1};
+						disable find_loop;
+					end
+				end
+				else begin
+					if(lobanks_map[b[5:0]]) begin
+						find_chip_from = {1'b1, b[6:0], 1'b0};
+						disable find_loop;
+					end
+					if(hibanks_map[b[5:0]]) begin
+						find_chip_from = {1'b1, b[6:0], 1'b1};
+						disable find_loop;
+					end
+				end
+			end
+		end
+	end
+endfunction
 
 integer i;
 
@@ -101,11 +224,6 @@ always_ff @(posedge clk) begin
 		end 
 	end
 
-	leds[0] <= img_present[0];
-	leds[1] <= img_present[1];
-	leds[2] <= img_present[2];
-	leds[3] <= img_present[3];
-	leds[4] <= img_present[4];
 	ioctl_rd <= 0;
 	ioctl_wr <= wr;
 	wr <= 0;
@@ -137,21 +255,23 @@ always_ff @(posedge clk) begin
 		load_tap <= 0;
 		load_flt <= 0;
 		load_reu <= 0;
-		load_ezflash <= 0;
 		ioctl_download <= 0;
 		ioctl_addr <= 'd0;
 		addr <= 'd0;
 		upload_data <= 8'd0;
-		leds <= 5'd0;
+		buf_addr <= 9'd0;
+		upload_state <= UP_GLOBAL_HDR;
+		upload_hdr_idx <= 6'd0;
+		upload_chip_hdr_idx <= 4'd0;
+		upload_chip_data_idx <= 13'd0;
+		upload_chip_bank <= 7'd0;
+		upload_chip_hi <= 1'b0;
 		loader_busy <= 0;
 		boot_crt <= 0;
 		boot_bin <= 0;
 		boot_prg <= 0;
-		boot_tap <= 0;
 		boot_flt <= 0;
 		boot_reu <= 0;
-		boot_ezflash <= 0;
-		boot_tap <= 0;
 		rd_sel <= 7'd0;
 		img_select <= 3'd0;
 		cnt <= 9'd0;
@@ -162,29 +282,104 @@ always_ff @(posedge clk) begin
 	begin
 	case(io_state)
 		WRITE_PREPARE: begin
-			ioctl_rd <= 1;
-			io_state <= WRITE_WAIT4CORE;
+			if(upload_state == UP_DONE) begin
+				if(cnt != 9'd0) begin
+					upload_data <= 8'hFF;
+					io_state <= WRITING;
+				end
+				else begin
+					ioctl_upload <= 0;
+					io_state <= START;
+				end
+			end
+			else if(upload_state == UP_GLOBAL_HDR) begin
+				upload_data <= crt_header_byte(upload_hdr_idx);
+				io_state <= WRITING;
+			end
+			else if(upload_state == UP_CHIP_HDR) begin
+				upload_data <= chip_header_byte(upload_chip_hdr_idx, upload_chip_bank, upload_chip_hi);
+				io_state <= WRITING;
+			end
+			else begin
+				ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), upload_chip_data_idx};
+				ioctl_rd <= 1;
+				core_wait_cnt <= '0;
+				io_state <= WRITE_WAIT4CORE;
+			end
 		end
 
 		WRITE_WAIT4CORE: begin
-				core_wait_cnt <= core_wait_cnt + 1;
-				if(~ioctl_wait && &core_wait_cnt) begin
-					upload_data <= ioctl_din;
-					io_state <= WRITING;
+				if(~ioctl_wait) begin
+					core_wait_cnt <= core_wait_cnt + 1;
+					if(&core_wait_cnt) begin
+						upload_data <= ioctl_din;
+						io_state <= WRITING;
+					end
+				end
+				else begin
+					core_wait_cnt <= '0;
 				end
 			end
 
 		WRITING: begin
 			write_strobe <= 1;
-			ioctl_addr <= addr;
+			buf_addr <= cnt;
 			addr <= addr + 1;
 			cnt <= cnt + 1;
-			if(cnt == 511) io_state <= WRITE_FLUSH;
-			else begin
-				ioctl_rd <= 1;
-				core_wait_cnt <= '0;
-				io_state <= WRITE_WAIT4CORE;
+
+			if(upload_state == UP_GLOBAL_HDR) begin
+				if(upload_hdr_idx == 6'd63) begin
+					chip_sel = find_chip_from(7'd0, 1'b0);
+					if(chip_sel[8]) begin
+						upload_chip_bank <= chip_sel[7:1];
+						upload_chip_hi <= chip_sel[0];
+						upload_chip_hdr_idx <= 4'd0;
+						upload_chip_data_idx <= 13'd0;
+						upload_state <= UP_CHIP_HDR;
+					end
+					else begin
+						upload_state <= UP_DONE;
+					end
+				end
+				else begin
+					upload_hdr_idx <= upload_hdr_idx + 1'd1;
+				end
 			end
+			else if(upload_state == UP_CHIP_HDR) begin
+				if(upload_chip_hdr_idx == 4'd15) begin
+					upload_chip_data_idx <= 13'd0;
+					upload_state <= UP_CHIP_DATA;
+				end
+				else begin
+					upload_chip_hdr_idx <= upload_chip_hdr_idx + 1'd1;
+				end
+			end
+			else if(upload_state == UP_CHIP_DATA) begin
+				if(upload_chip_data_idx == 13'd8191) begin
+					if(upload_chip_hi && upload_chip_bank == 7'd63) begin
+						upload_state <= UP_DONE;
+					end
+					else begin
+						chip_sel = find_chip_from(upload_chip_hi ? (upload_chip_bank + 1'd1) : upload_chip_bank, upload_chip_hi ? 1'b0 : 1'b1);
+						if(chip_sel[8]) begin
+							upload_chip_bank <= chip_sel[7:1];
+							upload_chip_hi <= chip_sel[0];
+							upload_chip_hdr_idx <= 4'd0;
+							upload_chip_data_idx <= 13'd0;
+							upload_state <= UP_CHIP_HDR;
+						end
+						else begin
+							upload_state <= UP_DONE;
+						end
+					end
+				end
+				else begin
+					upload_chip_data_idx <= upload_chip_data_idx + 1'd1;
+				end
+			end
+
+			if(cnt == 511) io_state <= WRITE_FLUSH;
+			else io_state <= WRITE_PREPARE;
 		end
 
 		WRITE_FLUSH: begin
@@ -201,33 +396,38 @@ always_ff @(posedge clk) begin
 
 		WRITE_WAIT4SD: begin
 			if(sd_done) begin
-				if(addr < 25'h100000) begin  // 1Mbyte
-					io_state <= WRITE_WAIT4CORE;
-					cnt <= 'd0;
-					sd_lba <= sd_lba + 1;
-					ioctl_rd <= 1;
-					core_wait_cnt <= '0;
-				end
-				else
-				begin
+				if(upload_state == UP_DONE) begin
 					ioctl_upload <= 0;
 					io_state <= START;
+					cnt <= 'd0;
+				end
+				else begin
+					io_state <= WRITE_PREPARE;
+					cnt <= 'd0;
+					sd_lba <= sd_lba + 1;
 				end
 			end
 		end
 
 		START:
 			begin // 0 c1541 1 CRT 2 PRG 3 BIN 4 TAP 5 FLT 6 REU 7 EZFLASH SAVE
-				if((|img_size[7]) && upload_req) begin //
+				if((|img_size[7]) && upload_req && (|bank_cnt || |lobanks_map || |hibanks_map)) begin //
 						upload_req <= 0;
 						loader_busy <= 1;
 						io_state <= WRITE_PREPARE;
 						ioctl_addr <= 'd0;
 						ioctl_upload <= 1;
 						addr <= 'd0;
+						buf_addr <= 'd0;
 						sd_lba <= 'd0;
 						core_wait_cnt <= '0;
 						cnt <= 'd0;
+						upload_state <= UP_GLOBAL_HDR;
+						upload_hdr_idx <= 6'd0;
+						upload_chip_hdr_idx <= 4'd0;
+						upload_chip_data_idx <= 13'd0;
+						upload_chip_bank <= 7'd0;
+						upload_chip_hi <= 1'b0;
 					end
 				else if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))) begin
 						img_select <= 3;
@@ -258,22 +458,13 @@ always_ff @(posedge clk) begin
 						img_select <= 4;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0001000;
-						boot_tap <= 1;
+//						boot_tap <= 1;
 					end
 				else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu))) begin
 						img_select <= 6;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0100000;
 						boot_reu <= 1;
-					end
-				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
-				//		img_select <= 0;
-				//	end
-				else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_ezflash))) begin // EZFLASH SAVE
-						img_select <= 7;
-						io_state <= GO4IT;
-						rd_sel <= 7'b1000000;
-						boot_ezflash <= 1;
 					end
 				else begin
 						loader_busy <= 0;
@@ -285,7 +476,6 @@ always_ff @(posedge clk) begin
 						load_tap <= 0;
 						load_flt <= 0;
 						load_reu <= 0;
-						load_ezflash <= 0;
 					end
 			end
 
@@ -297,7 +487,6 @@ always_ff @(posedge clk) begin
 					load_tap <= rd_sel[3]; 
 					load_flt <= rd_sel[4]; 
 					load_reu <= rd_sel[5];
-					load_ezflash <= rd_sel[6];
 					ioctl_addr <= '0;
 					ioctl_download <= 1;
 					addr <= '0;
@@ -332,6 +521,7 @@ always_ff @(posedge clk) begin
 				core_wait_cnt <= core_wait_cnt + 1;
 				if(~ioctl_wait && &core_wait_cnt) begin
 					wr <= 1;
+					buf_addr <= cnt;
 					ioctl_addr <= addr;
 					addr <= addr + 1;
 					cnt <= cnt + 1;
@@ -353,7 +543,6 @@ always_ff @(posedge clk) begin
 				load_tap <= 1'b0;
 				load_flt <= 1'b0;
 				load_reu <= 1'b0;
-				load_ezflash <= 1'b0;
 				loader_busy <= 1'b0;
 				io_state <= START;
 			end
@@ -374,7 +563,7 @@ sector_dpram #(8, 9) trkbuf_inst_loader
 	.wren_a(sd_rd_byte_strobe),
 	.q_a(sd_wr_data),
 
-	.address_b(ioctl_addr[8:0]),
+	.address_b(buf_addr),
 	.data_b(upload_data),
 	.wren_b(write_strobe),
 	.q_b(ioctl_dout)
@@ -395,7 +584,7 @@ Gowin_DPB_track_buffer_b trkbuf_inst_loader(
 	.wreb(write_strobe),// write from ioctl to buffer (write)
 	.ada(sd_byte_index),  // sd module
 	.dina(sd_rd_data),    // sd module
-	.adb(ioctl_addr[8:0]),
+	.adb(buf_addr),
 	.dinb(upload_data)
 );
 `endif

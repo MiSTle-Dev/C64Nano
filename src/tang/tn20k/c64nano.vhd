@@ -1629,7 +1629,7 @@ port map(
     hibanks         => cart_hibanks,
     lobanks_map     => cart_lobanks_map,
     hibanks_map     => cart_hibanks_map,
-    bank_cnt       => cart_bank_cnt,
+    bank_cnt        => cart_bank_cnt,
 
     exrom           => exrom,
     game            => game,
@@ -1745,10 +1745,7 @@ port map (
   load_tap          => load_tap,
   load_flt          => load_flt,
   load_reu          => load_reu,
-  load_ezflash      => load_ezflash,
   sd_img_size       => sd_img_size,
-  leds              => open,
-  img_select        => open,
 
   lobanks           => cart_lobanks,
   hibanks           => cart_hibanks,
@@ -1814,9 +1811,7 @@ begin
     end if;
 
     if ioctl_rd = '1' then
---      if(ioctl_addr = to_unsigned(0, ioctl_addr'length)) then
---        ioctl_load_addr <= CRT_ADDR;
---      end if;
+      ioctl_load_addr <= CRT_ADDR + resize(ioctl_addr, ioctl_load_addr'length);
       ioctl_req_rd <= '1';
     end if;
 
@@ -1825,7 +1820,6 @@ begin
     if rd_cyc(2) = '1' then
       ioctl_din <= sdram_data;
       ioctl_req_rd <= '0';
-      ioctl_load_addr <= ioctl_load_addr + 1;
     end if;
 
     if ioctl_wr = '1' then
@@ -1918,32 +1912,19 @@ begin
       elsif load_reu = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= REU_ADDR; end if;
         ioctl_req_wr <= '1';
-
-      elsif load_ezflash = '1' then
-        if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
-          ioctl_load_addr <= CRT_ADDR;
-          cart_id <= to_unsigned(32, cart_id'length);-- EZFlash
-          cart_exrom <= '1'; -- Ultimax mode for easy compatibility
-          cart_game  <= '0';
-          cart_bank_hi <= '0';
-          cart_bank_num <= (others => '0');
-          cart_bank_16k <= '0';
-          cart_blk_len <= (others => '0');
-          cart_hdr_cnt <= (others => '0');
-        end if;
-          ioctl_req_wr <= '1';
       end if;
+
     end if;
 
     -- cart added
-    if old_download /= ioctl_download and (load_crt or load_ezflash) = '1' then
+    if (old_download /= ioctl_download) and load_crt = '1' then
       cart_attached <= old_download;
       erase_cram <= '1';
       ext_crt <= ioctl_download and load_crt;
     end if;
 
     -- meminit for RAM injection
-    if old_download /= ioctl_download and load_prg = '1' and inj_meminit = '0' then
+    if (old_download /= ioctl_download) and load_prg = '1' and inj_meminit = '0' then
       inj_meminit <= '1';
       ioctl_load_addr <= (others => '0');
     end if;
@@ -2077,7 +2058,7 @@ process(clk_sys)
         do_erase <= '1';
         reset_wait <= '1';
         reset_counter <= 255;
-      elsif ioctl_download = '1' and (load_crt or load_ezflash or load_rom) = '1' then
+      elsif ioctl_download = '1' and (load_crt or load_rom) = '1' then
         do_erase <= '1';
         reset_counter <= 255;
       elsif erasing = '1' then 
