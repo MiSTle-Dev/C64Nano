@@ -1507,7 +1507,7 @@ port map(
     cart_bank_addr  => ioctl_load_addr(20 downto 13),
     cart_bank_wr    => cart_hdr_wr,
     cart_boot       => boot_easyflash,
-    cart_premap     => load_ezflash,
+    cart_premap     => '0', -- debug only
 
     exrom           => exrom,
     game            => game,
