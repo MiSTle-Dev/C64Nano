@@ -1802,13 +1802,23 @@ begin
         ioctl_req_wr <= '1';
 
       elsif load_ezflash = '1' then
-          ioctl_load_addr <= CRT_ADDR; -- dummy
+        if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
+          ioctl_load_addr <= CRT_ADDR;
+          cart_id <= to_unsigned(32, cart_id'length);-- EZFlash
+          cart_exrom <= '1'; -- Ultimax mode for easy compatibility
+          cart_game  <= '0';
+          cart_bank_hi <= '0';
+          cart_bank_num <= (others => '0');
+          cart_bank_16k <= '0';
+          cart_blk_len <= (others => '0');
+          cart_hdr_cnt <= (others => '0');
+        end if;
           ioctl_req_wr <= '1';
       end if;
     end if;
 
     -- cart added
-    if old_download /= ioctl_download and load_crt = '1' then
+    if old_download /= ioctl_download and (load_crt or load_ezflash) = '1' then
       cart_attached <= old_download;
       erase_cram <= '1';
       ext_crt <= ioctl_download and load_crt;

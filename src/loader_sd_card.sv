@@ -29,6 +29,7 @@ module loader_sd_card
 	output logic        load_reu,
 	output logic        load_ezflash,
 	output logic        loader_busy,
+	output logic [2:0]  img_select,
 
 	input logic [6:0]   lobanks[0:63],
 	input logic [6:0]   hibanks[0:63],
@@ -70,7 +71,6 @@ typedef enum logic [1:0] {
 	UP_DONE
 } upload_state_t;
 
-logic [2:0] img_select;
 io_state_t io_state;
 logic [24:0] addr;
 logic wr;
