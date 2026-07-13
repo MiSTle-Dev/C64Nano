@@ -9,8 +9,8 @@ module loader_sd_card
 	input  logic        reset,
 
 	output logic [31:0] sd_lba,
-	output logic [6:0]  sd_rd, // read request for target
-	output logic [6:0]  sd_wr, // write request for target
+	output logic [7:0]  sd_rd, // read request for target
+	output logic [7:0]  sd_wr, // write request for target
 	input  logic        sd_busy, // SD is busy (has accepted read or write request)
 
 	input  logic [8:0]  sd_byte_index, // address of data byte within 512 bytes sector
@@ -18,6 +18,10 @@ module loader_sd_card
 	input  logic        sd_rd_byte_strobe, // SD has read a byte to be stored in  buffer
 	input  logic        sd_done, // SD is done (data has been read or written
 	output logic [7:0]  sd_wr_data,
+	input  logic [31:0] c1541_lba,
+	input  logic        c1541_sd_rd,
+	input  logic        c1541_sd_wr,
+	input  logic [7:0]  c1541_sd_wr_data,
 
 	input  logic [7:0]  sd_img_mounted,
 	input  logic [31:0] sd_img_size,
@@ -27,9 +31,7 @@ module loader_sd_card
 	output logic        load_tap,
 	output logic        load_flt,
 	output logic        load_reu,
-	output logic        load_ezflash,
 	output logic        loader_busy,
-	output logic [2:0]  img_select,
 
 	input logic [6:0]   lobanks[0:63],
 	input logic [6:0]   hibanks[0:63],
@@ -71,6 +73,8 @@ typedef enum logic [1:0] {
 	UP_DONE
 } upload_state_t;
 
+logic load_ezflash;
+logic [2:0] img_select;
 io_state_t io_state;
 logic [24:0] addr;
 logic wr;
@@ -83,7 +87,7 @@ logic [6:0] rd_sel;
 logic boot_crt;
 logic boot_bin;
 logic boot_prg;
-//logic boot_tap;
+logic boot_tap;
 logic boot_flt;
 logic boot_reu;
 logic boot_ezflash;
@@ -99,6 +103,16 @@ logic [12:0] upload_chip_data_idx;
 logic [6:0] upload_chip_bank;
 logic       upload_chip_hi;
 logic [8:0] chip_sel;
+
+logic [31:0] loader_sd_lba;
+logic [6:0]  loader_sd_rd;
+logic [6:0]  loader_sd_wr;
+logic [7:0]  loader_sd_wr_data;
+
+assign sd_lba     = loader_busy ? loader_sd_lba     : c1541_lba;
+assign sd_wr_data = loader_busy ? loader_sd_wr_data : c1541_sd_wr_data;
+assign sd_rd      = loader_busy ? {loader_sd_rd, 1'b0} : {7'b0000000, c1541_sd_rd};
+assign sd_wr      = loader_busy ? {loader_sd_wr, 1'b0} : {7'b0000000, c1541_sd_wr};
 
 function automatic logic [7:0] crt_header_byte(input logic [5:0] idx);
 	begin
@@ -182,7 +196,7 @@ function automatic logic [8:0] find_chip_from(input logic [6:0] start_bank, inpu
 	int unsigned b;
 	int unsigned start_u;
 	begin : find_loop
-		find_chip_from = 9'd0;
+		find_chip_from = '0;
 		start_u = {25'd0, start_bank};
 		for(b = 0; b < 64; b = b + 1) begin
 			if(b >= start_u) begin
@@ -232,8 +246,8 @@ always_ff @(posedge clk) begin
 	write_strobe <= 0;
 
 	if(sd_busy) begin
-		sd_rd <= 7'd0;
-		sd_wr <= 7'd0;
+		loader_sd_rd <= '0;
+		loader_sd_wr <= '0;
 	end
 
 	old_upload_req <= ioctl_upload_req;
@@ -247,9 +261,9 @@ always_ff @(posedge clk) begin
 		ioctl_upload <= 0;
 		ioctl_rd <= 0;
 		write_strobe <= 0;
-		sd_rd <= 7'd0;
-		sd_wr <= 7'd0;
-		sd_lba <= 32'h0;
+		loader_sd_rd <= '0;
+		loader_sd_wr <= '0;
+		loader_sd_lba <= '0;
 		wr <= 0;
 		load_crt <= 0;
 		load_prg <= 0;
@@ -259,16 +273,16 @@ always_ff @(posedge clk) begin
 		load_reu <= 0;
 		load_ezflash <= 0;
 		ioctl_download <= 0;
-		ioctl_addr <= 'd0;
-		addr <= 'd0;
-		upload_data <= 8'd0;
-		buf_addr <= 9'd0;
+		ioctl_addr <= '0;
+		addr <= '0;
+		upload_data <= '0;
+		buf_addr <= '0;
 		upload_state <= UP_GLOBAL_HDR;
-		upload_hdr_idx <= 6'd0;
-		upload_chip_hdr_idx <= 4'd0;
-		upload_chip_data_idx <= 13'd0;
-		upload_chip_bank <= 7'd0;
-		upload_chip_hi <= 1'b0;
+		upload_hdr_idx <= '0;
+		upload_chip_hdr_idx <= '0;
+		upload_chip_data_idx <= '0;
+		upload_chip_bank <= '0;
+		upload_chip_hi <= 0;
 		loader_busy <= 0;
 		boot_crt <= 0;
 		boot_bin <= 0;
@@ -276,9 +290,9 @@ always_ff @(posedge clk) begin
 		boot_flt <= 0;
 		boot_reu <= 0;
 		boot_ezflash <= 0;
-		rd_sel <= 7'd0;
-		img_select <= 3'd0;
-		cnt <= 9'd0;
+		rd_sel <= '0;
+		img_select <= '0;
+		cnt <= '0;
 		core_wait_cnt <= '0;
 		io_state <= START;
 	end
@@ -287,7 +301,7 @@ always_ff @(posedge clk) begin
 	case(io_state)
 		WRITE_PREPARE: begin
 			if(upload_state == UP_DONE) begin
-				if(cnt != 9'd0) begin
+				if(cnt != '0) begin
 					upload_data <= 8'hFF;
 					io_state <= WRITING;
 				end
@@ -333,12 +347,12 @@ always_ff @(posedge clk) begin
 
 			if(upload_state == UP_GLOBAL_HDR) begin
 				if(upload_hdr_idx == 6'd63) begin
-					chip_sel = find_chip_from(7'd0, 1'b0);
+					chip_sel = find_chip_from('0, 1'b0);
 					if(chip_sel[8]) begin
 						upload_chip_bank <= chip_sel[7:1];
 						upload_chip_hi <= chip_sel[0];
-						upload_chip_hdr_idx <= 4'd0;
-						upload_chip_data_idx <= 13'd0;
+						upload_chip_hdr_idx <= '0;
+						upload_chip_data_idx <= '0;
 						upload_state <= UP_CHIP_HDR;
 					end
 					else begin
@@ -351,7 +365,7 @@ always_ff @(posedge clk) begin
 			end
 			else if(upload_state == UP_CHIP_HDR) begin
 				if(upload_chip_hdr_idx == 4'd15) begin
-					upload_chip_data_idx <= 13'd0;
+					upload_chip_data_idx <= '0;
 					upload_state <= UP_CHIP_DATA;
 				end
 				else begin
@@ -368,8 +382,8 @@ always_ff @(posedge clk) begin
 						if(chip_sel[8]) begin
 							upload_chip_bank <= chip_sel[7:1];
 							upload_chip_hi <= chip_sel[0];
-							upload_chip_hdr_idx <= 4'd0;
-							upload_chip_data_idx <= 13'd0;
+							upload_chip_hdr_idx <= '0;
+							upload_chip_data_idx <= '0;
 							upload_state <= UP_CHIP_HDR;
 						end
 						else begin
@@ -387,7 +401,7 @@ always_ff @(posedge clk) begin
 		end
 
 		WRITE_FLUSH: begin
-			sd_wr <= 7'b1000000; // request write to sd card, EZFLASH index
+			loader_sd_wr <= 7'b1000000; // request write to sd card, EZFLASH index
 			io_state <= WRITE_START_SD;
 		end
 
@@ -403,12 +417,12 @@ always_ff @(posedge clk) begin
 				if(upload_state == UP_DONE) begin
 					ioctl_upload <= 0;
 					io_state <= START;
-					cnt <= 'd0;
+					loader_busy <= 0;
 				end
 				else begin
 					io_state <= WRITE_PREPARE;
-					cnt <= 'd0;
-					sd_lba <= sd_lba + 1;
+					cnt <= '0;
+					loader_sd_lba <= loader_sd_lba + 1;
 				end
 			end
 		end
@@ -419,19 +433,19 @@ always_ff @(posedge clk) begin
 						upload_req <= 0;
 						loader_busy <= 1;
 						io_state <= WRITE_PREPARE;
-						ioctl_addr <= 'd0;
+						ioctl_addr <= '0;
 						ioctl_upload <= 1;
-						addr <= 'd0;
-						buf_addr <= 'd0;
-						sd_lba <= 'd0;
+						addr <= '0;
+						buf_addr <= '0;
+						loader_sd_lba <= '0;
 						core_wait_cnt <= '0;
-						cnt <= 'd0;
+						cnt <= '0;
 						upload_state <= UP_GLOBAL_HDR;
-						upload_hdr_idx <= 6'd0;
-						upload_chip_hdr_idx <= 4'd0;
-						upload_chip_data_idx <= 13'd0;
-						upload_chip_bank <= 7'd0;
-						upload_chip_hi <= 1'b0;
+						upload_hdr_idx <= '0;
+						upload_chip_hdr_idx <= '0;
+						upload_chip_data_idx <= '0;
+						upload_chip_bank <= '0;
+						upload_chip_hi <= 0;
 					end
 				else if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))) begin
 						img_select <= 3;
@@ -462,7 +476,7 @@ always_ff @(posedge clk) begin
 						img_select <= 4;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0001000;
-//						boot_tap <= 1;
+						boot_tap <= 1;
 					end
 				else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu))) begin
 						img_select <= 6;
@@ -470,15 +484,15 @@ always_ff @(posedge clk) begin
 						rd_sel <= 7'b0100000;
 						boot_reu <= 1;
 					end
-				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
-				//		img_select <= 0;
-				//	end
 				else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_ezflash))) begin // EZFLASH SAVE
 						img_select <= 7;
 						io_state <= GO4IT;
 						rd_sel <= 7'b1000000;
 						boot_ezflash <= 1;
 					end
+				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
+				//		img_select <= 0;   // use for mux instead busy
+				//	end
 				else begin
 						loader_busy <= 0;
 						ioctl_upload <= 0;
@@ -505,15 +519,15 @@ always_ff @(posedge clk) begin
 					ioctl_addr <= '0;
 					ioctl_download <= 1;
 					addr <= '0;
-					sd_lba <= '0;
+					loader_sd_lba <= '0;
 					core_wait_cnt <= '0;
 					io_state <= WAIT4CORE;
 			end
 
 		WAIT4CORE: begin
 				if(~ioctl_wait) begin
-					sd_rd <= rd_sel;
-					cnt <= 9'd0;
+					loader_sd_rd <= rd_sel;
+					cnt <= '0;
 					io_state <= READ_WAIT4SD;
 				end
 			end
@@ -527,7 +541,7 @@ always_ff @(posedge clk) begin
 					io_state <= READ_NEXT;
 				else 
 				begin
-					ioctl_download <= 1'b0;
+					ioctl_download <= 0;
 					io_state <= DESELECT;
 				end
 			end
@@ -541,7 +555,7 @@ always_ff @(posedge clk) begin
 					addr <= addr + 1;
 					cnt <= cnt + 1;
 					if(cnt == 511 && (addr + 1) < img_size[img_select]) begin
-							sd_lba <= sd_lba + 1;
+							loader_sd_lba <= loader_sd_lba + 1;
 							io_state <= WAIT4CORE;
 						end
 					else
@@ -552,14 +566,14 @@ always_ff @(posedge clk) begin
 		end
 
 		DESELECT: begin
-				load_crt <= 1'b0;
-				load_prg <= 1'b0;
-				load_rom <= 1'b0;
-				load_tap <= 1'b0;
-				load_flt <= 1'b0;
-				load_reu <= 1'b0;
-				load_ezflash <= 1'b0;
-				loader_busy <= 1'b0;
+				load_crt <= 0;
+				load_prg <= 0;
+				load_rom <= 0;
+				load_tap <= 0;
+				load_flt <= 0;
+				load_reu <= 0;
+				load_ezflash <= 0;
+				loader_busy <= 0;
 				io_state <= START;
 			end
 
@@ -577,7 +591,7 @@ sector_dpram #(8, 9) trkbuf_inst_loader
 	.address_a(sd_byte_index),
 	.data_a(sd_rd_data),
 	.wren_a(sd_rd_byte_strobe),
-	.q_a(sd_wr_data),
+	.q_a(loader_sd_wr_data),
 
 	.address_b(buf_addr),
 	.data_b(upload_data),
@@ -586,7 +600,7 @@ sector_dpram #(8, 9) trkbuf_inst_loader
 );
 `else
 Gowin_DPB_track_buffer_b trkbuf_inst_loader(
-	.douta(sd_wr_data),   // sd module, write data to SD card (write)
+	.douta(loader_sd_wr_data),   // sd module, write data to SD card (write)
 	.doutb(ioctl_dout),
 	.clka(clk), 
 	.ocea(1'b1), 

@@ -209,7 +209,6 @@ signal sd_rd          : std_logic_vector(7 downto 0);
 signal sd_wr          : std_logic_vector(7 downto 0);
 signal disk_lba       : unsigned(31 downto 0);
 signal sd_lba         : unsigned(31 downto 0);
-signal loader_lba     : unsigned(31 downto 0);
 signal sd_busy        : std_logic;
 signal sd_done        : std_logic;
 signal sd_rd_byte_strobe : std_logic;
@@ -306,7 +305,6 @@ signal io_cycle_we     : std_logic;
 signal io_cycle_addr   : unsigned(24 downto 0);
 signal io_cycle_data   : unsigned(7 downto 0);
 signal load_crt        : std_logic := '0';
-signal load_ezflash    : std_logic := '0';
 signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
@@ -456,7 +454,6 @@ signal autosave         : std_logic := '0';
 signal ezfl_idx         : std_logic := '0';
 signal ioctl_upload     : std_logic := '0';
 signal disk_sd_wr_data  : unsigned(7 downto 0);
-signal loader_sd_wr_data: unsigned(7 downto 0);
 signal ext_old          : std_logic := '0';
 signal ext_crt          : std_logic := '0';
 signal ezfl_save_en     : std_logic := '0';
@@ -699,16 +696,12 @@ yes_c1541: if C1541 /= 0 generate
       c1541rom_addr => c1541rom_addr,
       c1541rom_data => c1541rom_data
   );
-  sd_lba <= loader_lba when loader_busy = '1' else disk_lba;
-  sd_wr_data <= loader_sd_wr_data when loader_busy = '1' else disk_sd_wr_data;
-  sd_rd(0) <= '0' when loader_busy = '1' else c1541_sd_rd;
-  sd_wr(0) <= '0' when loader_busy = '1' else c1541_sd_wr;
+
   ext_en <= '1' when dos_sel(0) = '0' else '0'; -- dolphindos, speeddos
 else generate
-  sd_lba <= loader_lba;
-  sd_wr_data <= loader_sd_wr_data;
-  sd_rd(0) <= '0';
-  sd_wr(0) <= '0';
+  disk_lba <= (others => '0');
+  c1541_sd_rd <= '0';
+  c1541_sd_wr <= '0';
   drive_par_o <= (others => '1');
   drive_stb_o <= '1';
   disk_sd_wr_data <= (others => '0'); 
@@ -1613,16 +1606,20 @@ port map (
   clk               => clk_sys,
   reset             => std_logic(system_reset(1) or not pll_locked),
 
-  sd_lba            => loader_lba,
-  sd_rd             => sd_rd(7 downto 1),
-  sd_wr             => sd_wr(7 downto 1),
+  sd_lba            => sd_lba,
+  sd_rd             => sd_rd,
+  sd_wr             => sd_wr,
   sd_busy           => sd_busy,
   sd_done           => sd_done,
 
   sd_byte_index     => sd_byte_index,
   sd_rd_data        => sd_rd_data,
   sd_rd_byte_strobe => sd_rd_byte_strobe,
-  sd_wr_data        => loader_sd_wr_data,
+  sd_wr_data        => sd_wr_data,
+  c1541_lba         => std_logic_vector(disk_lba),
+  c1541_sd_rd       => c1541_sd_rd,
+  c1541_sd_wr       => c1541_sd_wr,
+  c1541_sd_wr_data  => std_logic_vector(disk_sd_wr_data),
 
   sd_img_mounted    => sd_img_mounted,
   loader_busy       => loader_busy,
@@ -1632,7 +1629,6 @@ port map (
   load_tap          => load_tap,
   load_flt          => load_flt,
   load_reu          => load_reu,
-  load_ezflash      => load_ezflash,
   sd_img_size       => sd_img_size,
 
   lobanks           => cart_lobanks,
@@ -1800,25 +1796,12 @@ begin
       elsif load_reu = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= REU_ADDR; end if;
         ioctl_req_wr <= '1';
-
-      elsif load_ezflash = '1' then
-        if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
-          ioctl_load_addr <= CRT_ADDR;
-          cart_id <= to_unsigned(32, cart_id'length);-- EZFlash
-          cart_exrom <= '1'; -- Ultimax mode for easy compatibility
-          cart_game  <= '0';
-          cart_bank_hi <= '0';
-          cart_bank_num <= (others => '0');
-          cart_bank_16k <= '0';
-          cart_blk_len <= (others => '0');
-          cart_hdr_cnt <= (others => '0');
-        end if;
-          ioctl_req_wr <= '1';
       end if;
+
     end if;
 
     -- cart added
-    if old_download /= ioctl_download and (load_crt or load_ezflash) = '1' then
+    if old_download /= ioctl_download and load_crt = '1' then
       cart_attached <= old_download;
       erase_cram <= '1';
       ext_crt <= ioctl_download and load_crt;
@@ -1959,7 +1942,7 @@ process(clk_sys)
         do_erase <= '1';
         reset_wait <= '1';
         reset_counter <= 255;
-      elsif ioctl_download = '1' and (load_crt or load_ezflash or load_rom) = '1' then
+      elsif ioctl_download = '1' and (load_crt or load_rom) = '1' then
         do_erase <= '1';
         reset_counter <= 255;
       elsif erasing = '1' then 
