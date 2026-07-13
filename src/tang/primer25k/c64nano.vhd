@@ -1541,7 +1541,7 @@ port map(
     nmi_ack     => nmi_ack
   );
 
-ezfl_save <= save_cartridge or (autosave and ezfl_mod);
+ezfl_save <= (save_cartridge or (autosave and ezfl_mod)) when cart_id = to_unsigned(32, cart_id'length) else '0';
 
 process(clk_sys)
   begin
