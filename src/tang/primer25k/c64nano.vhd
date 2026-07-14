@@ -463,7 +463,7 @@ signal tap_io_cycle     : std_logic := '0';
 signal dac_l, dac_r     : unsigned(8 downto 0);
 signal alo, aro         : signed(15 downto 0);
 signal sact             : unsigned(3 downto 0);
-signal system_digimax   : unsigned(1 downto 0);
+signal system_digimax   : unsigned(1 downto 0) := (others => '0');
 signal ioe_we, iof_we   : std_logic;
 signal old_ioe, old_iof : std_logic;
 
@@ -798,7 +798,7 @@ begin
         end if;
 
         -- Guess mono/stereo/4-channel modes
-        if unsigned(act) < 2 then
+        if unsigned(sact) < 2 then
             dac_l <= unsigned(dac(0)) + unsigned(dac(0));
             dac_r <= unsigned(dac(0)) + unsigned(dac(0));
         elsif unsigned(sact) < 3 then
@@ -1541,7 +1541,7 @@ port map(
     nmi_ack     => nmi_ack
   );
 
-ezfl_save <= (save_cartridge or (autosave and ezfl_mod)) when cart_id = to_unsigned(32, cart_id'length) else '0';
+ezfl_save <= (save_cartridge or (autosave and ezfl_mod)) when cart_id = to_unsigned(32, cart_id'length) and cart_attached = '1' else '0';
 
 process(clk_sys)
   begin

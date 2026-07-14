@@ -251,12 +251,9 @@ always_ff @(posedge clk) begin
 	end
 
 	old_upload_req <= ioctl_upload_req;
-	if(~old_upload_req & ioctl_upload_req)
-		upload_req <= 1;
 
 	if(reset)
 	begin
-		old_upload_req <= 0;
 		upload_req <= 0;
 		ioctl_upload <= 0;
 		ioctl_rd <= 0;
@@ -298,6 +295,10 @@ always_ff @(posedge clk) begin
 	end
 	else
 	begin
+
+	if(~old_upload_req & ioctl_upload_req)
+		upload_req <= 1;
+
 	case(io_state)
 		WRITE_PREPARE: begin
 			if(upload_state == UP_DONE) begin
@@ -485,9 +486,9 @@ always_ff @(posedge clk) begin
 						boot_reu <= 1;
 					end
 				else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_ezflash))) begin // EZFLASH SAVE
-						img_select <= 7;
-						io_state <= GO4IT;
-						rd_sel <= 7'b1000000;
+						//img_select <= 7;
+						//io_state <= GO4IT;
+						//rd_sel <= 7'b1000000;
 						boot_ezflash <= 1;
 					end
 				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
