@@ -14,7 +14,7 @@ use IEEE.numeric_std.ALL;
 entity c64nano_top is
   generic
   (
-   DUAL  : integer := 0; -- 0:no, 1:yes dual SID build option
+   DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
    MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
    C1541 : integer := 1  -- 0:no, 1:yes optional 6551 UART
@@ -299,6 +299,7 @@ signal cart_attached   : std_logic := '0';
 signal cart_hdr_cnt    : unsigned(3 downto 0);
 signal cart_hdr_wr     : std_logic;
 signal cart_blk_len    : unsigned(15 downto 0);
+signal cart_chip_cnt   : unsigned(7 downto 0);
 signal io_cycle        : std_logic;
 signal io_cycle_ce     : std_logic;
 signal io_cycle_we     : std_logic;
@@ -1728,6 +1729,7 @@ begin
           ioctl_load_addr <= CRT_ADDR;
           cart_blk_len <= (others => '0');
           cart_hdr_cnt <= (others => '0');
+          cart_chip_cnt <= (others => '0');
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#16#, ioctl_addr'length) then
@@ -1751,40 +1753,44 @@ begin
         end if;
 
         if ioctl_addr >= to_unsigned(16#40#, ioctl_addr'length) then
-          if cart_blk_len = to_unsigned(0, cart_blk_len'length) or 
-          cart_hdr_cnt /= to_unsigned(0, cart_hdr_cnt'length) then
-            cart_hdr_cnt <= cart_hdr_cnt + 1;
+          if (cart_id = to_unsigned(32, cart_id'length) and cart_chip_cnt < to_unsigned(64, cart_chip_cnt'length)) or
+             (cart_id /= to_unsigned(32, cart_id'length)) then
+            if cart_blk_len = to_unsigned(0, cart_blk_len'length) or 
+            cart_hdr_cnt /= to_unsigned(0, cart_hdr_cnt'length) then
+              cart_hdr_cnt <= cart_hdr_cnt + 1;
 
-            if cart_hdr_cnt = to_unsigned(6, cart_hdr_cnt'length) then
-              cart_blk_len <= ioctl_data & x"00";
-            end if;
-
-            if cart_hdr_cnt = to_unsigned(11, cart_hdr_cnt'length) then
-              cart_bank_num <= ioctl_data;
-            end if;
-
-            if cart_hdr_cnt = to_unsigned(12, cart_hdr_cnt'length) then
-              if ioctl_data > to_unsigned(16#80#, ioctl_data'length) then
-                cart_bank_hi <= '1';
-              else
-                cart_bank_hi <= '0';
+              if cart_hdr_cnt = to_unsigned(6, cart_hdr_cnt'length) then
+                cart_blk_len <= ioctl_data & x"00";
               end if;
-            end if;
 
-            if cart_hdr_cnt = to_unsigned(14, cart_hdr_cnt'length) then
-              if ioctl_data > to_unsigned(16#20#, ioctl_data'length) then
-                cart_bank_16k <= '1';
-              else
-                cart_bank_16k <= '0';
+              if cart_hdr_cnt = to_unsigned(11, cart_hdr_cnt'length) then
+                cart_bank_num <= ioctl_data;
               end if;
-            end if;
 
-            if unsigned(cart_hdr_cnt) = to_unsigned(15, cart_hdr_cnt'length) then
-              cart_hdr_wr <= '1';
+              if cart_hdr_cnt = to_unsigned(12, cart_hdr_cnt'length) then
+                if ioctl_data > to_unsigned(16#80#, ioctl_data'length) then
+                  cart_bank_hi <= '1';
+                else
+                  cart_bank_hi <= '0';
+                end if;
+              end if;
+
+              if cart_hdr_cnt = to_unsigned(14, cart_hdr_cnt'length) then
+                if ioctl_data > to_unsigned(16#20#, ioctl_data'length) then
+                  cart_bank_16k <= '1';
+                else
+                  cart_bank_16k <= '0';
+                end if;
+              end if;
+
+              if unsigned(cart_hdr_cnt) = to_unsigned(15, cart_hdr_cnt'length) then
+                cart_hdr_wr <= '1';
+                cart_chip_cnt <= cart_chip_cnt + 1;
+              end if;
+            else
+              cart_blk_len <= cart_blk_len - 1;
+              ioctl_req_wr <= '1';
             end if;
-          else
-            cart_blk_len <= cart_blk_len - 1;
-            ioctl_req_wr <= '1';
           end if;
         end if;
 

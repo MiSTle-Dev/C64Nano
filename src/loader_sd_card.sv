@@ -84,13 +84,7 @@ logic [24:0] img_size [0:7];
 logic img_present [0:7];
 logic img_presentD [0:7];
 logic [6:0] rd_sel;
-logic boot_crt;
-logic boot_bin;
-logic boot_prg;
-logic boot_tap;
-logic boot_flt;
-logic boot_reu;
-logic boot_ezflash;
+logic [7:0] boot_flags;  // bit[1]=crt, [2]=prg, [3]=bin, [4]=tap, [5]=flt, [6]=reu, [7]=ezflash
 logic old_upload_req;
 logic upload_req;
 logic write_strobe;
@@ -114,82 +108,36 @@ assign sd_wr_data = loader_busy ? loader_sd_wr_data : c1541_sd_wr_data;
 assign sd_rd      = loader_busy ? {loader_sd_rd, 1'b0} : {7'b0000000, c1541_sd_rd};
 assign sd_wr      = loader_busy ? {loader_sd_wr, 1'b0} : {7'b0000000, c1541_sd_wr};
 
+// CRT header ROM - 64 bytes of static configuration data
+logic [7:0] CRT_HEADER[0:63] = '{
+	8'h43, 8'h36, 8'h34, 8'h20, 8'h43, 8'h41, 8'h52, 8'h54,  // "C64 CART"
+	8'h52, 8'h49, 8'h44, 8'h47, 8'h45, 8'h20, 8'h20, 8'h20,  // "RIDGE   "
+	8'h00, 8'h00, 8'h00, 8'h40, 8'h01, 8'h00, 8'h00, 8'h20,  // header size, EasyFlash type
+	8'h01, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00,  // EXROM, flags
+	8'h45, 8'h61, 8'h73, 8'h79, 8'h46, 8'h6c, 8'h61, 8'h73,  // "EasyFlas"
+	8'h68, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00,  // "h" + padding
+	8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00,  // padding
+	8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00, 8'h00   // padding
+};
+
 function automatic logic [7:0] crt_header_byte(input logic [5:0] idx);
-	begin
-		case(idx)
-			6'd0:  crt_header_byte = "C";
-			6'd1:  crt_header_byte = "6";
-			6'd2:  crt_header_byte = "4";
-			6'd3:  crt_header_byte = " ";
-			6'd4:  crt_header_byte = "C";
-			6'd5:  crt_header_byte = "A";
-			6'd6:  crt_header_byte = "R";
-			6'd7:  crt_header_byte = "T";
-			6'd8:  crt_header_byte = "R";
-			6'd9:  crt_header_byte = "I";
-			6'd10: crt_header_byte = "D";
-			6'd11: crt_header_byte = "G";
-			6'd12: crt_header_byte = "E";
-			6'd13: crt_header_byte = " ";
-			6'd14: crt_header_byte = " ";
-			6'd15: crt_header_byte = " ";
-			6'd16: crt_header_byte = 8'h00;
-			6'd17: crt_header_byte = 8'h00;
-			6'd18: crt_header_byte = 8'h00;
-			6'd19: crt_header_byte = 8'h40;
-			6'd20: crt_header_byte = 8'h01;
-			6'd21: crt_header_byte = 8'h00;
-			6'd22: crt_header_byte = 8'h00;
-			6'd23: crt_header_byte = 8'h20; // EasyFlash cartridge type
-			6'd24: crt_header_byte = 8'h01; // EXROM, Ultimax mode
-			6'd25: crt_header_byte = 8'h00; // GAME
-			6'd26: crt_header_byte = 8'h00;
-			6'd27: crt_header_byte = 8'h00;
-			6'd28: crt_header_byte = 8'h00;
-			6'd29: crt_header_byte = 8'h00;
-			6'd30: crt_header_byte = 8'h00;
-			6'd31: crt_header_byte = 8'h00;
-			6'd32: crt_header_byte = "E";
-			6'd33: crt_header_byte = "A";
-			6'd34: crt_header_byte = "S";
-			6'd35: crt_header_byte = "Y";
-			6'd36: crt_header_byte = "F";
-			6'd37: crt_header_byte = "L";
-			6'd38: crt_header_byte = "A";
-			6'd39: crt_header_byte = "S";
-			6'd40: crt_header_byte = "H";
-			6'd41: crt_header_byte = " ";
-			6'd42: crt_header_byte = "S";
-			6'd43: crt_header_byte = "A";
-			6'd44: crt_header_byte = "V";
-			6'd45: crt_header_byte = "E";
-			default: crt_header_byte = " ";
-		endcase
-	end
+	return CRT_HEADER[idx];
 endfunction
 
+// CHIP header base ROM - indices 0-10 static, 11-12 computed with bank/address
+logic [7:0] CHIP_HEADER_BASE[0:15] = '{
+	8'h43, 8'h48, 8'h49, 8'h50,              // "CHIP"
+	8'h00, 8'h00, 8'h20, 8'h10,              // header size (0x20), total size (0x10 = 16-byte header + 8KB)
+	8'h00, 8'h02, 8'h00, 8'h00,              // reserved, chip type (0x02 = ROM)
+	8'h00, 8'h00, 8'h20, 8'h00               // reserved, reserved
+};
+
 function automatic logic [7:0] chip_header_byte(input logic [3:0] idx, input logic [6:0] bank, input logic hi);
-	begin
-		case(idx)
-			4'd0:  chip_header_byte = "C";
-			4'd1:  chip_header_byte = "H";
-			4'd2:  chip_header_byte = "I";
-			4'd3:  chip_header_byte = "P";
-			4'd4:  chip_header_byte = 8'h00;
-			4'd5:  chip_header_byte = 8'h00;
-			4'd6:  chip_header_byte = 8'h20;
-			4'd7:  chip_header_byte = 8'h10; // 16-byte CHIP header + 8k payload
-			4'd8:  chip_header_byte = 8'h00;
-			4'd9:  chip_header_byte = 8'h02; // ROM chip type
-			4'd10: chip_header_byte = 8'h00;
-			4'd11: chip_header_byte = {1'b0, bank};
-			4'd12: chip_header_byte = hi ? 8'hA0 : 8'h80;
-			4'd13: chip_header_byte = 8'h00;
-			4'd14: chip_header_byte = 8'h20;
-			4'd15: chip_header_byte = 8'h00;
-			default: chip_header_byte = 8'h00;
-		endcase
-	end
+	case(idx)
+		4'd11: return {1'b0, bank};
+		4'd12: return hi ? 8'hA0 : 8'h80;
+		default: return CHIP_HEADER_BASE[idx];
+	endcase
 endfunction
 
 function automatic logic [8:0] find_chip_from(input logic [6:0] start_bank, input logic start_hi);
@@ -281,12 +229,7 @@ always_ff @(posedge clk) begin
 		upload_chip_bank <= '0;
 		upload_chip_hi <= 0;
 		loader_busy <= 0;
-		boot_crt <= 0;
-		boot_bin <= 0;
-		boot_prg <= 0;
-		boot_flt <= 0;
-		boot_reu <= 0;
-		boot_ezflash <= 0;
+		boot_flags <= '0;
 		rd_sel <= '0;
 		img_select <= '0;
 		cnt <= '0;
@@ -320,10 +263,16 @@ always_ff @(posedge clk) begin
 				io_state <= WRITING;
 			end
 			else begin
-				ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), upload_chip_data_idx};
-				ioctl_rd <= 1;
-				core_wait_cnt <= '0;
-				io_state <= WRITE_WAIT4CORE;
+				if((upload_chip_hi && !hibanks_map[upload_chip_bank]) || (!upload_chip_hi && !lobanks_map[upload_chip_bank])) begin
+					upload_data <= 8'hFF;
+					io_state <= WRITING;
+				end
+				else begin
+					ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), upload_chip_data_idx};
+					ioctl_rd <= 1;
+					core_wait_cnt <= '0;
+					io_state <= WRITE_WAIT4CORE;
+				end
 			end
 		end
 
@@ -357,7 +306,11 @@ always_ff @(posedge clk) begin
 						upload_state <= UP_CHIP_HDR;
 					end
 					else begin
-						upload_state <= UP_DONE;
+						upload_chip_bank <= '0;
+						upload_chip_hi <= 1'b0;
+						upload_chip_hdr_idx <= '0;
+						upload_chip_data_idx <= '0;
+						upload_state <= UP_CHIP_HDR;
 					end
 				end
 				else begin
@@ -388,7 +341,24 @@ always_ff @(posedge clk) begin
 							upload_state <= UP_CHIP_HDR;
 						end
 						else begin
-							upload_state <= UP_DONE;
+							if(upload_chip_hi) begin
+								if(upload_chip_bank == 7'd63) begin
+									upload_state <= UP_DONE;
+								end
+								else begin
+									upload_chip_bank <= upload_chip_bank + 1'd1;
+									upload_chip_hi <= 1'b0;
+									upload_chip_hdr_idx <= '0;
+									upload_chip_data_idx <= '0;
+									upload_state <= UP_CHIP_HDR;
+								end
+							end
+							else begin
+								upload_chip_hi <= 1'b1;
+								upload_chip_hdr_idx <= '0;
+								upload_chip_data_idx <= '0;
+								upload_state <= UP_CHIP_HDR;
+							end
 						end
 					end
 				end
@@ -448,48 +418,44 @@ always_ff @(posedge clk) begin
 						upload_chip_bank <= '0;
 						upload_chip_hi <= 0;
 					end
-				else if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_bin))) begin
-						img_select <= 3;
-						io_state <= GO4IT;
-						rd_sel <= 7'b0000100;
-						boot_bin <= 1;
+			else if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_flags[3]))) begin
+					img_select <= 3;
+					io_state <= GO4IT;
+					rd_sel <= 7'b0000100;
+					boot_flags[3] <= 1;
 					end
-				else if((|img_size[1]) && ((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_crt))) begin
-						img_select <= 1; 
-						io_state <= GO4IT; 
-						rd_sel <= 7'b0000001;
-						boot_crt <= 1;
+			else if((|img_size[1]) && ((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_flags[1]))) begin
+					img_select <= 1; 
+					io_state <= GO4IT; 
+					rd_sel <= 7'b0000001;
+					boot_flags[1] <= 1;
 					end
-				else if((|img_size[2]) && ((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_prg))) begin 
-						img_select <= 2;
-						io_state <= GO4IT;
-						rd_sel <= 7'b0000010;
-						boot_prg <= 1;
+			else if((|img_size[2]) && ((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_flags[2]))) begin 
+					img_select <= 2;
+					io_state <= GO4IT;
+					rd_sel <= 7'b0000010;
+					boot_flags[2] <= 1;
 					end
-				else if((|img_size[5]) && ((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flt))) begin
-						img_select <= 5;
-						io_state <= GO4IT;
-						rd_sel <= 7'b0010000;
-						boot_flt <= 1;
+			else if((|img_size[5]) && ((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flags[5]))) begin
+					img_select <= 5;
+					io_state <= GO4IT;
+					rd_sel <= 7'b0010000;
+					boot_flags[5] <= 1;
 					end
-//				else if((img_present[4] && ~img_presentD[4]) || (img_present[4] && ~boot_tap))
 				else if((|img_size[4]) && img_present[4] && ~img_presentD[4]) begin
 						img_select <= 4;
 						io_state <= GO4IT;
 						rd_sel <= 7'b0001000;
-						boot_tap <= 1;
+					boot_flags[4] <= 1;
 					end
-				else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_reu))) begin
-						img_select <= 6;
-						io_state <= GO4IT;
-						rd_sel <= 7'b0100000;
-						boot_reu <= 1;
+			else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_flags[6]))) begin
+					img_select <= 6;
+					io_state <= GO4IT;
+					rd_sel <= 7'b0100000;
+					boot_flags[6] <= 1;
 					end
-				else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_ezflash))) begin // EZFLASH SAVE
-						//img_select <= 7;
-						//io_state <= GO4IT;
-						//rd_sel <= 7'b1000000;
-						boot_ezflash <= 1;
+			else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_flags[7]))) begin // EZFLASH file select
+					boot_flags[7] <= 1;
 					end
 				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
 				//		img_select <= 0;   // use for mux instead busy

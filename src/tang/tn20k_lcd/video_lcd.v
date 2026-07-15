@@ -16,8 +16,8 @@ module video
    input [3:0]  g_in,
    input [3:0]  b_in,
 
-   input [17:0] audio_l,
-   input [17:0] audio_r,
+    input [15:0] audio_l,
+    input [15:0] audio_r,
 
    output osd_status,
 
@@ -102,32 +102,20 @@ osd_u8g2 osd_u8g2 (
 );   
 
 /* ------------------- audio processing --------------- */
-
 assign pa_en = (STEREO)?~pll_lock:pll_lock; // TM138/60k enable amplifier 0=on and 1= off, TN20k vice versa
-
-// Audio c64 core specific
-reg [15:0] alo,aro;
-always @(posedge clk) begin
-	reg [16:0] alm,arm;
-
-	arm <= {audio_r[17],audio_r[17:2]};
-	alm <= {audio_l[17],audio_l[17:2]};
-	alo <= ^alm[16:15] ? {alm[16], {15{alm[15]}}} : alm[15:0];
-	aro <= ^arm[16:15] ? {arm[16], {15{arm[15]}}} : arm[15:0];
-end
 
 // scale audio for valume by signed division
 wire [15:0] audio_vol_l = 
     (system_volume == 2'd0)?16'd0:
-    (system_volume == 2'd1)?{ {2{alo[15]}}, alo[15:2] }:
-    (system_volume == 2'd2)?{ alo[15], alo[15:1] }:
-    alo;
+    (system_volume == 2'd1)?{ {2{audio_l[15]}}, audio_l[15:2] }:
+    (system_volume == 2'd2)?{ audio_l[15], audio_l[15:1] }:
+    audio_l;
 
 wire [15:0] audio_vol_r = 
     (system_volume == 2'd0)?16'd0:
-    (system_volume == 2'd1)?{ {2{aro[15]}}, aro[15:2] }:
-    (system_volume == 2'd2)?{ aro[15], aro[15:1] }:
-    aro;
+    (system_volume == 2'd1)?{ {2{audio_r[15]}}, audio_r[15:2] }:
+    (system_volume == 2'd2)?{ audio_r[15], audio_r[15:1] }:
+    audio_r;
 
 // clk_div <= (ntscmode?32500000:31500000); // GW5A
 // clk_div <= (ntscmode?32940000:31500000); // TN20k

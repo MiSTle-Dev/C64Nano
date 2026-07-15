@@ -77,12 +77,6 @@ logic        exrom_overide;
 logic        game_overide;
 assign     {exrom, game} = force_ultimax ? 2'b10 : {exrom_overide, game_overide};
 
-//logic [6:0] lobanks[0:63];
-//logic [6:0] hibanks[0:63];
-
-//logic [7:0]  bank_cnt;
-//logic [63:0] lobanks_map;
-//logic [63:0] hibanks_map;
 logic        old_loading;
 
 always_ff @(posedge clk32) begin
@@ -108,14 +102,6 @@ always_ff @(posedge clk32) begin
 		end
 	end
 
-//	if(!old_cart_premap && cart_premap) begin
-//		for (int i = 0; i < 64; i++) begin
-//			lobanks[i] <= {i[5:0], 1'b0};
-//			hibanks[i] <= {i[5:0], 1'b1};
-//		end
-//		lobanks_map <= 64'hFFFFFFFFFFFFFFFF;
-//		hibanks_map <= 64'hFFFFFFFFFFFFFFFF;
-//	end
 end
 
 logic IOE_ena,IOF_ena;

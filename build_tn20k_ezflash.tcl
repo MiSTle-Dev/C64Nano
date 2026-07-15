@@ -6,10 +6,11 @@ set MIDI  1  ;# 0=disabled, 1=enabled optional MIDI Interface
 set U6551 1  ;# 0=disabled, 1=enabled optional 6551 UART
 set C1541 1  ;# 0=disabled, 1=enabled optional C1541 Interface
 
+add_file src/tang/tn20k/am29f040.sv
 add_file src/gowin_rpll/gowin_rpll_flash.vhd
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/dualshock2.v
+add_file src/cartridge.sv
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
 add_file src/gowin_dpb/sector_dpram.v
@@ -36,7 +37,7 @@ add_file src/misc/video.v
 add_file src/misc/video_analyzer.v
 add_file src/misc/ws2812.v
 add_file src/mos6526.v
-add_file src/tang/tn20k/reu.v
+add_file src/reu.v
 add_file src/sdram8.v
 add_file src/c1541/c1541_logic.vhd
 add_file src/c1541/c1541_sd.vhd
@@ -93,8 +94,8 @@ set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -multi_boot 0
 set_option -mspi_jump 0
-#set_option -place_option 2
-#set_option -route_option 1
+set_option -place_option 2
+set_option -route_option 1
 set_option -ireg_in_iob 1
 set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1
@@ -105,14 +106,10 @@ set_property c64nano_top.DUAL {$DUAL} [get_ips c64nano_top]
 # Conditionally add files based on DUAL parameter
 if {$DUAL == 0} {
 	puts "single SID EZFlash save/load build"
-	add_file src/am29f040.sv
-    add_file src/tang/tn20k/cartridge.sv
     set_option -output_base_name C64Nano_TN20k_ezflash
 } else { 
     # DUAL == 1
 	puts "dual SID build"
-    add_file src/tang/tn20k/am29f040.sv
-    add_file src/tang/tn20k/cartridge.sv
     set_option -output_base_name C64Nano_TN20k
 }
 
