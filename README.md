@@ -16,12 +16,13 @@ The C64Nano is a port of some [MiST](https://github.com/mist-devel/mist-board/wi
 This project relies on a MPU being connected to the FPGA. --> [MiSTle-Dev wiki](https://github.com/MiSTle-Dev/.github/wiki) <--  
 
 > [!NOTE]
-> If you don't need the WIFI modem on a TN20K then even the onboard BL616 MPU (normally used for bitstream programming) can be used. A dedicated FPGA bitstream and FPGA companion firmware is needed in that configuration. The onboard BL616 MPU is presently supported for Nano 20k, Console 60k / 138k, Primer 25k, Mega 138k Pro and Mega 60k Dock. WIFI modem is supported on Console 60K / 138k and Mega 60k Dock too (requires I-PEX MHF4 connector antenna)
+> If you don't need the WIFI modem on a TN20K then even the onboard BL616 MPU can be used. WIFI modem is supported on M0S Dock, Console 60K / 138k and Mega 60k Dock too (requires I-PEX MHF4 connector antenna)
 
 Original C64 core by Peter Wendrich and c1541 by [darfpga](https://github.com/darfpga).  
 All HID components and MPU firmware by Till Harbaum
 
 Features:
+
 * support of Core load from FLASH or USB pendrive (Console SDcard + USB)
 * PAL 720x576p@50Hz or NTSC 720x480p@60Hz HDMI Video and Audio Output
 * TFT-LCD module 800x600 [SH500Q01Z](https://dl.sipeed.com/Accessories/LCD/500Q01Z-00%20spec.pdf) + Speaker support
@@ -51,7 +52,7 @@ Features:
 * external IEC device (C1541 Floppy / IEC Printer etc.)
 * REU (*.reu) loader
 * DigiMax four channel audio DAC ($DE00 /$DF00)
-* EasyFlash CRT Save (for enhanced Games that support write to Flash (gameplay progress)
+* EasyFlash CRT Save (for enhanced Games that support write to Flash as gameplay progress storage)
 
 <img src="./.assets/c64_core.png" alt="image" width="80%" height="auto">
 
@@ -97,9 +98,10 @@ Add D64 or G64 images as you like and insert card in TN slot. LED 0 acts as Driv
 c1541 DOS ROM can be selected from OSD (default Dolphin DOS 2.0, CBM DOS, SpeedDos Plus or JiffyDOS)
 In case a program don't load correctly select via OSD the factory default CBM DOS an give it a try.
 
-## Cartridge ROM Loader (.CRT)
+## Cartridge ROM Loader (.CRT, .SAV)
 
-Cartridge ROM can be loaded via OSD file selection.
+Cartridge ROM can be loaded via OSD file selection.  
+Also EasyFlash save game progress images are loaded via this item.
 
 > [!TIP]
 > **Detach Cartridge** by OSD:
@@ -107,6 +109,25 @@ Cartridge ROM can be loaded via OSD file selection.
 
 > [!IMPORTANT]
 > Be aware that some Freezer Card CRT might require to use the standard C64 Kernal and the standard C1541 CBM DOS.
+
+## EasyFlash Cartridge save (.SAV)
+
+Storing game progress for Cartridge images using EasyFlash is nowadays the de facto standard.
+Game progress is stored per `.CRT` game in a dedicated save file, leaving your original `.CRT` untouched.
+
+**Workflow:**
+
+1. Select a storage file (`.SAV`) via OSD **Select EZFLASH:**. Best practice is to rename the master `easyflash.sav` file to e.g. `easyflash_caren.sav`.
+2. Load your game via **CRT ROM:** as usual, e.g. `caren_priorart_ef.crt` or any other EasyFlash-enabled game.
+3. Perform the **in-game** save-to-CRT process, which is specific to each game. The game will program specific blocks of the two emulated AM29F040B flash chips to store its progress.
+4. Press **Save EZFLASH:** in the OSD. The core will write the updated EasyFlash image — including the modified blocks containing the game progress — back to the SD card as `xyz.SAV`.
+
+To **resume** a saved game: first select the `.SAV` file via **Select EZFLASH:**, then load the **`.SAV`** file (not the original `.CRT`) via the **CRT ROM:** OSD item.
+
+> [!IMPORTANT]
+> Be aware that some Games supporting Flash write require to use the standard C64 Kernal and the standard C1541 CBM DOS.
+
+Be aware that this feature works differently from MiSTer: MiSTer rewrites the CRT image in Linux userspace, whereas here the rewrite is performed by Mistle C64 core directly in the core HDL itself.
 
 ## BASIC Program Loader (.PRG)
 
