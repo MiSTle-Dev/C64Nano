@@ -2,7 +2,7 @@ set_device GW5AST-LV138PG484AC1/I0 -device_version C
 
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/cartridge.v
+add_file src/cartridge.sv
 add_file src/dualshock2.v
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
@@ -92,8 +92,6 @@ set_option -user_code 00000001
 set_option -bit_compress 1
 set_option -multi_boot 0
 set_option -turn_off_bg 0
-set_option -vccx 1.8
-set_option -vcc 0.9
 set_option -power_on_reset_monitor 1
 set_option -timing_driven 1
 set_option -cst_warn_to_error 1

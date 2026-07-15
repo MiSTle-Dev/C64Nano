@@ -132,6 +132,7 @@
  <listentry label="Off" value="0"/>
  <listentry label="512KB" value="1"/>
  <listentry label="2MB" value="2"/>
+ <listentry label="16MB" value="3"/>
       </list>
       <list label="REU wrap:" id="4" default="0">
  <listentry label="512KB" value="0"/>
@@ -271,18 +272,23 @@
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
       </list>
+      <list label="DigiMax:" id="0" default="0">
+ <listentry label="Off" value="0"/>
+ <listentry label="DE00" value="1"/>
+ <listentry label="DF00" value="2"/>
+      </list>
  <button label="C1541 Reset" action="c1541_reset_hide"/>
  <button label="Cold Boot" action="cold_reset_hide"/>
     </menu>
     <menu label="Storage">
       <fileselector label="Floppy:" ext="d64;g64" index="0" default="disk8.d64"/>
-      <fileselector label="CRT ROM:" ext="crt" index="1"/>
+      <fileselector label="CRT ROM:" ext="crt;sav" index="1"/>
       <fileselector label="PRG BASIC:" ext="prg" index="2"/>
       <fileselector label="C64 KERNAL:" ext="bin" index="3"/>
       <fileselector label="TAP TAPE:" ext="tap" index="4"/>
       <fileselector label="FLT FILTER:" ext="flt" index="5"/>
       <fileselector label="REU:" ext="reu" index="6"/>
-      <fileselector label="Load EZFLASH:" ext="sav" index="7" default="ezflash.sav"/>
+      <fileselector label="Select EZFLASH:" ext="sav" index="7" default="ezflash.sav"/>
       <button label="Save EZFLASH" action="save_cartridge_hide"/>
       <list label="Disk prot.:" id="P" default="0">
 	<listentry label="None" value="0"/>

@@ -70,7 +70,8 @@ module sysctrl (
   output reg        system_clear_ram,
   output reg        system_boot_easyflash,
   output reg        system_autosave,
-  output reg        system_save_cartridge
+  output reg        system_save_cartridge,
+  output reg [1:0]  system_digimax
 );
 
 reg [3:0] state;
@@ -172,6 +173,7 @@ always @(posedge clk) begin
       system_boot_easyflash <= 1'b1;
       system_autosave <= 1'b0;
       system_save_cartridge <= 1'b0;
+      system_digimax <= 2'b00;
    end else begin // if (reset)
       //  bring button state into local clock domain
       buttonsD <= buttons;
@@ -335,6 +337,8 @@ always @(posedge clk) begin
                     if(id == "8") system_autosave <= data_in[0];
                     //
                     if(id == "9") system_save_cartridge <= data_in[0];
+                    //
+                    if(id == "0") system_digimax <= data_in[1:0];
                 end
             end
 

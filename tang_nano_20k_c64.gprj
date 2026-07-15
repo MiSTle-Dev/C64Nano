@@ -42,8 +42,8 @@
         <File path="src/sid/sid_tables.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_top.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_voice.sv" type="file.verilog" enable="1"/>
-        <File path="src/tang/tn20k/am29f040.sv" type="file.verilog" enable="1"/>
-        <File path="src/tang/tn20k/cartridge.v" type="file.verilog" enable="1"/>
+        <File path="src/am29f040.sv" type="file.verilog" enable="1"/>
+        <File path="src/cartridge.sv" type="file.verilog" enable="1"/>
         <File path="src/uart6551/io_fifo.v" type="file.verilog" enable="1"/>
         <File path="src/uart6551/uart_6551.v" type="file.verilog" enable="1"/>
         <File path="src/c1530.vhd" type="file.vhdl" enable="1"/>

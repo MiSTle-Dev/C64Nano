@@ -23,9 +23,9 @@
 module sdram (
 
 	// interface to the MT48LC16M16 chip
-	output reg [12:0]	sd_addr,    // 13 bit multiplexed address bus
+	output logic [12:0]	sd_addr,    // 13 bit multiplexed address bus
 	inout      [15:0]	sd_data,
-	output reg [ 1:0]	sd_ba,      // two banks
+	output logic [ 1:0]	sd_ba,      // two banks
 	output 				sd_cs,      // a single chip select
 	output 				sd_we,      // write enable
 	output 				sd_ras,     // row address select
@@ -46,7 +46,7 @@ module sdram (
 	input 		 		we          // cpu/chipset requests write
 );
 
-assign sd_clk = ~clk;
+// no burst configured
 localparam RASCAS_DELAY   = 3'd2;   // tRCD>=20ns -> 2 cycles@64MHz
 localparam BURST_LENGTH   = 3'b000; // 000=none, 001=2, 010=4, 011=8
 localparam ACCESS_TYPE    = 1'b0;   // 0=sequential, 1=interleaved
@@ -64,9 +64,9 @@ localparam STATE_CMD_CONT  = STATE_CMD_START  + RASCAS_DELAY; // command can be 
 localparam STATE_READ      = STATE_CMD_CONT + CAS_LATENCY + 1'd1;
 localparam STATE_LAST      = 3'd7;   // last state in cycle
 
-reg [2:0] q /* synthesis noprune */;
-reg last_ce, last_refresh;
-always @(posedge clk) begin
+logic [2:0] q = 0;
+logic last_ce = 0, last_refresh = 0;
+always_ff @(posedge clk) begin
 	last_ce <= ce;
 	last_refresh <= refresh;
 
@@ -81,10 +81,8 @@ end
 
 // wait 1ms (32 clkref cycles) after FPGA config is done before going
 // into normal operation. Initialize the ram in the last 16 reset cycles (cycles 15-0)
-initial reset = 5'h1f;
-
-reg [4:0] reset;
-always @(posedge clk) begin
+logic [4:0] reset = 5'h1f;
+always_ff @(posedge clk) begin
 	if(init)	reset <= 5'h1f;
 	else if((q == STATE_LAST) && (reset != 0)) reset <= reset - 5'd1;
 end
@@ -103,7 +101,7 @@ localparam CMD_PRECHARGE       = 3'b010;
 localparam CMD_AUTO_REFRESH    = 3'b001;
 localparam CMD_LOAD_MODE       = 3'b000;
 
-reg [2:0] sd_cmd;   // current command sent to sd ram
+logic [2:0] sd_cmd;   // current command sent to sd ram
 
 // drive control signals according to current command
 assign sd_cs  = 0;
@@ -112,18 +110,18 @@ assign sd_cas = sd_cmd[1];
 assign sd_we  = sd_cmd[0];
 assign sd_dqm = sd_addr[12:11];
 
-reg bt;
-reg [15:0] dout_r;
-reg [15:0] sd_data_out;
-reg        sd_data_oe;
+logic bt;
+logic [15:0] dout_r;
+logic [15:0] sd_data_out;
+logic        sd_data_oe;
 
 assign dout = bt ? dout_r[15:8] : dout_r[7:0];
-assign sd_data = sd_data_oe ? sd_data_out : 16'bZ;
+assign sd_data = sd_data_oe ? sd_data_out : 'z;
 
-always @(posedge clk) begin
-	reg [8:0] caddr;
-	reg [7:0] wrdata;
-	reg       wr;
+always_ff @(posedge clk) begin
+	logic [8:0] caddr;
+	logic [7:0] wrdata;
+	logic       wr;
 
 	sd_cmd     <= CMD_NOP;
 	sd_data_oe <= 1'b0;
@@ -165,5 +163,21 @@ always @(posedge clk) begin
 		end
 	end
 end
+
+`ifdef VERILATOR
+	assign sd_clk = ~clk;
+`else
+ODDR #(
+    .TXCLK_POL(1'b0),
+    .INIT(1'b0)
+	) sdramclk_ddr (
+    .Q0(sd_clk),             // DDR output clock to SDRAM pin
+    .Q1(),
+    .D0(1'b0),               // value for one half-cycle
+    .D1(1'b1),               // value for the other half-cycle
+    .TX(1'b0),               // output always enabled
+    .CLK(clk)
+);
+`endif
 
 endmodule

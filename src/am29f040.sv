@@ -63,13 +63,13 @@ wire UNLOCK2 = IS_UNLOCK_ADDR2 && (dq_in == UNLOCK_DATA2);
 
 
 // Command codes (byte mode)
-localparam byte CMD_AUTOSEL     = 8'h90;
-localparam byte CMD_RESET       = 8'hF0;
-localparam byte CMD_RESET2      = 8'hFF;
-localparam byte CMD_PROG        = 8'hA0;
-localparam byte CMD_ERASE       = 8'h80;
-localparam byte CMD_ERASE_CHIP  = 8'h10;
-localparam byte CMD_ERASE_SECT  = 8'h30;
+localparam logic [7:0] CMD_AUTOSEL     = 8'h90;
+localparam logic [7:0] CMD_RESET       = 8'hF0;
+localparam logic [7:0] CMD_RESET2      = 8'hFF;
+localparam logic [7:0] CMD_PROG        = 8'hA0;
+localparam logic [7:0] CMD_ERASE       = 8'h80;
+localparam logic [7:0] CMD_ERASE_CHIP  = 8'h10;
+localparam logic [7:0] CMD_ERASE_SECT  = 8'h30;
 
 typedef enum logic [2:0]
 {

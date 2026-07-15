@@ -32,9 +32,6 @@ Features:
 * [USB XBOX 360 Controller](https://en.wikipedia.org/wiki/Xbox_360_controller) as Joystick or Paddle
 * 2 x [legacy D9 Joystick](https://en.wikipedia.org/wiki/Atari_CX40_joystick) (Atari / Commodore digital type)
 * Joystick emulation on Keyboard Numpad
-* ~~[Dualshock 2 Controller Gamepad](https://en.wikipedia.org/wiki/DualShock) for [MiSTeryShield20k](https://github.com/harbaum/MiSTeryNano/tree/main/board/misteryshield20k/README.md) via spare [pinheader](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md). Adapter [venice1200](https://github.com/venice1200)~~
-* ~~[Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) DPad / left Stick as Joystick~~
-* ~~[Dualshock 2 Gamepad](https://en.wikipedia.org/wiki/DualShock) Sticks as [Paddle](https://www.c64-wiki.com/wiki/Paddle) Emulation (analog mode)~~
 * Emulation of [C64GS Cheetah Annihilator](https://en.wikipedia.org/wiki/Commodore_64_Games_System) Joystick 2nd Trigger Button (Pot X/Y)
 * emulated [1541 Diskdrive](https://en.wikipedia.org/wiki/Commodore_1541) on FAT/extFAT microSD card with parallel bus [Speedloader Dolphin DOS 2](https://rr.pokefinder.org/wiki/Dolphin_DOS). [GER manual](https://www.c64-wiki.de/wiki/Dolphin_DOS)
 * c1541 DOS ROM selection
@@ -53,6 +50,8 @@ Features:
 * Freezer support (e.g. Action Replay)
 * external IEC device (C1541 Floppy / IEC Printer etc.)
 * REU (*.reu) loader
+* DigiMax four channel audio DAC ($DE00 /$DF00)
+* EasyFlash CRT Save (for enhanced Games that support write to Flash (gameplay progress)
 
 <img src="./.assets/c64_core.png" alt="image" width="80%" height="auto">
 

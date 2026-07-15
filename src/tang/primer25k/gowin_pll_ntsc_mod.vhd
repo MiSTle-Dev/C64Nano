@@ -1,4 +1,12 @@
-
+--Copyright (C)2014-2026 Gowin Semiconductor Corporation.
+--All rights reserved.
+--File Title: IP file
+--Tool Version: V1.9.12.03
+--IP Version: 1.0
+--Part Number: GW5A-LV25MG121NC1/I0
+--Device: GW5A-25
+--Device Version: A
+--Created Time: Tue Jul  7 21:02:14 2026
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -9,6 +17,7 @@ entity Gowin_PLL_ntsc_MOD is
         clkout0: out std_logic;
         clkout1: out std_logic;
         clkout2: out std_logic;
+        clkout4: out std_logic;
         mdrdo: out std_logic_vector(7 downto 0);
         clkin: in std_logic;
         reset: in std_logic;
@@ -22,7 +31,6 @@ end Gowin_PLL_ntsc_MOD;
 architecture Behavioral of Gowin_PLL_ntsc_MOD is
 
     signal clkout3: std_logic;
-    signal clkout4: std_logic;
     signal clkout5: std_logic;
     signal clkout6: std_logic;
     signal clkfbout: std_logic;
@@ -34,6 +42,9 @@ architecture Behavioral of Gowin_PLL_ntsc_MOD is
     --component declaration
     component PLLA
         generic (
+            ICP_SEL : std_logic_vector(5 downto 0) := "XXXXXX";
+            LPF_RES : std_logic_vector(2 downto 0) := "XXX";
+            LPF_CAP: bit_vector := "00";
             FCLKIN: string := "100.0";
             IDIV_SEL: integer := 1;
             FBDIV_SEL: integer := 1;
@@ -106,9 +117,6 @@ architecture Behavioral of Gowin_PLL_ntsc_MOD is
             DYN_PE4_SEL: string := "FALSE";
             DYN_PE5_SEL: string := "FALSE";
             DYN_PE6_SEL: string := "FALSE";
-            ICP_SEL : std_logic_vector(5 downto 0) := "XXXXXX";
-            LPF_RES : std_logic_vector(2 downto 0) := "XXX";
-            LPF_CAP: bit_vector := "00";
             RESET_I_EN: string := "FALSE";
             RESET_O_EN: string := "FALSE";
             SSC_EN: string := "FALSE"
@@ -159,7 +167,7 @@ begin
             ODIV1_SEL => 6,
             ODIV2_SEL => 15,
             ODIV3_SEL => 8,
-            ODIV4_SEL => 8,
+            ODIV4_SEL => 30,
             ODIV5_SEL => 8,
             ODIV6_SEL => 8,
             MDIV_SEL => 39,
@@ -169,7 +177,7 @@ begin
             CLKOUT1_EN => "TRUE",
             CLKOUT2_EN => "TRUE",
             CLKOUT3_EN => "FALSE",
-            CLKOUT4_EN => "FALSE",
+            CLKOUT4_EN => "TRUE",
             CLKOUT5_EN => "FALSE",
             CLKOUT6_EN => "FALSE",
             CLKFB_SEL => "INTERNAL",

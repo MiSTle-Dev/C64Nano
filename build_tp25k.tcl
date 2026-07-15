@@ -3,7 +3,7 @@ set_device GW5A-LV25MG121NC1/I0 -name GW5A-25A
 add_file src/am29f040.sv
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/cartridge.v
+add_file src/cartridge.sv
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
 add_file src/gowin_dpb/sector_dpram.v

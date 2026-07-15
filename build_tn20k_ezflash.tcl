@@ -4,11 +4,13 @@ set_device GW2AR-LV18QN88C8/I7 -name GW2AR-18C
 set DUAL  0  ;# 0=single SID, 1=dual SID
 set MIDI  1  ;# 0=disabled, 1=enabled optional MIDI Interface
 set U6551 1  ;# 0=disabled, 1=enabled optional 6551 UART
+set C1541 1  ;# 0=disabled, 1=enabled optional C1541 Interface
 
+add_file src/tang/tn20k/am29f040.sv
 add_file src/gowin_rpll/gowin_rpll_flash.vhd
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/dualshock2.v
+add_file src/cartridge.sv
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
 add_file src/gowin_dpb/sector_dpram.v
@@ -99,19 +101,15 @@ set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1
 
 # Apply generic configuration to c64nano_top entity
-#not working !
+# set_property not working !
 set_property c64nano_top.DUAL {$DUAL} [get_ips c64nano_top]
 # Conditionally add files based on DUAL parameter
 if {$DUAL == 0} {
 	puts "single SID EZFlash save/load build"
-	add_file src/am29f040.sv
-    add_file src/cartridge.v
     set_option -output_base_name C64Nano_TN20k_ezflash
 } else { 
     # DUAL == 1
 	puts "dual SID build"
-    add_file src/tang/tn20k/am29f040.sv
-    add_file src/tang/tn20k/cartridge.v
     set_option -output_base_name C64Nano_TN20k
 }
 

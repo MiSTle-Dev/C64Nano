@@ -5,75 +5,81 @@
 */
 
 module cartridge
-(
-	input             clk32,				 	// 32mhz clock source
-	input             reset_n,					// reset signal
+#(
+	parameter [24:0] RAM_ADDR = 25'h0000000,
+	parameter [24:0] CRM_ADDR = 25'h0010000,
+	parameter [24:0] CRT_ADDR = 25'h0200000,
+	parameter [24:0] GEO_ADDR = 25'h0C00000
+)(
+	input  logic        clk32,				// 32mhz clock source
+	input  logic        reset_n,				// reset signal
 
-	input             cart_loading,
-	input       [7:0] cart_id,					// cart ID or cart type
-	input             cart_exrom,				// CRT file EXROM status
-	input             cart_game,				// CRT file GAME status
-	input             cart_bank_hi,				// bank is high
-	input             cart_bank_16k,
-	input       [7:0] cart_bank_num,
-	input       [7:0] cart_bank_addr,			// chip packet address
-	input             cart_bank_wr,
-	input             cart_boot,
+	input  logic        cart_loading,
+	input  logic [7:0]  cart_id,				// cart ID or cart type
+	input  logic        cart_exrom,			// CRT file EXROM status
+	input  logic        cart_game,				// CRT file GAME status
+	input  logic        cart_bank_hi,			// bank is high
+	input  logic        cart_bank_16k,
+	input  logic [7:0]  cart_bank_num,
+	input  logic [7:0]  cart_bank_addr,		// chip packet address
+	input  logic        cart_bank_wr,
+	input  logic        cart_boot,
 
-	output            exrom,					// exrom line
-	output            game,						// game line
+	output logic [6:0] lobanks[0:63],
+	output logic [6:0] hibanks[0:63],
+	output logic [63:0] lobanks_map,
+	output logic [63:0] hibanks_map,
+	output logic [7:0]  bank_cnt,
 
-	input             romL,						// romL signal in
-	input             romH,						// romH signal in
-	input             UMAXromH,					// romH VIC II address signal
-	input             IOE,						// IOE control signal
-	input             IOF,						// IOF control signal
-	input             mem_write,				// memory write active
-	input             mem_ce,
-	output            mem_ce_out,
-	output reg        mem_write_out,
-	input       [7:0] mem_in,
-	output      [7:0] mem_out,
-	output     [24:0] mem_addr, 				// translated address output
-	output            mem_req,
-	input             mem_cycle,
+	output logic        exrom,				// exrom line
+	output logic        game,					// game line
 
-	output            IO_rom,					// FLAG to enable IOE/IOF address relocation
-	output            IO_rd,
-	output reg  [7:0] IO_data,
-	input      [15:0] addr_in,					// address from cpu
-	input       [7:0] data_in,					// data from cpu going to sdram
-	output      [7:0] data_out,
+	input  logic        romL,					// romL signal in
+	input  logic        romH,					// romH signal in
+	input  logic        UMAXromH,				// romH VIC II address signal
+	input  logic        IOE,					// IOE control signal
+	input  logic        IOF,					// IOF control signal
+	input  logic        mem_write,			// memory write active
+	input  logic        mem_ce,
+	output logic        mem_ce_out,
+	output logic        mem_write_out,
+	input  logic [7:0]  mem_in,
+	output logic [7:0]  mem_out,
+	output logic [24:0] mem_addr,	         // translated address output
+	output logic        mem_req,
+	input  logic        mem_cycle,
 
-	input             freeze_key,
-	input             mod_key,
-	output reg        nmi,
-	input             nmi_ack
+	output logic        IO_rom,				// FLAG to enable IOE/IOF address relocation
+	output logic        IO_rd,
+	output logic [7:0]  IO_data,
+	input  logic [15:0] addr_in,				// address from cpu
+	input  logic [7:0]  data_in,				// data from cpu going to sdram
+	output logic [7:0]  data_out,
+
+	input  logic        freeze_key,
+	input  logic        mod_key,
+	output logic        nmi,
+	input  logic        nmi_ack
 );
 
-reg  [7:0] bank_lo;
-reg  [7:0] bank_hi;
-reg [12:0] mask_lo;
-reg  [5:0] bank_no;
+logic [7:0]  bank_lo;
+logic [7:0]  bank_hi;
+logic [12:0] mask_lo;
+logic [5:0]  bank_no;
 
-reg [13:0] geo_bank;
-reg  [7:0] IOE_bank;
-reg  [7:0] IOF_bank;
-reg        IOE_wr_ena;
-reg        IOF_wr_ena;
+logic [13:0] geo_bank;
+logic [7:0]  IOE_bank;
+logic [7:0]  IOF_bank;
+logic        IOE_wr_ena;
+logic        IOF_wr_ena;
 
-reg        exrom_overide;
-reg        game_overide;
+logic        exrom_overide;
+logic        game_overide;
 assign     {exrom, game} = force_ultimax ? 2'b10 : {exrom_overide, game_overide};
 
-reg [6:0] lobanks[0:63];
-reg [6:0] hibanks[0:63];
+logic        old_loading;
 
-reg  [7:0] bank_cnt;
-reg [63:0] lobanks_map;
-reg [63:0] hibanks_map;
-always @(posedge clk32) begin
-	reg old_loading;
+always_ff @(posedge clk32) begin
 	old_loading <= cart_loading;
 
 	if(~old_loading & cart_loading) begin
@@ -95,49 +101,67 @@ always @(posedge clk32) begin
 			end
 		end
 	end
+
 end
 
-reg IOE_ena,IOF_ena;
-reg IOE_rd,IOF_rd;
+logic IOE_ena,IOF_ena;
+logic IOE_rd,IOF_rd;
 
 assign IO_rom = (IOE & IOE_ena & ~IOE_rd) | (IOF & IOF_ena & ~IOF_rd);
 assign IO_rd  = IOE_rd | IOF_rd;
 
-reg romL_we = 0;
-reg romH_we = 0;
+logic romL_we = 0;
+logic romH_we = 0;
 
-reg old_ioe, old_iof;
-always @(posedge clk32) begin
-	old_ioe <= IOE;
-	old_iof <= IOF;
+logic old_ioe, old_iof;
+
+always_ff @(posedge clk32) begin
+	old_ioe    <= IOE;
+	old_iof    <= IOF;
 end
 
-wire stb_ioe = (~old_ioe & IOE);
-wire stb_iof = (~old_iof & IOF);
+logic stb_ioe;
+logic stb_iof;
 
-wire ioe_wr = stb_ioe & mem_write;
-wire ioe_rd = stb_ioe & ~mem_write;
+assign stb_ioe = (~old_ioe & IOE);
+assign stb_iof = (~old_iof & IOF);
 
-wire iof_wr = stb_iof & mem_write;
+logic ioe_wr;
+logic ioe_rd;
+
+assign ioe_wr = stb_ioe & mem_write;
+assign ioe_rd = stb_ioe & ~mem_write;
+
+logic iof_wr;
+assign iof_wr = stb_iof & mem_write;
 //wire iof_rd = stb_iof & ~mem_write;
 
-reg  old_freeze = 0;
-wire freeze_req = (~old_freeze & freeze_key);
+logic old_freeze = 0;
+logic freeze_req;
 
-reg  old_nmiack = 0;
-wire freeze_ack = (nmi & ~old_nmiack & nmi_ack);
-wire freeze_crt = freeze_ack & ~mod_key;
+assign freeze_req = (~old_freeze & freeze_key);
 
-reg  cart_disable = 0;
-reg  allow_bank;
-reg  ram_bank;
-reg  reu_map;
-reg  clock_port;
-reg  rom_kbb;
-reg  force_ultimax;
-reg  ezrom_en;
+logic old_nmiack = 0;
+logic freeze_ack;
+logic freeze_crt;
 
+assign freeze_ack = (nmi & ~old_nmiack & nmi_ack);
+assign freeze_crt = freeze_ack & ~mod_key;
 
+logic cart_disable = 0;
+logic allow_bank;
+
+logic reu_map;
+logic clock_port;
+logic rom_kbb;
+logic force_ultimax;
+logic ezrom_en;
+logic init_n = 0;
+logic allow_freeze = 0;
+logic saved_d6 = 0;
+logic [15:0] count;
+logic        count_ena;
+logic [7:0] old_id;
 
 // Magic Formel (type 14) - MC6821 PIA state
 //reg  [7:0] mf_porta;   // PIA Port A output (ROM bank + RAM enable)
@@ -147,14 +171,7 @@ reg  ezrom_en;
 
 // 0018 - EXROM line status
 // 0019 - GAME line status
-always @(posedge clk32) begin
-	reg        init_n;
-	reg        allow_freeze;
-	reg        saved_d6;
-	reg [15:0] count;
-	reg        count_ena;
-	reg [15:0] old_id;
-
+always_ff @(posedge clk32) begin
 	old_freeze <= freeze_key;
 	if(freeze_req & (allow_freeze | mod_key)) nmi <= 1;
 
@@ -831,12 +848,12 @@ always @(posedge clk32) begin
 	endcase
 end
 
-wire [19:0] ezrom_addr;
-wire  [7:0] ezdq_out;
-wire        ezrom_ce, ezrom_we;
-wire  [7:0] ezmem_out;
-wire        ezmem_oe;
-wire        ezdq_oe;
+logic [19:0] ezrom_addr;
+logic  [7:0] ezdq_out;
+logic        ezrom_ce, ezrom_we;
+logic  [7:0] ezmem_out;
+logic        ezmem_oe;
+logic        ezdq_oe;
 
 ez_rom ez_rom
 (
@@ -858,8 +875,11 @@ ez_rom ez_rom
 	.mem_we(ezrom_we)
 );
 
-wire [21:0] ezmem_addr = {2'b10, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
-wire        ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
+logic [24:0] ezmem_addr;
+logic        ezmem_we;
+// adjusted to 2MB CRT ROM offset 
+assign ezmem_addr = {5'h02, ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
+assign ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
 
 assign mem_addr = (ezmem_oe) ? ezmem_addr : addr_out;
 assign mem_out  = (ezmem_oe) ?  ezmem_out : data_in;
@@ -871,22 +891,19 @@ assign data_out = (ezdq_oe & (romH|romL)) ? ezdq_out : mem_in;
 // ****** Address handling - Redirection to SDRAM CRT file
 // ************************************************************************************************************
 
-wire cs_ioe = IOE && (mem_write ? IOE_wr_ena : IOE_ena);
-wire cs_iof = IOF && (mem_write ? IOF_wr_ena : IOF_ena);
+logic cs_ioe;
+logic cs_iof;
+
+assign cs_ioe = IOE && (mem_write ? IOE_wr_ena : IOE_ena);
+assign cs_iof = IOF && (mem_write ? IOF_wr_ena : IOF_ena);
 
 assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof) | ezrom_ce;
 
-//RAM banks are mapped to 0x010000 (64K max)
-//ROM banks are mapped to 0x200000 (2MB max)
-function [8:0] get_bank;
-	input [7:0] bank;
-	input       ram;
-begin
-	get_bank = ram ? {6'b000001, bank[2:0]} : {1'b1, bank[7:0]};
-end
+function automatic logic [11:0] get_bank(input logic [7:0] bank, input logic ram);
+	get_bank = ram ? {9'(CRM_ADDR>>16), bank[2:0]} : {4'(CRT_ADDR>>21), bank[7:0]};
 endfunction
 
-reg [24:0] addr_out;
+logic [24:0] addr_out;
 
 always_comb begin
 	IOE_rd = 0;
@@ -896,7 +913,7 @@ always_comb begin
 
 	//prohibit to write in ultimax mode into underlaying (actually non-existent) RAM
 	mem_write_out = (~(((romL & ~romL_we) | (romH & ~romH_we)) & exrom_overide & ~game_overide) & mem_write) | ezmem_we;
-	addr_out = addr_in;
+	addr_out = {9'(RAM_ADDR>>18), addr_in};
 
 	if(reset_n) begin
 		if(romH & (romH_we | ~mem_write)) addr_out[24:13] =  get_bank(bank_hi, romH_we);
@@ -920,10 +937,10 @@ always_comb begin
 			// Magic Formel: RAM paging at IOE ($DE00-$DEFF)
 			// 32 pages x 256 bytes = 8K RAM, stored at SDRAM 0x010000-0x011FFF, addr_out[16]=1 (RAM base), [12:8]=page, [7:0]=byte offset within page
 //			14: if(cs_ioe) begin
-//					addr_out[24:0] = {8'd0, 1'b1, 3'b000, mf_portb[4:0], addr_in[7:0]};
+//					addr_out[23:0] = {8'd0, 1'b1, 3'b000, mf_portb[4:0], addr_in[7:0]};
 //				end
 			99: if(IOE) begin
-					addr_out[24:8] = {3'b011, geo_bank};
+					addr_out[24:8] = {3'(GEO_ADDR>>22), geo_bank};
 				end
 		default:;
 		endcase

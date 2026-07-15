@@ -4,7 +4,7 @@ add_file src/tang/tn20k/am29f040.sv
 add_file src/gowin_rpll/gowin_rpll_flash.vhd
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/tang/tn20k/cartridge.v
+add_file src/cartridge.sv
 add_file src/dualshock2.v
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v

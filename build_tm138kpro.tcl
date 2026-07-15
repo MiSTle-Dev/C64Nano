@@ -1,9 +1,9 @@
 set_device GW5AST-LV138FPG676AC1/I0 -device_version B
 
+add_file src/am29f040.sv
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/cartridge.v
-add_file src/dualshock2.v
+add_file src/cartridge.sv
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
 add_file src/gowin_dpb/sector_dpram.v
@@ -73,6 +73,7 @@ add_file src/sid/sid_voice.sv
 add_file src/uart6551/BaudRate.vhd
 add_file src/uart6551/io_fifo.v
 add_file src/uart6551/uart_6551.v
+add_file src/misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
 set_option -output_base_name C64Nano_TM138kPro
@@ -92,32 +93,13 @@ set_option -user_code 00000001
 set_option -bit_compress 1
 set_option -multi_boot 0
 set_option -mspi_jump 0
-set_option -turn_off_bg 0
-set_option -vccx 1.8
-set_option -vcc 0.9
-set_option -power_on_reset_monitor 1
-set_option -timing_driven 1
-set_option -cst_warn_to_error 1
-set_option -rpt_auto_place_io_info 1
-set_option -convert_sdp32_36_to_sdp16_18 1
-set_option -correct_hold_violation 1
 set_option -loading_rate 70.000
-set_option -place_option 2
-set_option -route_option 1
+#set_option -place_option 2
+#set_option -route_option 1
 set_option -ireg_in_iob 1
 set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1
-set_option -bit_crc_check 1
-set_option -bit_security 1
-set_option -bit_incl_bsram_init 1
-set_option -bg_programming off
-set_option -hotboot 0
-set_option -program_done_bypass 0
-set_option -wakeup_mode 0
-set_option -serdesRetiming 0
-set_option -enable_dsrm 0
-set_option -disable_io_insertion 0
-set_option -looplimit 2000
+#set_option -looplimit 2000
 
 #set_option -multiboot_mode quad
 #set_option -multiboot_address_width 24

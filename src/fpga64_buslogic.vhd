@@ -88,8 +88,8 @@ end fpga64_buslogic;
 
 architecture rtl of fpga64_buslogic is
 	signal charData       : std_logic_vector(7 downto 0);
-	signal charData_std   : std_logic_vector(7 downto 0);
-	signal charData_jap   : std_logic_vector(7 downto 0);
+	--signal charData_std   : std_logic_vector(7 downto 0);
+	--signal charData_jap   : std_logic_vector(7 downto 0);
 	signal romData        : std_logic_vector(7 downto 0);
 	--signal romData_c64    : std_logic_vector(7 downto 0);
 	--signal romData_c64std : std_logic_vector(7 downto 0);
@@ -175,13 +175,7 @@ begin
 romData <= romData_Kernal when cpuAddr(14) = '1' else romData_Basic;
 
 	--begin
-	process(ramData, vicData, sidData, colorData,
-              cia1Data, cia2Data, charData, romData,
-		      cs_romHLoc, cs_romLLoc, cs_romLoc, cs_CharLoc,
-			  cs_ramLoc, cs_vicLoc, cs_sidLoc, cs_colorLoc,
-			  cs_cia1Loc, cs_cia2Loc, lastVicData,
-			  cs_ioELoc, cs_io7Loc, cs_ioFLoc,
-			  io_rom, io_ext, io_data)
+	process(all)
 	begin
 		-- If no hardware is addressed the bus is floating.
 		-- It will contain the last data read by the VIC. (if a C64 is shielded correctly)
@@ -206,8 +200,6 @@ romData <= romData_Kernal when cpuAddr(14) = '1' else romData_Basic;
 			dataToCpu <= ramData;
 		elsif cs_romHLoc = '1' then
 			dataToCpu <= ramData;
-		elsif cs_io7Loc = '1' and io_rom = '1' then
-			dataToCpu <= ramData;
 		elsif cs_ioELoc = '1' and io_rom = '1' then
 			dataToCpu <= ramData;
 		elsif cs_ioFLoc = '1' and io_rom = '1' then
@@ -223,7 +215,7 @@ romData <= romData_Kernal when cpuAddr(14) = '1' else romData_Basic;
 
 	ultimax <= exrom and (not game);
 
-	process(cpuHasBus, cpuAddr, ultimax, cpuWe, bankSwitch, exrom, game, aec, vicAddr)
+	process(all)
 	begin
 		currentAddr <= (others => '1');
 		systemWe <= '0';

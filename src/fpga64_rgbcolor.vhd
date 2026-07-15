@@ -54,7 +54,6 @@ begin
 			when X"D" => r <= X"a9"; g <= X"ff"; b <= X"9f";
 			when X"E" => r <= X"70"; g <= X"6d"; b <= X"eb";
 			when X"F" => r <= X"b2"; g <= X"b2"; b <= X"b2";
-			when others => null;
 			end case;
 		when "001" =>
 			case index is
@@ -74,7 +73,6 @@ begin
 			when X"D" => r <= X"9f"; g <= X"ef"; b <= X"93";
 			when X"E" => r <= X"6d"; g <= X"6a"; b <= X"ef";
 			when X"F" => r <= X"b2"; g <= X"b2"; b <= X"b2";
-			when others => null;
 			end case;
 		when "010" =>
 			case index is
@@ -94,7 +92,6 @@ begin
 			when X"D" => r <= X"9a"; g <= X"d2"; b <= X"84";
 			when X"E" => r <= X"6c"; g <= X"5e"; b <= X"b5";
 			when X"F" => r <= X"95"; g <= X"95"; b <= X"95";
-			when others => null;
 			end case;
 		when "011" =>
 			case index is
@@ -114,7 +111,6 @@ begin
 			when X"D" => r <= X"8f"; g <= X"c2"; b <= X"71";
 			when X"E" => r <= X"67"; g <= X"5d"; b <= X"b6";
 			when X"F" => r <= X"8f"; g <= X"8f"; b <= X"8f";
-			when others => null;
 			end case;
 		when "100" =>
 			case index is
@@ -134,7 +130,6 @@ begin
 			when X"D" => r <= X"8c"; g <= X"e8"; b <= X"8e";
 			when X"E" => r <= X"7b"; g <= X"6c"; b <= X"f0";
 			when X"F" => r <= X"c2"; g <= X"c2"; b <= X"c2";
-			when others => null;
 			end case;
 		when "101" =>
 			case index is
@@ -154,7 +149,6 @@ begin
 			when X"D" => r <= X"8c"; g <= X"e8"; b <= X"8e";
 			when X"E" => r <= X"71"; g <= X"62"; b <= X"e6";
 			when X"F" => r <= X"a3"; g <= X"a3"; b <= X"a3";
-			when others => null;
 			end case;
 		when "110" =>
 			case index is
@@ -174,7 +168,6 @@ begin
 			when X"D" => r <= X"8d"; g <= X"e9"; b <= X"89";
 			when X"E" => r <= X"66"; g <= X"69"; b <= X"e1";
 			when X"F" => r <= X"a3"; g <= X"a3"; b <= X"a3";
-			when others => null;
 			end case;
 		when "111" =>
 			case index is
@@ -194,9 +187,7 @@ begin
 			when X"D" => r <= X"af"; g <= X"f8"; b <= X"a6";
 			when X"E" => r <= X"7f"; g <= X"7d"; b <= X"f4";
 			when X"F" => r <= X"ba"; g <= X"ba"; b <= X"ba";
-			when others => null;
 			end case;
-		when others => null;
 		end case;
 	end process;
 end Behavioral;
