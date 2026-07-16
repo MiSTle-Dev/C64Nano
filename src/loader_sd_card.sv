@@ -66,10 +66,11 @@ typedef enum logic [3:0] {
 	WRITE_WAIT4SD
 } io_state_t;
 
-typedef enum logic [1:0] {
+typedef enum logic [2:0] {
 	UP_GLOBAL_HDR,
 	UP_CHIP_HDR,
 	UP_CHIP_DATA,
+	UP_FIND_CHIP,
 	UP_DONE
 } upload_state_t;
 
@@ -96,7 +97,8 @@ logic [3:0] upload_chip_hdr_idx;
 logic [12:0] upload_chip_data_idx;
 logic [6:0] upload_chip_bank;
 logic       upload_chip_hi;
-logic [8:0] chip_sel;
+logic [6:0] upload_walk_bank;
+logic       upload_walk_hi;
 
 logic [31:0] loader_sd_lba;
 logic [6:0]  loader_sd_rd;
@@ -109,7 +111,7 @@ assign sd_rd      = loader_busy ? {loader_sd_rd, 1'b0} : {7'b0000000, c1541_sd_r
 assign sd_wr      = loader_busy ? {loader_sd_wr, 1'b0} : {7'b0000000, c1541_sd_wr};
 
 // CRT header ROM - 64 bytes of static configuration data
-logic [7:0] CRT_HEADER[0:63] = '{
+localparam logic [7:0] CRT_HEADER[0:63] = '{
 	8'h43, 8'h36, 8'h34, 8'h20, 8'h43, 8'h41, 8'h52, 8'h54,  // "C64 CART"
 	8'h52, 8'h49, 8'h44, 8'h47, 8'h45, 8'h20, 8'h20, 8'h20,  // "RIDGE   "
 	8'h00, 8'h00, 8'h00, 8'h40, 8'h01, 8'h00, 8'h00, 8'h20,  // header size, EasyFlash type
@@ -125,7 +127,7 @@ function automatic logic [7:0] crt_header_byte(input logic [5:0] idx);
 endfunction
 
 // CHIP header base ROM - indices 0-10 static, 11-12 computed with bank/address
-logic [7:0] CHIP_HEADER_BASE[0:15] = '{
+localparam logic [7:0] CHIP_HEADER_BASE[0:15] = '{
 	8'h43, 8'h48, 8'h49, 8'h50,              // "CHIP"
 	8'h00, 8'h00, 8'h20, 8'h10,              // header size (0x20), total size (0x10 = 16-byte header + 8KB)
 	8'h00, 8'h02, 8'h00, 8'h00,              // reserved, chip type (0x02 = ROM)
@@ -138,39 +140,6 @@ function automatic logic [7:0] chip_header_byte(input logic [3:0] idx, input log
 		4'd12: return hi ? 8'hA0 : 8'h80;
 		default: return CHIP_HEADER_BASE[idx];
 	endcase
-endfunction
-
-function automatic logic [8:0] find_chip_from(input logic [6:0] start_bank, input logic start_hi);
-	int unsigned b;
-	int unsigned start_u;
-	begin : find_loop
-		find_chip_from = '0;
-		start_u = {25'd0, start_bank};
-		for(b = 0; b < 64; b = b + 1) begin
-			if(b >= start_u) begin
-				if(b == start_u) begin
-					if(!start_hi && lobanks_map[b[5:0]]) begin
-						find_chip_from = {1'b1, b[6:0], 1'b0};
-						disable find_loop;
-					end
-					if(hibanks_map[b[5:0]]) begin
-						find_chip_from = {1'b1, b[6:0], 1'b1};
-						disable find_loop;
-					end
-				end
-				else begin
-					if(lobanks_map[b[5:0]]) begin
-						find_chip_from = {1'b1, b[6:0], 1'b0};
-						disable find_loop;
-					end
-					if(hibanks_map[b[5:0]]) begin
-						find_chip_from = {1'b1, b[6:0], 1'b1};
-						disable find_loop;
-					end
-				end
-			end
-		end
-	end
 endfunction
 
 integer i;
@@ -228,6 +197,8 @@ always_ff @(posedge clk) begin
 		upload_chip_data_idx <= '0;
 		upload_chip_bank <= '0;
 		upload_chip_hi <= 0;
+		upload_walk_bank <= '0;
+		upload_walk_hi <= 0;
 		loader_busy <= 0;
 		boot_flags <= '0;
 		rd_sel <= '0;
@@ -262,17 +233,31 @@ always_ff @(posedge clk) begin
 				upload_data <= chip_header_byte(upload_chip_hdr_idx, upload_chip_bank, upload_chip_hi);
 				io_state <= WRITING;
 			end
-			else begin
-				if((upload_chip_hi && !hibanks_map[upload_chip_bank]) || (!upload_chip_hi && !lobanks_map[upload_chip_bank])) begin
-					upload_data <= 8'hFF;
-					io_state <= WRITING;
+			else if(upload_state == UP_FIND_CHIP) begin
+				if((!upload_walk_hi && lobanks_map[upload_walk_bank]) || (upload_walk_hi && hibanks_map[upload_walk_bank])) begin
+					upload_chip_bank <= upload_walk_bank;
+					upload_chip_hi <= upload_walk_hi;
+					upload_chip_hdr_idx <= '0;
+					upload_chip_data_idx <= '0;
+					upload_state <= UP_CHIP_HDR;
+				end
+				else if(upload_walk_hi && (upload_walk_bank == 7'd63)) begin
+					upload_state <= UP_DONE;
+				end
+				else if(!upload_walk_hi) begin
+					upload_walk_hi <= 1'b1;
 				end
 				else begin
-					ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), upload_chip_data_idx};
-					ioctl_rd <= 1;
-					core_wait_cnt <= '0;
-					io_state <= WRITE_WAIT4CORE;
+					upload_walk_hi <= 1'b0;
+					upload_walk_bank <= upload_walk_bank + 1'd1;
 				end
+				io_state <= WRITE_PREPARE;
+			end
+			else begin
+				ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), upload_chip_data_idx};
+				ioctl_rd <= 1;
+				core_wait_cnt <= '0;
+				io_state <= WRITE_WAIT4CORE;
 			end
 		end
 
@@ -297,21 +282,9 @@ always_ff @(posedge clk) begin
 
 			if(upload_state == UP_GLOBAL_HDR) begin
 				if(upload_hdr_idx == 6'd63) begin
-					chip_sel = find_chip_from('0, 1'b0);
-					if(chip_sel[8]) begin
-						upload_chip_bank <= chip_sel[7:1];
-						upload_chip_hi <= chip_sel[0];
-						upload_chip_hdr_idx <= '0;
-						upload_chip_data_idx <= '0;
-						upload_state <= UP_CHIP_HDR;
-					end
-					else begin
-						upload_chip_bank <= '0;
-						upload_chip_hi <= 1'b0;
-						upload_chip_hdr_idx <= '0;
-						upload_chip_data_idx <= '0;
-						upload_state <= UP_CHIP_HDR;
-					end
+					upload_walk_bank <= '0;
+					upload_walk_hi <= 1'b0;
+					upload_state <= UP_FIND_CHIP;
 				end
 				else begin
 					upload_hdr_idx <= upload_hdr_idx + 1'd1;
@@ -331,35 +304,15 @@ always_ff @(posedge clk) begin
 					if(upload_chip_hi && upload_chip_bank == 7'd63) begin
 						upload_state <= UP_DONE;
 					end
+					else if(upload_chip_hi) begin
+						upload_walk_bank <= upload_chip_bank + 1'd1;
+						upload_walk_hi <= 1'b0;
+						upload_state <= UP_FIND_CHIP;
+					end
 					else begin
-						chip_sel = find_chip_from(upload_chip_hi ? (upload_chip_bank + 1'd1) : upload_chip_bank, upload_chip_hi ? 1'b0 : 1'b1);
-						if(chip_sel[8]) begin
-							upload_chip_bank <= chip_sel[7:1];
-							upload_chip_hi <= chip_sel[0];
-							upload_chip_hdr_idx <= '0;
-							upload_chip_data_idx <= '0;
-							upload_state <= UP_CHIP_HDR;
-						end
-						else begin
-							if(upload_chip_hi) begin
-								if(upload_chip_bank == 7'd63) begin
-									upload_state <= UP_DONE;
-								end
-								else begin
-									upload_chip_bank <= upload_chip_bank + 1'd1;
-									upload_chip_hi <= 1'b0;
-									upload_chip_hdr_idx <= '0;
-									upload_chip_data_idx <= '0;
-									upload_state <= UP_CHIP_HDR;
-								end
-							end
-							else begin
-								upload_chip_hi <= 1'b1;
-								upload_chip_hdr_idx <= '0;
-								upload_chip_data_idx <= '0;
-								upload_state <= UP_CHIP_HDR;
-							end
-						end
+						upload_walk_bank <= upload_chip_bank;
+						upload_walk_hi <= 1'b1;
+						upload_state <= UP_FIND_CHIP;
 					end
 				end
 				else begin
@@ -372,7 +325,7 @@ always_ff @(posedge clk) begin
 		end
 
 		WRITE_FLUSH: begin
-			loader_sd_wr <= 7'b1000000; // request write to sd card, EZFLASH index
+			loader_sd_wr <= 7'b1000001; // request write to sd card, CRT index
 			io_state <= WRITE_START_SD;
 		end
 
@@ -399,8 +352,9 @@ always_ff @(posedge clk) begin
 		end
 
 		START:
-			begin // 0 c1541 1 CRT 2 PRG 3 BIN 4 TAP 5 FLT 6 REU 7 EZFLASH SAVE
-				if((|img_size[7]) && upload_req && (|bank_cnt || |lobanks_map || |hibanks_map)) begin //
+			begin // 0 c1541 1 CRT 2 PRG 3 BIN 4 TAP 5 FLT 6 REU 7 unused
+				if((|img_size[1]) && upload_req && (|lobanks_map || |hibanks_map)) begin
+						// CRT save EZFLASH
 						upload_req <= 0;
 						loader_busy <= 1;
 						io_state <= WRITE_PREPARE;
@@ -417,47 +371,57 @@ always_ff @(posedge clk) begin
 						upload_chip_data_idx <= '0;
 						upload_chip_bank <= '0;
 						upload_chip_hi <= 0;
+						upload_walk_bank <= '0;
+						upload_walk_hi <= 0;
 					end
 			else if((|img_size[3]) && ((img_present[3] && ~img_presentD[3]) || (img_present[3] && ~boot_flags[3]))) begin
+					// Kernal file select
 					img_select <= 3;
 					io_state <= GO4IT;
 					rd_sel <= 7'b0000100;
 					boot_flags[3] <= 1;
 					end
 			else if((|img_size[1]) && ((img_present[1] && ~img_presentD[1]) || (img_present[1] && ~boot_flags[1]))) begin
+					// CRT file select
 					img_select <= 1; 
 					io_state <= GO4IT; 
 					rd_sel <= 7'b0000001;
 					boot_flags[1] <= 1;
 					end
-			else if((|img_size[2]) && ((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_flags[2]))) begin 
+			else if((|img_size[2]) && ((img_present[2] && ~img_presentD[2]) || (img_present[2] && ~boot_flags[2]))) begin
+					// PRG file select 
 					img_select <= 2;
 					io_state <= GO4IT;
 					rd_sel <= 7'b0000010;
 					boot_flags[2] <= 1;
 					end
 			else if((|img_size[5]) && ((img_present[5] && ~img_presentD[5]) || (img_present[5] && ~boot_flags[5]))) begin
+					// FLT file select
 					img_select <= 5;
 					io_state <= GO4IT;
 					rd_sel <= 7'b0010000;
 					boot_flags[5] <= 1;
 					end
-				else if((|img_size[4]) && img_present[4] && ~img_presentD[4]) begin
-						img_select <= 4;
-						io_state <= GO4IT;
-						rd_sel <= 7'b0001000;
+			else if((|img_size[4]) && img_present[4] && ~img_presentD[4]) begin
+					// TAP file select
+					img_select <= 4;
+					io_state <= GO4IT;
+					rd_sel <= 7'b0001000;
 					boot_flags[4] <= 1;
 					end
 			else if((|img_size[6]) && ((img_present[6] && ~img_presentD[6]) || (img_present[6] && ~boot_flags[6]))) begin
+					// REU file select
 					img_select <= 6;
 					io_state <= GO4IT;
 					rd_sel <= 7'b0100000;
 					boot_flags[6] <= 1;
 					end
-			else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_flags[7]))) begin // EZFLASH file select
-					boot_flags[7] <= 1;
-					end
-				//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin // C1541
+			//else if((|img_size[7]) && ((img_present[7] && ~img_presentD[7]) || (img_present[7] && ~boot_flags[7]))) begin // EZFLASH file select
+				// unused
+				//		boot_flags[7] <= 1;
+				//		end
+			//else if((|img_size[0]) && img_present[0] && ~img_presentD[0]) begin 
+				// C1541 select
 				//		img_select <= 0;   // use for mux instead busy
 				//	end
 				else begin

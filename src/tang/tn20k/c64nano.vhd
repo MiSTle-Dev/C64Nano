@@ -318,7 +318,6 @@ signal cart_attached   : std_logic := '0';
 signal cart_hdr_cnt    : unsigned(3 downto 0);
 signal cart_hdr_wr     : std_logic;
 signal cart_blk_len    : unsigned(15 downto 0);
-signal cart_chip_cnt   : unsigned(7 downto 0);
 signal io_cycle        : std_logic;
 signal io_cycle_ce     : std_logic;
 signal io_cycle_we     : std_logic;
@@ -487,7 +486,7 @@ signal tap_io_cycle     : std_logic := '0';
 signal dac_l, dac_r     : unsigned(8 downto 0);
 signal alo, aro         : signed(15 downto 0);
 signal sact             : unsigned(3 downto 0);
-signal system_digimax   : unsigned(1 downto 0);
+signal system_digimax   : unsigned(1 downto 0) := (others => '0');
 signal ioe_we, iof_we   : std_logic;
 signal old_ioe, old_iof : std_logic;
 
@@ -1843,7 +1842,6 @@ begin
           ioctl_load_addr <= CRT_ADDR;
           cart_blk_len <= (others => '0');
           cart_hdr_cnt <= (others => '0');
-          cart_chip_cnt <= (others => '0');
         end if;
 
         if unsigned(ioctl_addr) = to_unsigned(16#16#, ioctl_addr'length) then
@@ -1867,8 +1865,6 @@ begin
         end if;
 
         if ioctl_addr >= to_unsigned(16#40#, ioctl_addr'length) then
-          if (cart_id = to_unsigned(32, cart_id'length) and cart_chip_cnt < to_unsigned(64, cart_chip_cnt'length)) or
-             (cart_id /= to_unsigned(32, cart_id'length)) then
             if cart_blk_len = to_unsigned(0, cart_blk_len'length) or 
             cart_hdr_cnt /= to_unsigned(0, cart_hdr_cnt'length) then
               cart_hdr_cnt <= cart_hdr_cnt + 1;
@@ -1899,12 +1895,10 @@ begin
 
               if unsigned(cart_hdr_cnt) = to_unsigned(15, cart_hdr_cnt'length) then
                 cart_hdr_wr <= '1';
-                cart_chip_cnt <= cart_chip_cnt + 1;
               end if;
             else
               cart_blk_len <= cart_blk_len - 1;
               ioctl_req_wr <= '1';
-            end if;
           end if;
         end if;
 
