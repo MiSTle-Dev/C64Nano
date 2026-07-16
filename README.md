@@ -35,11 +35,12 @@ Features:
 * Joystick emulation on Keyboard Numpad
 * Emulation of [C64GS Cheetah Annihilator](https://en.wikipedia.org/wiki/Commodore_64_Games_System) Joystick 2nd Trigger Button (Pot X/Y)
 * emulated [1541 Diskdrive](https://en.wikipedia.org/wiki/Commodore_1541) on FAT/extFAT microSD card with parallel bus [Speedloader Dolphin DOS 2](https://rr.pokefinder.org/wiki/Dolphin_DOS). [GER manual](https://www.c64-wiki.de/wiki/Dolphin_DOS)
-* c1541 DOS ROM selection
+* C1541 DOS ROM selection
 * Cartridge ROM (*.CRT) loader
 * Direct BASIC program (*.PRG) injection loader
 * Tape (*.TAP) image loader as [C1530 Datasette](https://en.wikipedia.org/wiki/Commodore_Datasette)
 * Loadable 8K Kernal ROM (*.BIN)
+* REU (*.reu) image loader
 * [VIC-II](https://en.wikipedia.org/wiki/MOS_Technology_VIC-II) revision and [6526](https://en.wikipedia.org/wiki/MOS_Technology_CIA) / 8521 selection
 * [SID](https://en.wikipedia.org/wiki/MOS_Technology_6581) revision 6581 or 8580 selectable
 * 2nd dual SID Option and loadable Filter curves
@@ -50,9 +51,8 @@ Features:
 * Swiftlink-232 [6551](https://en.wikipedia.org/wiki/MOS_Technology_6551) WIFI Modem Interface to FPGA-Companion up to 38400 Baud
 * Freezer support (e.g. Action Replay)
 * external IEC device (C1541 Floppy / IEC Printer etc.)
-* REU (*.reu) loader
 * DigiMax four channel audio DAC ($DE00 /$DF00)
-* EasyFlash CRT Save (for enhanced Games that support write to Flash as gameplay progress storage)
+* [EasyFlash](https://www.c64-wiki.com/wiki/EasyFlash) CRT Save (for enhanced Games that support write to [Flash](https://skoe.de/easyflash/) as gameplay progress storage)
 
 <img src="./.assets/c64_core.png" alt="image" width="80%" height="auto">
 
@@ -95,10 +95,10 @@ Add D64 or G64 images as you like and insert card in TN slot. LED 0 acts as Driv
 > LOAD"*",8  
 > RUN  
 
-c1541 DOS ROM can be selected from OSD (default Dolphin DOS 2.0, CBM DOS, SpeedDos Plus or JiffyDOS)
+C1541 DOS ROM can be selected from OSD (default Dolphin DOS 2.0, CBM DOS, SpeedDos Plus or JiffyDOS)
 In case a program don't load correctly select via OSD the factory default CBM DOS an give it a try.
 
-## Cartridge ROM Loader (.CRT, .SAV)
+## Cartridge ROM Loader (.CRT)
 
 Cartridge ROM can be loaded via OSD file selection.  
 Also EasyFlash save game progress images are loaded via this item.
@@ -110,24 +110,23 @@ Also EasyFlash save game progress images are loaded via this item.
 > [!IMPORTANT]
 > Be aware that some Freezer Card CRT might require to use the standard C64 Kernal and the standard C1541 CBM DOS.
 
-## EasyFlash Cartridge save (.SAV)
+## EasyFlash Cartridge Save (.CRT)
 
-Storing game progress for Cartridge images using EasyFlash is nowadays the de facto standard.
-Game progress is stored per `.CRT` game in a dedicated save file, leaving your original `.CRT` untouched.
+Saving game progress for **EasyFlash** [cartridge ](https://gitlab.com/easyflash/) images is now the de facto standard.
+Progress is written directly into the `*.CRT` file, so the image is modified in place (rewritten). It is strongly recommended to keep a backup copy in case the file becomes corrupted.
 
 **Workflow:**
 
-1. Select a storage file (`.SAV`) via OSD **Select EZFLASH:**. Best practice is to rename the master `easyflash.sav` file to e.g. `easyflash_caren.sav`.
-2. Load your game via **CRT ROM:** as usual, e.g. `caren_priorart_ef.crt` or any other EasyFlash-enabled game.
-3. Perform the **in-game** save-to-CRT process, which is specific to each game. The game will program specific blocks of the two emulated AM29F040B flash chips to store its progress.
-4. Press **Save EZFLASH:** in the OSD. The core will write the updated EasyFlash image — including the modified blocks containing the game progress — back to the SD card as `xyz.SAV`.
+1. Load your game via **CRT ROM:** as usual, for example `caren_priorart_ef.crt` or any other EasyFlash-enabled game.
+2. Perform the **in-game** save-to-CRT process (this is game-specific). The game will program selected blocks of the two emulated AM29F040B flash chips to store progress.
+3. Press **Save EZFLASH:**. The core writes the updated EasyFlash image, including the modified save blocks, back to the SD card (for example as `caren_priorart_ef.crt`).
 
-To **resume** a saved game: first select the `.SAV` file via **Select EZFLASH:**, then load the **`.SAV`** file (not the original `.CRT`) via the **CRT ROM:** OSD item.
+To **resume** a saved game, load it again via **CRT ROM:** and use the in-game load/continue function.
 
 > [!IMPORTANT]
-> Be aware that some Games supporting Flash write require to use the standard C64 Kernal and the standard C1541 CBM DOS.
+> Some games that support flash writes require the standard C64 Kernal and standard C1541 CBM DOS.
 
-Be aware that this feature works differently from MiSTer: MiSTer rewrites the CRT image in Linux userspace, whereas here the rewrite is performed by Mistle C64 core directly in the core HDL itself.
+This feature behaves differently than on MiSTer: MiSTer rewrites the CRT image in Linux userspace and creates a different file. Here, the rewrite is done directly by the Mistle C64 core in HDL, and the original CRT file is overwritten.
 
 ## BASIC Program Loader (.PRG)
 
@@ -169,15 +168,23 @@ Prevent Kernal load by OSD Kernal BIN selection **No Disk** and **Save settings*
 
 ## SID Filter Curve (.FLT)
 
-Custom Filters curves can optionally be loaded via OSD.
-> [!TIP]https://www.telnetbbsguide.com/bbs/software/image-bbs/
-> This is in most cases not needed and build-in filters curves are already an optimum.
+Custom filter curves can optionally be loaded via OSD.
+
+> [!TIP]
+> In most cases this is not required, because the built-in filter curves are already well optimized.
 
 > [!NOTE]
 > Remember to select the 6581 chip, not the 8580.
-> Select 'Custom 1' as the filter to activate it. When a custom filter is loaded, there's no difference between custom options Custom 1, 2, and 3. Selecting 'Default' switches back to the built-in filter curve.
+> Select `Custom 1` as the filter to activate it. When a custom filter is loaded, there is no difference between `Custom 1`, `Custom 2`, and `Custom 3`. Select `Default` to switch back to the built-in filter curve.
+
+Filter examples and references:
 https://www.telnetbbsguide.com/bbs/software/image-bbs/
-Prevent Filter curve load by OSD Kernal **FLT** selection **No Disk** and **Save settings** and **power-cyle** of the board.
+
+To disable filter-curve loading, set OSD Kernal **FLT** to **No Disk**, select **Save settings**, and power-cycle the board.
+
+## Ram Expansion Unit (.REU)
+
+Ram Expansion Unit images can optionally be loaded via OSD.
 
 ## Core Loader Sequencing
 
@@ -188,7 +195,8 @@ The core will after power cycle/ cold-boot start downloading the images on the s
 
 ## emulated RAM Expansion Unit REU 1750
 
-For those programs the require a [RAM Expansion Unit (REU)](https://en.wikipedia.org/wiki/Commodore_REU) it can be activated by OSD on demand.
+For those programs the require a [RAM Expansion Unit (REU)](https://en.wikipedia.org/wiki/Commodore_REU) it can be activated by OSD on demand.  
+TN20k supports 512k and 2MByte size whereas Primer, Mega and Console do support also 16MB.
 
 Playing [Sonic the Hedgehog V1.2](https://csdb.dk/release/?id=212523)
 Enable REU, and load the PRG.  
@@ -279,15 +287,6 @@ Don't configure e.g. [ArcadeR](https://retroradionics.com) for C64 mode rather t
 OSD: **USB #1 Joy** or **USB #2 Joy**
 Also [RII Mini Keyboard i8](http://www.riitek.com/product/220.html) left Multimedia Keys are active if **USB #1 Joy** selected.
 
-~~<u>Dualshock 2 Gamepad Stick or Dpad as Joystick.</u>.  
-OSD: **DS #1 Joy** or **DS #2 Joy**
-At the moment Dpad only for original Pad. Some clone devices support at the same time Dpad and left stick simultaniously. ```circle and cross``` Buttons as Trigger:~~
-
-> [!NOTE]
-> TN20k: You have to select OSD **DS2 #2 Joy** or **DS #2 Paddle** for a ``MiSTeryShield20k`` configuration.
-> In a MiSTeryShield20k configuration Dualshock is supported via the internal ``spare J8`` pinheader. Multiplex supported in between DS2 or 2nd D9 retro Joystick.
-> See [MiSTeryShield20k DS2 Adapter / Cable](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md) for further information. Thx [venice1200](https://github.com/venice1200) !
-
 <u>Keyboard Numpad.</u>  
 OSD: **Numpad**
 
@@ -300,22 +299,6 @@ OSD: **Numpad**
 <u>Mouse.</u>  
 OSD: **Mouse**
 USB Mouse as c1351 Mouse emulation.
-
-~~<u>Dualshock 2 Gamepad</u> as Paddle  
-OSD: **DS #1 Paddle** or **DS #2 Paddle**
-Dualshock left Stick in analog mode as VC-1312 Paddle emulation.
-ANALOG Paddle mode will be indicated by DS 2 red light indicator.~~
-
-> [!NOTE]
-> TN20k:
-> single Dualshock support only
-> 4 Paddles mapped to a single Gamepad (X/Y) and both Sticks.
-> **square** , **cross**, **circle** and **triangle** used as 4 Trigger buttons
-> ``Joyport 1:``  **DS2 #1 Paddle**
-> ``Joyport 2:``  **DS2 #1 Paddle**
-> or<br>
-> ``Joyport 1:``  **DS2 #2 Paddle**
-> ``Joyport 2:``  **DS2 #2 Paddle**
 
 <u>USB Paddle</u>.  
 OSD: **USB #1 Padd** or **USB #2 Padd**
@@ -340,11 +323,7 @@ Button **cross / square** as Trigger
 | LED | function    | TN20K | TP25K |TM60K|TM138K Pro|Console60K/138k|
 | --- |           - | -     | -     | -   |-         |-|
 | 0 | c1541 activity| x     | x     | x   |x         |x|
-| 1 | D64 selected  | x     | x     | x   |x         |x|
-| 2 | CRT seleced   | x     | -     |   - |x         |-|
-| 3 | PRG selected  | x     | -     |   - |x         |-|
-| 4 |Kernal selected| x     | -     |   - |x         |-|
-| 5 | TAP selected  | x     | -     |   - |x         |-|
+| 1 | EZFlash save  | x     | x     | x   |x         |x|
 
 Solid **<font color="red">red</font>** of the c1541 led after power-up indicates a missing DOS in Flash
 
@@ -363,7 +342,7 @@ Note: Enabling persitent the MIDI interface will block other things like Multica
 
 ## RS232 Serial Interface Swiftlink-232 <-> WIFI Modem
 
-Have a look: [Wiki WIFI Modem](https://github.com/harbaum/FPGA-Companion/wiki/AT-Wi%E2%80%90Fi-modem)  
+Have a look: [Wiki WIFI Modem](https://github.com/MiSTle-Dev/.github/wiki)  
 
 Most Terminal programs need the Kernal serial routines therefore select via OSD the CBM Kernal rather than default DolphinDOS.  
 In addition select OSD System RS232 mode ``Swiftlink DE``. Also possible ACIA [6551](https://en.wikipedia.org/wiki/MOS_Technology_6551) addresses are: $DE00 (default), $DF00 or $D700.  
@@ -395,18 +374,6 @@ OSD selection allows to change in between TANG USB-C port or external HW pin int
 
 Remember that in + out to be crossed to connect to external device. Level are 3V3 tolerant.
 
-## Synthesis
-
-Source code can be synthesized, fitted and programmed with GOWIN IDE Windows or Linux.
-
-Alternatively use the command line build script **gw_sh.exe / gw_sh.sh** [build_tn20k.tcl](build_tn20k.tcl) , [build_tp25k.tcl](build_tp25k.tcl) or [build_tm138k.tcl](build_tm138k.tcl)
-
-## HW circuit considerations
-
-**Pinmap TN20k Interfaces**
- Sipeed M0S Dock, digital Joystick D9. TN20k DS2 JoyToDIP is not supported anymore.
- ![wiring](\.assets/wiring_spi_irq.png)
-
 ## Pinmap D-SUB 9 Joystick Interface
 
 * Joystick interface is 3.3V tolerant. Joystick 5V supply pin has to be left floating !
@@ -425,37 +392,10 @@ Alternatively use the command line build script **gw_sh.exe / gw_sh.sh** [build_
 | 8          |-    | J5 20       | -        | GND             |
 | 9          |-    | -           | 30       | TRIGGER 2       |
 
-## Pinmap Dualshock 2 Controller Interface
-
-See [MiSTeryShield20k DS2 Adapter / Cable](/board/misteryshield20k_ds2_adapter/misteryshield20k_ds2_adapter_cable.md)
 
 ## Getting started
 
-In order to use this Design the following things are needed:
 
-[Sipeed M0S Dock](https://wiki.sipeed.com/hardware/en/maixzero/m0s/m0s.html) or Raspberry Pi Pico RP2040 or ESP32-S2/S3  
-[Sipeed Tang Nano 20k](https://wiki.sipeed.com/nano20k)  
-or [Sipeed Tang Primer 25k](https://wiki.sipeed.com/hardware/en/tang/tang-primer-25k/primer-25k.html)  
-and [PMOD DVI](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#PMOD_DVI)  
-and [PMOD TF-CARD V2](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#PMOD_TF-CARD)  
-and [PMOD SDRAM](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#TANG_SDRAM)  
-and [M0S PMOD adapter](https://github.com/harbaum/MiSTeryNano/tree/main/board/m0s_pmod/README.md)  
-or ad hoc wiring + soldering.
-or [Sipeed Tang Mega 138k Pro](https://wiki.sipeed.com/hardware/en/tang/tang-mega-138k/mega-138k-pro.html)  
-and [PMOD SDRAM](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#TANG_SDRAM)  
-and [PMOD DS2x2](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#PMOD_DS2x2)  
-and [M0S PMOD adapter](https://github.com/harbaum/MiSTeryNano/tree/main/board/m0s_pmod/README.md)  
-or [Tang Mega 60K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-mega-60k/mega-60k.html)  
-and [PMOD SDRAM](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#TANG_SDRAM)  
-and [PMOD DS2x2](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#PMOD_DS2x2)  
-and [M0S PMOD adapter](https://github.com/harbaum/MiSTeryNano/tree/main/board/m0s_pmod/README.md)  
-or [Tang Console 60K/138k NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)  
-and [PMOD DS2x2](https://wiki.sipeed.com/hardware/en/tang/tang-PMOD/FPGA_PMOD.html#PMOD_DS2x2)  
-and [Sipeed M0S Dock](https://wiki.sipeed.com/hardware/en/maixzero/m0s/m0s.html)
-and [M0S PMOD adapter](https://github.com/harbaum/MiSTeryNano/tree/main/board/m0s_pmod/README.md)  
-or a [PMOD RP2040-Zero](/board/pizero_pmod/README.md)  
-
-microSD or microSDHC card FAT32 formatted  
-TFT Monitor with HDMI Input and Speaker  
+[Board Setup](https://github.com/MiSTle-Dev/.github/wiki/Board-Setup)
 
 
