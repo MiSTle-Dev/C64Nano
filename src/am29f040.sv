@@ -101,6 +101,7 @@ logic [ADDR_WIDTH-1:0] mem_req_addr;
 logic            [7:0] mem_req_out;
 logic [ADDR_WIDTH-1:0] mem_req_cnt;
 logic           [31:0] busy_cnt;
+logic            [2:0] ce_stage;
 
 assign mem_addr = mem_req_addr;
 assign mem_out  = mem_req_out;
@@ -131,11 +132,18 @@ always_comb begin
 end
 
 always_ff @(posedge clk or negedge reset_n) begin
-	logic [2:0] ce_stage;
-
 	if (!reset_n) begin
 		state      <= ST_READ_MEM;
 		unlock     <= U_IDLE;
+		dq6_toggle <= 1'b0;
+		dq7_data   <= 1'b1;
+		dq3_data   <= 1'b0;
+		mem_req_we <= 1'b0;
+		mem_req_addr <= '0;
+		mem_req_out  <= 8'hFF;
+		mem_req_cnt  <= '0;
+		busy_cnt     <= '0;
+		ce_stage     <= 3'b000;
 		mem_req    <= 0;
 	end else begin
 
@@ -332,19 +340,26 @@ assign mem_req = mem0_req | mem1_req;
 logic mem_req_en;
 logic mem_cycle_q;
 always_ff @(posedge clk) begin
-	if(~reset_n || ~mem_req) mem_req_en <= 0;
-	else if(mem_req & mem_cycle) mem_req_en <= 1;
-	mem_cycle_q <= mem_cycle;
+	if(~reset_n) begin
+		mem_req_en  <= 1'b0;
+		mem_cycle_q <= 1'b0;
+	end else begin
+		if(~mem_req) mem_req_en <= 1'b0;
+		else if(mem_req & mem_cycle) mem_req_en <= 1'b1;
+		mem_cycle_q <= mem_cycle;
+	end
 end
 
 assign mem_oe = ~mem_cycle_q & mem_cycle & mem_req_en;
 
 
 always_ff @(posedge clk) begin
-	if(mem_oe) begin
+	if(~reset_n) begin
+		mem_rom_sel <= 1'b0;
+	end else if(mem_oe) begin
 		if(mem0_req && mem1_req) mem_rom_sel <= ~mem_rom_sel;
-		else if(mem0_req) mem_rom_sel <= 0;
-		else if(mem1_req) mem_rom_sel <= 1;
+		else if(mem0_req) mem_rom_sel <= 1'b0;
+		else if(mem1_req) mem_rom_sel <= 1'b1;
 	end
 end
 

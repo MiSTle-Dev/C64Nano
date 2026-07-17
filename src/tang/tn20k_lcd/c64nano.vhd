@@ -14,7 +14,7 @@ use IEEE.numeric_std.ALL;
 entity c64nano_top is
   generic
   (
-   DUAL  : integer := 0; -- 0:no, 1:yes dual SID build option
+   DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
    MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
    C1541 : integer := 1  -- 0:no, 1:yes optional 6551 UART
@@ -326,7 +326,6 @@ signal io_cycle_we     : std_logic;
 signal io_cycle_addr   : unsigned(23 downto 0);
 signal io_cycle_data   : unsigned(7 downto 0);
 signal load_crt        : std_logic := '0';
-signal load_ezflash    : std_logic := '0';
 signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
@@ -488,7 +487,7 @@ signal tap_io_cycle     : std_logic := '0';
 signal dac_l, dac_r     : unsigned(8 downto 0);
 signal alo, aro         : signed(15 downto 0);
 signal sact             : unsigned(3 downto 0);
-signal system_digimax   : unsigned(1 downto 0);
+signal system_digimax   : unsigned(1 downto 0) := (others => '0');
 signal ioe_we, iof_we   : std_logic;
 signal old_ioe, old_iof : std_logic;
 
@@ -936,7 +935,6 @@ din <= cart_wrdata
            when ext_cycle = '1' else
        cart_wrdata;
 
-
 dram_inst: entity work.sdram8
    port map(
     -- SDRAM side interface
@@ -958,8 +956,7 @@ dram_inst: entity work.sdram8
     din       => din,           -- data input from chipset/cpu
     dout      => sdram_data,
     addr      => addr(22 downto 0),          -- 23 bit word address
-    ds        => "00",
-    cs        => cs,            -- cpu/chipset requests read/wrie
+    ce        => cs,            -- cpu/chipset requests read/wrie
     we        => we             -- cpu/chipset requests write
   );
 

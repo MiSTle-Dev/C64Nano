@@ -15,8 +15,10 @@ entity c64nano_top is
   generic
   (
    DUAL  : integer := 0; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
-   U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
+   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
+   U6551 : integer := 0;  -- 0:no, 1:yes optional 6551 UART
+   DIGIMAX : integer := 0;  -- 0:no, 1:yes optional DIGIMAX DAC
+   REU   : integer := 0;  -- 0:no, 1:yes optional REU
    C1541 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
@@ -122,9 +124,13 @@ signal audio_data_r  : std_logic_vector(17 downto 0);
 signal c64_addr     : unsigned(15 downto 0);
 signal c64_data_out : unsigned(7 downto 0);
 signal sdram_data   : unsigned(7 downto 0);
+signal sdram_addr_q : unsigned(22 downto 0);
+signal sdram_din_q  : unsigned(7 downto 0);
+signal sdram_cs_q   : std_logic;
+signal sdram_we_q   : std_logic;
 signal idle         : std_logic;
 signal ram_ready    : std_logic;
-signal addr         : unsigned(23 downto 0);
+signal addr         : unsigned(22 downto 0);
 signal cs           : std_logic;
 signal we           : std_logic;
 signal din          : unsigned(7 downto 0);
@@ -254,7 +260,7 @@ signal dma_din        : unsigned(7 downto 0);
 signal dma_we         : std_logic;
 signal ext_cycle      : std_logic;
 signal ext_cycle_d    : std_logic;
-signal reu_ram_addr   : unsigned(23 downto 0);
+signal reu_ram_addr   : unsigned(22 downto 0);
 signal reu_ram_dout   : unsigned(7 downto 0);
 signal reu_ram_we     : std_logic;
 signal reu_irq        : std_logic;
@@ -267,7 +273,7 @@ signal reu_ram_ce     : std_logic;
 signal cart_ce        : std_logic;
 signal cart_we        : std_logic;
 signal cart_data      : unsigned(7 downto 0);
-signal cart_addr      : unsigned(23 downto 0);
+signal cart_addr      : unsigned(22 downto 0);
 signal exrom          : std_logic;
 signal game           : std_logic;
 signal romL           : std_logic;
@@ -308,7 +314,7 @@ signal ntscModeD2      : std_logic;
 signal audio_div       : unsigned(8 downto 0);
 signal flash_lock      : std_logic;
 signal ioctl_download  : std_logic := '0';
-signal ioctl_load_addr : unsigned(23 downto 0);
+signal ioctl_load_addr : unsigned(22 downto 0);
 signal ioctl_req_wr    : std_logic := '0';
 signal cart_id         : unsigned(7 downto 0);
 signal cart_bank_num   : unsigned(7 downto 0);
@@ -321,15 +327,14 @@ signal cart_blk_len    : unsigned(15 downto 0);
 signal io_cycle        : std_logic;
 signal io_cycle_ce     : std_logic;
 signal io_cycle_we     : std_logic;
-signal io_cycle_addr   : unsigned(23 downto 0);
+signal io_cycle_addr   : unsigned(22 downto 0);
 signal io_cycle_data   : unsigned(7 downto 0);
 signal load_crt        : std_logic := '0';
-signal load_ezflash    : std_logic := '0';
 signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
 signal ioctl_data      : unsigned(7 downto 0);
-signal ioctl_addr      : unsigned(23 downto 0);
+signal ioctl_addr      : unsigned(22 downto 0);
 signal cid             : unsigned(7 downto 0);
 -- crt loader
 signal erase_to        : unsigned(4 downto 0);
@@ -345,7 +350,7 @@ signal load_prg        : std_logic := '0';
 signal load_rom        : std_logic := '0';
 signal load_reu        : std_logic := '0';
 signal load_tap        : std_logic := '0';
-signal tap_play_addr   : unsigned(23 downto 0);
+signal tap_play_addr   : unsigned(22 downto 0);
 signal reset_wait      : std_logic := '0';
 signal old_download_r  : std_logic;
 signal old_upload      : std_logic := '0';
@@ -367,7 +372,7 @@ signal cass_snd       : std_logic;
 signal tap_download   : std_logic;
 signal tap_reset      : std_logic;
 signal tap_loaded     : std_logic;
-signal tap_last_addr  : unsigned(23 downto 0);
+signal tap_last_addr  : unsigned(22 downto 0);
 signal tap_wrreq      : std_logic_vector(1 downto 0);
 signal tap_wrfull     : std_logic;
 signal tap_start      : std_logic;
@@ -490,12 +495,12 @@ signal system_digimax   : unsigned(1 downto 0) := (others => '0');
 signal ioe_we, iof_we   : std_logic;
 signal old_ioe, old_iof : std_logic;
 
-constant RAM_ADDR      : unsigned(23 downto 0) := 24x"0000000";-- System RAM: 64k
-constant CRM_ADDR      : unsigned(23 downto 0) := 24x"0010000";-- Cartridge RAM: 64k
-constant CRT_ADDR      : unsigned(23 downto 0) := 24x"0200000";-- Cartridge: 2M
-constant TAP_ADDR      : unsigned(23 downto 0) := 24x"0400000";-- Tape buffer
-constant GEO_ADDR      : unsigned(23 downto 0) := 24x"0400000";-- GeoRAM: 4M
-constant REU_ADDR      : unsigned(23 downto 0) := 24x"0400000";-- REU: 2M !!!
+constant RAM_ADDR      : unsigned(22 downto 0) := 23x"0000000";-- System RAM: 64k
+constant CRM_ADDR      : unsigned(22 downto 0) := 23x"0010000";-- Cartridge RAM: 64k
+constant CRT_ADDR      : unsigned(22 downto 0) := 23x"0200000";-- Cartridge: 2M
+constant TAP_ADDR      : unsigned(22 downto 0) := 23x"0400000";-- Tape buffer
+constant GEO_ADDR      : unsigned(22 downto 0) := 23x"0400000";-- GeoRAM: 4M
+constant REU_ADDR      : unsigned(22 downto 0) := 23x"0600000";-- REU: 2M !!!
 -- TAP, REU and GEORAM and overlap with TAP load due to TN20k DRAM constrains (mutual exclusive)
 
 component CLKDIV
@@ -826,7 +831,9 @@ audio_div  <= to_unsigned(342,9) when ntscMode = '1' else to_unsigned(327,9);
 
 cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_finish;
 
+yes_digimax: if DIGIMAX /= 0 generate
 process(clk_sys)
+    variable dac_index : integer range 0 to 3;
 begin
     if rising_edge(clk_sys) then
         old_ioe <= IOE;
@@ -834,14 +841,7 @@ begin
 
         old_iof <= IOF;
         iof_we <= (not old_iof) and IOF and ram_we;
-    end if;
-end process;
 
-process(clk_sys)
-    variable dac_index : integer range 0 to 3;
-    variable alm, arm : signed(16 downto 0);
-begin
-    if rising_edge(clk_sys) then
         if system_digimax = "00" or reset_n = '0' then
             dac <= (others => (others => '0'));
             sact <= (others => '0');
@@ -865,7 +865,19 @@ begin
             dac_l <= unsigned(dac(1)) + unsigned(dac(2));
             dac_r <= unsigned(dac(0)) + unsigned(dac(3));
         end if;
+    end if;
+end process;
 
+else generate
+  dac_l <= (others => '0');
+  dac_r <= (others => '0');
+end generate yes_digimax;
+
+process(clk_sys)
+    variable dac_index : integer range 0 to 3;
+    variable alm, arm : signed(16 downto 0);
+begin
+    if rising_edge(clk_sys) then
         alm := signed(audio_data_l(17) & std_logic_vector(audio_data_l(17 downto 2))) 
                + signed(std_logic_vector'("00") & std_logic_vector(dac_l) & std_logic_vector'("000000")) 
                + signed((0 => cass_snd) & std_logic_vector'("000000000"));
@@ -959,6 +971,15 @@ din <= cart_wrdata
            when ext_cycle = '1' else
        cart_wrdata;
 
+process(clk64)
+begin
+  if rising_edge(clk64) then
+    sdram_addr_q <= addr;
+    sdram_cs_q   <= cs;
+    sdram_we_q   <= we;
+    sdram_din_q  <= din;
+  end if;
+end process;
 
 dram_inst: entity work.sdram8
    port map(
@@ -978,12 +999,16 @@ dram_inst: entity work.sdram8
     reset_n   => pll_locked,    -- init signal after FPGA config to initialize RAM
     ready     => ram_ready,     -- ram is ready and has been initialized
     refresh   => idle,          -- chipset requests a refresh cycle
-    din       => din,           -- data input from chipset/cpu
+    din       => sdram_din_q,   -- data input from chipset/cpu
     dout      => sdram_data,
-    addr      => addr(22 downto 0),          -- 23 bit word address
-    ds        => "00",
-    cs        => cs,            -- cpu/chipset requests read/wrie
-    we        => we             -- cpu/chipset requests write
+    addr      => sdram_addr_q(22 downto 0),  -- 23 bit word address
+    ce        => sdram_cs_q,    -- cpu/chipset requests read/write
+    we        => sdram_we_q     -- cpu/chipset requests write
+--    din       => din,           -- data input from chipset/cpu
+--    dout      => sdram_data,
+--    addr      => addr,          -- 23 bit word address
+--    ce        => cs,            -- cpu/chipset requests read/wrie
+--    we        => we             -- cpu/chipset requests write
   );
 
 -- Clock tree and all frequencies in Hz
@@ -1124,6 +1149,7 @@ pll_locked_comb <= pll_locked_hid and flash_lock;
 leds_n <=  not leds;
 leds(0) <= led1541;
 leds(1) <= ioctl_download or ioctl_upload;
+leds(5 downto 2) <= (others => '0');
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
@@ -1541,9 +1567,10 @@ end process;
 reu_oe  <= '1' when IOF = '1' and reu_cfg /= "00" else '0';
 reu_ram_ce <= not ext_cycle_d and ext_cycle and dma_req;
 
+yes_reu: if REU /= 0 generate
 reu_inst: entity work.reu
 generic map(
-  REU_ADDR => unsigned('0' & REU_ADDR)
+  REU_ADDR => unsigned'("00" & REU_ADDR)
 )
 port map(
     clk       => clk_sys,
@@ -1559,7 +1586,7 @@ port map(
     dma_we    => dma_we,
   
     ram_cycle => ext_cycle,
-    ram_addr(23 downto 0) => reu_ram_addr,
+    ram_addr(22 downto 0) => reu_ram_addr,
     ram_dout  => reu_ram_dout,
     ram_din   => sdram_data,
     ram_we    => reu_ram_we,
@@ -1572,6 +1599,17 @@ port map(
     
     irq       => reu_irq
   ); 
+else generate
+  dma_req <= '0';
+  dma_addr <= (others => '0');
+  dma_dout <= (others => '1');
+  dma_we <= '0';
+  reu_ram_addr <= (others => '0');
+  reu_ram_dout <= (others => '1');
+  reu_ram_we   <= '0';
+  reu_dout  <= (others => '0');
+  reu_irq   <= '0';
+end generate yes_reu;
 
 -- c1541 ROM's SPI Flash
 -- TN20k  Winbond 25Q64JVIQ
@@ -1600,10 +1638,10 @@ cid <= cart_id when cart_attached = '1' else x"63" when georam ='1' else x"FF";
 
 cartridge_inst: entity work.cartridge
 generic map(
-  RAM_ADDR => unsigned('0' & RAM_ADDR),
-  CRM_ADDR => unsigned('0' & CRM_ADDR),
-  CRT_ADDR => unsigned('0' & CRT_ADDR),
-  GEO_ADDR => unsigned('0' & GEO_ADDR)
+  RAM_ADDR => unsigned'("00" & RAM_ADDR),
+  CRM_ADDR => unsigned'("00" & CRM_ADDR),
+  CRT_ADDR => unsigned'("00" & CRT_ADDR),
+  GEO_ADDR => unsigned'("00" & GEO_ADDR)
 )
 port map(
     clk32           => clk_sys,
@@ -1639,7 +1677,7 @@ port map(
     mem_write_out => cart_we,
     mem_in      => sdram_data,
     mem_out     => cart_wrdata,
-    mem_addr(23 downto 0) => cart_addr,
+    mem_addr(22 downto 0) => cart_addr,
     mem_req     => cart_mem_req,
     mem_cycle   => io_cycle,
     IO_rom      => io_rom,
@@ -1755,7 +1793,7 @@ port map (
   ioctl_upload_req  => ezfl_save,
   ioctl_upload      => ioctl_upload,
   ioctl_din         => ioctl_din,
-  ioctl_addr(23 downto 0) => ioctl_addr,
+  ioctl_addr(22 downto 0) => ioctl_addr,
   ioctl_dout        => ioctl_data,
   ioctl_wr          => ioctl_wr,
   ioctl_rd          => ioctl_rd,
@@ -2270,6 +2308,10 @@ else generate
   tx_6551 <= '1';
   uart_data <= x"FF";
   uart_irq <= '1';
+  serial_status <= (others => '0');
+  serial_tx_available <= (others => '0');
+  serial_tx_data <= (others => '0');
+  serial_rx_available <= (others => '0');
 end generate yes_uart;
 
 end Behavioral_top;
