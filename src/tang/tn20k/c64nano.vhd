@@ -128,7 +128,13 @@ signal sdram_addr_q : unsigned(22 downto 0);
 signal sdram_din_q  : unsigned(7 downto 0);
 signal sdram_cs_q   : std_logic;
 signal sdram_we_q   : std_logic;
-signal idle         : std_logic;
+signal sdram_refresh: std_logic;
+signal sdram_pll_locked : std_logic;
+signal sdram_dout_valid : std_logic;
+signal sdram_dout_valid_d : std_logic;
+signal sdram_valid  : std_logic;
+signal sdram_valid_d  : std_logic;
+signal refresh      : std_logic;
 signal ram_ready    : std_logic;
 signal addr         : unsigned(22 downto 0);
 signal cs           : std_logic;
@@ -459,7 +465,7 @@ signal cart_lobanks_map : unsigned(63 downto 0);
 signal cart_hibanks_map : unsigned(63 downto 0);
 signal cart_bank_hi     : std_logic;
 signal cart_bank_16k    : std_logic;
-signal rd_cyc           : unsigned(2 downto 0);
+--signal rd_cyc           : unsigned(2 downto 0);
 signal ioctl_rd_en      : std_logic := '0';
 signal cart_id_hi       : unsigned(7 downto 0);
 signal ioctl_req_rd     : std_logic := '0';
@@ -978,8 +984,13 @@ begin
     sdram_cs_q   <= cs;
     sdram_we_q   <= we;
     sdram_din_q  <= din;
+    sdram_refresh <= refresh;
+    sdram_pll_locked <= pll_locked;
+    sdram_dout_valid_d <= sdram_dout_valid;
   end if;
 end process;
+
+sdram_valid <= sdram_dout_valid_d or sdram_dout_valid;
 
 dram_inst: entity work.sdram8
    port map(
@@ -995,20 +1006,16 @@ dram_inst: entity work.sdram8
     sd_ras    => O_sdram_ras_n, -- row address select
     sd_cas    => O_sdram_cas_n, -- columns address select
     -- cpu/chipset interface
+    dout_valid => sdram_dout_valid,
     clk       => clk64,         -- sdram is accessed at 64MHz
-    reset_n   => pll_locked,    -- init signal after FPGA config to initialize RAM
+    reset_n   => sdram_pll_locked,    -- init signal after FPGA config to initialize RAM
     ready     => ram_ready,     -- ram is ready and has been initialized
-    refresh   => idle,          -- chipset requests a refresh cycle
+    refresh   => sdram_refresh,          -- chipset requests a refresh cycle
     din       => sdram_din_q,   -- data input from chipset/cpu
     dout      => sdram_data,
     addr      => sdram_addr_q(22 downto 0),  -- 23 bit word address
     ce        => sdram_cs_q,    -- cpu/chipset requests read/write
     we        => sdram_we_q     -- cpu/chipset requests write
---    din       => din,           -- data input from chipset/cpu
---    dout      => sdram_data,
---    addr      => addr,          -- 23 bit word address
---    ce        => cs,            -- cpu/chipset requests read/wrie
---    we        => we             -- cpu/chipset requests write
   );
 
 -- Clock tree and all frequencies in Hz
@@ -1456,7 +1463,7 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   ramWE        => ram_we,
   io_cycle     => io_cycle,
   ext_cycle    => ext_cycle,
-  refresh      => idle,
+  refresh      => refresh,
 
   cia_mode     => cia_mode,
   turbo_mode   => ((turbo_mode(1) and not disk_access) & turbo_mode(0)),
@@ -1841,7 +1848,7 @@ begin
 
     if old_upload = '0' and ioctl_upload = '1' then
       ioctl_load_addr <= CRT_ADDR;
-      rd_cyc <= (others => '0');
+--      rd_cyc <= (others => '0');
       ioctl_req_rd <= '0';
       ioctl_rd_en <= '0';
     end if;
@@ -1851,9 +1858,10 @@ begin
       ioctl_req_rd <= '1';
     end if;
 
-    rd_cyc <= rd_cyc(1 downto 0) & (io_cycle and io_cycle_ce and ioctl_rd_en);
+--    rd_cyc <= rd_cyc(1 downto 0) & (io_cycle and io_cycle_ce and ioctl_rd_en);
 
-    if rd_cyc(2) = '1' then
+    sdram_valid_d <= sdram_valid;
+    if sdram_valid_d = '0' and sdram_valid = '1' then
       ioctl_din <= sdram_data;
       ioctl_req_rd <= '0';
     end if;

@@ -44,6 +44,7 @@ module sdram8 (
     input      [22:0]   addr,
     input      [7:0]    din,
     output     [7:0]    dout,
+    output logic        dout_valid,
 
     input               refresh,
     input               ce,
@@ -112,22 +113,16 @@ localparam CMD_LOAD_MODE       = 3'b000;
 
 logic [2:0] sd_cmd;   // current command sent to sd ram
 logic        wr;
+logic [3:0] dqm;
 
 // drive control signals according to current command
 assign sd_cs  = 0;
 assign sd_ras = sd_cmd[2];
 assign sd_cas = sd_cmd[1];
 assign sd_we  = sd_cmd[0];
-assign sd_dqm = !wr ? 4'b0000 :
-                (bt == 2'd0) ? 4'b1110 :
-                (bt == 2'd1) ? 4'b1101 :
-                (bt == 2'd2) ? 4'b1011 :
-                               4'b0111;
+assign sd_dqm = dqm;
 
-logic [1:0] bt;
-logic [1:0] rd_bt;
 logic [7:0] dout_q;
-logic [31:0] dout_r;
 logic [31:0] sd_data_out;
 logic        sd_data_oe;
 
@@ -135,16 +130,18 @@ assign dout = dout_q;
 assign sd_data = sd_data_oe ? sd_data_out : 32'hZZZZ_ZZZZ;
 
 always_ff @(posedge clk) begin
-    logic [7:0]  caddr;
+    logic [7:0]  caddr ;
     logic [7:0]  wrdata;
-
+    logic [1:0]  bt;
 
     sd_cmd <= CMD_NOP;
     sd_data_oe <= 1'b0;
+    dout_valid <= 1'b0;
+    dqm <= 4'b0000;
 
-    if(q == STATE_READ) begin
-        dout_r <= sd_data;
-        case(rd_bt)
+    if((q == STATE_READ) && !wr) begin
+        dout_valid <= 1'b1;
+        case(bt)
             2'd0: dout_q <= sd_data[7:0];
             2'd1: dout_q <= sd_data[15:8];
             2'd2: dout_q <= sd_data[23:16];
@@ -181,8 +178,10 @@ always_ff @(posedge clk) begin
             if(wr) begin
                 sd_data_out <= {wrdata, wrdata, wrdata, wrdata};
                 sd_data_oe  <= 1'b1;
-            end else begin
-                rd_bt <= bt;
+                dqm <= (bt == 2'd0) ? 4'b1110 :
+                       (bt == 2'd1) ? 4'b1101 :
+                       (bt == 2'd2) ? 4'b1011 :
+                                      4'b0111;
             end
             sd_cmd  <= wr ? CMD_WRITE : CMD_READ;
             sd_addr <= {3'b100, caddr};
