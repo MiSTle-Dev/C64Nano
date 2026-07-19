@@ -8,7 +8,6 @@ create_generated_clock -name clk64 -source [get_pins {mainclock/CLKOUT}] -master
 create_generated_clock -name clk_sys -source [get_pins {div1_inst/CLKOUT}] -master_clock clk64 -divide_by 2 -multiply_by 1 [get_pins {div2_inst/CLKOUT}]
 set_clock_groups -asynchronous -group [get_clocks {flash_clk}] -group [get_clocks {clk_sys}]
 set_clock_groups -asynchronous -group [get_clocks {clk_sys}] -group [get_clocks {spi_io_clk}]
-set_clock_groups -asynchronous -group [get_clocks {clk}] -group [get_clocks {spi_io_clk}]
 create_generated_clock -name clk_audio -master_clock clk_sys -source [get_pins {div2_inst/CLKOUT}] -multiply_by 200 -divide_by 63 [get_pins {video_inst/clk_audio_s0/Q}]
 report_timing -hold -from_clock [all_clocks] -to_clock [all_clocks] -max_paths 100 -max_common_paths 1
 report_timing -setup -from_clock [all_clocks] -to_clock [all_clocks] -max_paths 100 -max_common_paths 1

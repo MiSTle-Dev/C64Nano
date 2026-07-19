@@ -107,10 +107,6 @@ signal clk_pixel_x5   : std_logic;
 signal spi_io_clk     : std_logic;
 signal flash_clk      : std_logic;
 attribute syn_keep : integer;
-attribute syn_keep of clk64         : signal is 1;
-attribute syn_keep of clk_sys       : signal is 1;
-attribute syn_keep of clk_pixel_x10 : signal is 1;
-attribute syn_keep of clk_pixel_x5  : signal is 1;
 attribute syn_keep of spi_io_clk    : signal is 1;
 attribute syn_keep of flash_clk     : signal is 1;
 
@@ -465,7 +461,7 @@ signal cart_lobanks_map : unsigned(63 downto 0);
 signal cart_hibanks_map : unsigned(63 downto 0);
 signal cart_bank_hi     : std_logic;
 signal cart_bank_16k    : std_logic;
---signal rd_cyc           : unsigned(2 downto 0);
+signal rd_cyc           : unsigned(2 downto 0);
 signal ioctl_rd_en      : std_logic := '0';
 signal cart_id_hi       : unsigned(7 downto 0);
 signal ioctl_req_rd     : std_logic := '0';
@@ -986,11 +982,8 @@ begin
     sdram_din_q  <= din;
     sdram_refresh <= refresh;
     sdram_pll_locked <= pll_locked;
-    sdram_dout_valid_d <= sdram_dout_valid;
   end if;
 end process;
-
-sdram_valid <= sdram_dout_valid_d or sdram_dout_valid;
 
 dram_inst: entity work.sdram8
    port map(
@@ -1006,7 +999,7 @@ dram_inst: entity work.sdram8
     sd_ras    => O_sdram_ras_n, -- row address select
     sd_cas    => O_sdram_cas_n, -- columns address select
     -- cpu/chipset interface
-    dout_valid => sdram_dout_valid,
+    dout_valid => open,
     clk       => clk64,         -- sdram is accessed at 64MHz
     reset_n   => sdram_pll_locked,    -- init signal after FPGA config to initialize RAM
     ready     => ram_ready,     -- ram is ready and has been initialized
@@ -1848,7 +1841,7 @@ begin
 
     if old_upload = '0' and ioctl_upload = '1' then
       ioctl_load_addr <= CRT_ADDR;
---      rd_cyc <= (others => '0');
+      rd_cyc <= (others => '0');
       ioctl_req_rd <= '0';
       ioctl_rd_en <= '0';
     end if;
@@ -1858,10 +1851,9 @@ begin
       ioctl_req_rd <= '1';
     end if;
 
---    rd_cyc <= rd_cyc(1 downto 0) & (io_cycle and io_cycle_ce and ioctl_rd_en);
+    rd_cyc <= rd_cyc(1 downto 0) & (io_cycle and io_cycle_ce and ioctl_rd_en);
 
-    sdram_valid_d <= sdram_valid;
-    if sdram_valid_d = '0' and sdram_valid = '1' then
+    if rd_cyc(2) = '1' then
       ioctl_din <= sdram_data;
       ioctl_req_rd <= '0';
     end if;
