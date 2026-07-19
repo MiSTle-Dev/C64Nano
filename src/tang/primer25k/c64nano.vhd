@@ -108,7 +108,7 @@ signal audio_data_r  : std_logic_vector(17 downto 0);
 signal c64_addr     : unsigned(15 downto 0);
 signal c64_data_out : unsigned(7 downto 0);
 signal sdram_data   : unsigned(7 downto 0);
-signal idle         : std_logic;
+signal refresh      : std_logic;
 signal ram_ready    : std_logic;
 signal addr         : unsigned(24 downto 0);
 signal cs           : std_logic;
@@ -917,7 +917,7 @@ port map(
     -- cpu/chipset interface
     clk       => clk64,         -- sdram is accessed at 64MHz
     init      => not pll_locked,-- init signal after FPGA config to initialize RAM
-    refresh   => idle,          -- chipset requests a refresh cycle
+    refresh   => refresh,          -- chipset requests a refresh cycle
     din       => din,           -- data input from chipset/cpu
     dout      => sdram_data,
     addr      => addr,          -- 25 bit word address
@@ -1316,7 +1316,7 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   ramWE        => ram_we,
   io_cycle     => io_cycle,
   ext_cycle    => ext_cycle,
-  refresh      => idle,
+  refresh      => refresh,
 
   cia_mode     => cia_mode,
   turbo_mode   => ((turbo_mode(1) and not disk_access) & turbo_mode(0)),

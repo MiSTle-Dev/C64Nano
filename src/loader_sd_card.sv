@@ -256,15 +256,22 @@ always_ff @(posedge clk) begin
 			else begin
 				ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), upload_chip_data_idx};
 				ioctl_rd <= 1;
+				core_wait_cnt <= '0;
 				io_state <= WRITE_WAIT4CORE;
 			end
 		end
 
 		WRITE_WAIT4CORE: begin
 				if(~ioctl_wait) begin
+					core_wait_cnt <= core_wait_cnt + 1;
+					if(&core_wait_cnt) begin
 						upload_data <= ioctl_din;
 						io_state <= WRITING;
 					end
+				end
+				else begin
+					core_wait_cnt <= '0;
+				end
 			end
 
 		WRITING: begin

@@ -107,9 +107,11 @@ signal clk_pixel_x5   : std_logic;
 signal spi_io_clk     : std_logic;
 signal flash_clk      : std_logic;
 attribute syn_keep : integer;
+attribute syn_keep of clk64             : signal is 1;
+attribute syn_keep of clk_sys           : signal is 1;
+attribute syn_keep of clk_pixel_x5      : signal is 1;
 attribute syn_keep of spi_io_clk    : signal is 1;
 attribute syn_keep of flash_clk     : signal is 1;
-
 -- custom pins
 signal uart_ext_rx   : std_logic;
 signal uart_ext_tx   : std_logic;
@@ -120,16 +122,6 @@ signal audio_data_r  : std_logic_vector(17 downto 0);
 signal c64_addr     : unsigned(15 downto 0);
 signal c64_data_out : unsigned(7 downto 0);
 signal sdram_data   : unsigned(7 downto 0);
-signal sdram_addr_q : unsigned(22 downto 0);
-signal sdram_din_q  : unsigned(7 downto 0);
-signal sdram_cs_q   : std_logic;
-signal sdram_we_q   : std_logic;
-signal sdram_refresh: std_logic;
-signal sdram_pll_locked : std_logic;
-signal sdram_dout_valid : std_logic;
-signal sdram_dout_valid_d : std_logic;
-signal sdram_valid  : std_logic;
-signal sdram_valid_d  : std_logic;
 signal refresh      : std_logic;
 signal ram_ready    : std_logic;
 signal addr         : unsigned(22 downto 0);
@@ -973,18 +965,6 @@ din <= cart_wrdata
            when ext_cycle = '1' else
        cart_wrdata;
 
-process(clk64)
-begin
-  if rising_edge(clk64) then
-    sdram_addr_q <= addr;
-    sdram_cs_q   <= cs;
-    sdram_we_q   <= we;
-    sdram_din_q  <= din;
-    sdram_refresh <= refresh;
-    sdram_pll_locked <= pll_locked;
-  end if;
-end process;
-
 dram_inst: entity work.sdram8
    port map(
     -- SDRAM side interface
@@ -999,16 +979,15 @@ dram_inst: entity work.sdram8
     sd_ras    => O_sdram_ras_n, -- row address select
     sd_cas    => O_sdram_cas_n, -- columns address select
     -- cpu/chipset interface
-    dout_valid => open,
     clk       => clk64,         -- sdram is accessed at 64MHz
-    reset_n   => sdram_pll_locked,    -- init signal after FPGA config to initialize RAM
+    reset_n   => pll_locked,-- init signal after FPGA config to initialize RAM
     ready     => ram_ready,     -- ram is ready and has been initialized
-    refresh   => sdram_refresh,          -- chipset requests a refresh cycle
-    din       => sdram_din_q,   -- data input from chipset/cpu
+    refresh   => refresh,          -- chipset requests a refresh cycle
+    din       => din,           -- data input from chipset/cpu
     dout      => sdram_data,
-    addr      => sdram_addr_q(22 downto 0),  -- 23 bit word address
-    ce        => sdram_cs_q,    -- cpu/chipset requests read/write
-    we        => sdram_we_q     -- cpu/chipset requests write
+    addr      => addr,          -- 25 bit word address
+    ce        => cs,            -- cpu/chipset requests read/wrie
+    we        => we             -- cpu/chipset requests write
   );
 
 -- Clock tree and all frequencies in Hz
