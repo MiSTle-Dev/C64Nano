@@ -1818,15 +1818,10 @@ begin
       ioctl_rd_en <= '0';
     end if;
 
-    if old_upload = '0' and ioctl_upload = '1' then
-      ioctl_load_addr <= CRT_ADDR;
-      rd_cyc <= (others => '0');
-      ioctl_req_rd <= '0';
-      ioctl_rd_en <= '0';
-    end if;
-
     if ioctl_rd = '1' then
-      ioctl_load_addr <= CRT_ADDR + resize(ioctl_addr, ioctl_load_addr'length);
+      if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
+        ioctl_load_addr <= CRT_ADDR;
+      end if;
       ioctl_req_rd <= '1';
     end if;
 
@@ -1835,6 +1830,7 @@ begin
     if rd_cyc(2) = '1' then
       ioctl_din <= sdram_data;
       ioctl_req_rd <= '0';
+      ioctl_load_addr <= ioctl_load_addr + 1;
     end if;
 
     if ioctl_wr = '1' then

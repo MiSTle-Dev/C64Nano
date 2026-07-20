@@ -820,6 +820,7 @@ ez_rom ez_rom
 
 logic [24:0] ezmem_addr /* synthesis syn_keep = 1 */;
 logic        ezmem_we /* synthesis syn_keep = 1 */;
+logic [24:0] addr_out /* synthesis syn_keep = 1 */; 
 
 assign ezmem_addr = {5'(CRT_ADDR>>20), ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
 assign ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
@@ -845,8 +846,6 @@ assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof) | ezrom_ce;
 function automatic logic [11:0] get_bank(input logic [7:0] bank, input logic ram);
 	get_bank = ram ? {9'(CRM_ADDR>>16), bank[2:0]} : {4'(CRT_ADDR>>21), bank[7:0]};
 endfunction
-
-logic [24:0] addr_out;
 
 always_comb begin
 	IOE_rd = 0;

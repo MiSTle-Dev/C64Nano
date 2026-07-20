@@ -102,21 +102,22 @@ end
 assign ready = !(|reset);
 
 // all possible commands
-localparam CMD_NOP             = 3'b111;
-localparam CMD_ACTIVE          = 3'b011;
-localparam CMD_READ            = 3'b101;
-localparam CMD_WRITE           = 3'b100;
-localparam CMD_BURST_TERMINATE = 3'b110;
-localparam CMD_PRECHARGE       = 3'b010;
-localparam CMD_AUTO_REFRESH    = 3'b001;
-localparam CMD_LOAD_MODE       = 3'b000;
+localparam CMD_INHIBIT         = 4'b1111;
+localparam CMD_NOP             = 4'b0111;
+localparam CMD_ACTIVE          = 4'b0011;
+localparam CMD_READ            = 4'b0101;
+localparam CMD_WRITE           = 4'b0100;
+localparam CMD_BURST_TERMINATE = 4'b0110;
+localparam CMD_PRECHARGE       = 4'b0010;
+localparam CMD_AUTO_REFRESH    = 4'b0001;
+localparam CMD_LOAD_MODE       = 4'b0000;
 
-logic [2:0] sd_cmd;   // current command sent to sd ram
+logic [3:0] sd_cmd;   // current command sent to sd ram
 logic        wr;
 logic [3:0] dqm;
 
 // drive control signals according to current command
-assign sd_cs  = 0;
+assign sd_cs  = sd_cmd[3];
 assign sd_ras = sd_cmd[2];
 assign sd_cas = sd_cmd[1];
 assign sd_we  = sd_cmd[0];
@@ -134,7 +135,7 @@ always_ff @(posedge clk) begin
     logic [7:0]  wrdata;
     logic [1:0]  bt;
 
-    sd_cmd <= CMD_NOP;
+    sd_cmd <= CMD_INHIBIT;
     sd_data_oe <= 1'b0;
     dout_valid <= 1'b0;
     dqm <= 4'b0000;
@@ -165,6 +166,7 @@ always_ff @(posedge clk) begin
     else begin
         if(refresh && !last_refresh)
             sd_cmd <= CMD_AUTO_REFRESH;
+
         if(ce && !last_ce) begin
             sd_cmd  <= CMD_ACTIVE;
             sd_ba   <= addr[22:21];     // bank
@@ -174,6 +176,7 @@ always_ff @(posedge clk) begin
             wr      <= we;
             wrdata  <= din;
         end
+
         if(q == STATE_CMD_CONT) begin
             if(wr) begin
                 sd_data_out <= {wrdata, wrdata, wrdata, wrdata};
@@ -186,6 +189,9 @@ always_ff @(posedge clk) begin
             sd_cmd  <= wr ? CMD_WRITE : CMD_READ;
             sd_addr <= {3'b100, caddr};
         end
+
+        if(q > STATE_CMD_CONT && q < STATE_READ)
+            sd_cmd <= CMD_NOP;
     end
 end
 
