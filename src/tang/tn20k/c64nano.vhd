@@ -1617,10 +1617,10 @@ cid <= cart_id when cart_attached = '1' else x"63" when georam ='1' else x"FF";
 
 cartridge_inst: entity work.cartridge
 generic map(
-  RAM_ADDR => unsigned'("00" & RAM_ADDR),
-  CRM_ADDR => unsigned'("00" & CRM_ADDR),
-  CRT_ADDR => unsigned'("00" & CRT_ADDR),
-  GEO_ADDR => unsigned'("00" & GEO_ADDR)
+  RAM_ADDR => unsigned'(RAM_ADDR),
+  CRM_ADDR => unsigned'(CRM_ADDR),
+  CRT_ADDR => unsigned'(CRT_ADDR),
+  GEO_ADDR => unsigned'(GEO_ADDR)
 )
 port map(
     clk32           => clk_sys,
