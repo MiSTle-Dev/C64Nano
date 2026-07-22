@@ -6,11 +6,10 @@ set MIDI  1  ;# 0=disabled, 1=enabled optional MIDI Interface
 set U6551 1  ;# 0=disabled, 1=enabled optional 6551 UART
 set C1541 1  ;# 0=disabled, 1=enabled optional C1541 Interface
 
-add_file src/tang/tn20k/am29f040.sv
 add_file src/gowin_rpll/gowin_rpll_flash.vhd
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/cartridge.sv
+add_file src/tang/tn20k/cartridge.sv
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
 add_file src/gowin_dpb/sector_dpram.v
@@ -102,15 +101,19 @@ set_option -ioreg_in_iob 1
 
 # Apply generic configuration to c64nano_top entity
 # set_property not working !
-set_property c64nano_top.DUAL {$DUAL} [get_ips c64nano_top]
+#read_ipc "src/tang/tn20k/c64nano.ipc"
+#set_property c64nano_top.DUAL {$DUAL} [get_ips c64nano]
 # Conditionally add files based on DUAL parameter
+#generate_target [get_ips c64nano]
 if {$DUAL == 0} {
 	puts "single SID EZFlash save/load build"
     set_option -output_base_name C64Nano_TN20k_ezflash
+    add_file src/am29f040.sv
 } else { 
     # DUAL == 1
 	puts "dual SID build"
     set_option -output_base_name C64Nano_TN20k
+    add_file src/tang/tn20k/am29f040.sv
 }
 
 #run syn

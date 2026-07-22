@@ -107,7 +107,7 @@ signal audio_data_r  : std_logic_vector(17 downto 0);
 signal c64_addr     : unsigned(15 downto 0);
 signal c64_data_out : unsigned(7 downto 0);
 signal sdram_data   : unsigned(7 downto 0);
-signal idle         : std_logic;
+signal refresh      : std_logic;
 signal ram_ready    : std_logic;
 signal addr         : unsigned(23 downto 0);
 signal cs           : std_logic;
@@ -898,7 +898,7 @@ port map(
     -- cpu/chipset interface
     clk       => clk64,         -- sdram is accessed at 64MHz
     init      => not pll_locked,-- init signal after FPGA config to initialize RAM
-    refresh   => idle,          -- chipset requests a refresh cycle
+    refresh   => refresh,          -- chipset requests a refresh cycle
     din       => din,           -- data input from chipset/cpu
     dout      => sdram_data,
     addr      => '0' & addr,    -- 25 bit word address
@@ -989,6 +989,7 @@ port map (
 
 leds(0) <= led1541;
 leds(1) <= ioctl_download or ioctl_upload;
+leds(5 downto 2) <= (others => '0');
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
@@ -1293,7 +1294,7 @@ fpga64_sid_iec_inst: entity work.fpga64_sid_iec
   ramWE        => ram_we,
   io_cycle     => io_cycle,
   ext_cycle    => ext_cycle,
-  refresh      => idle,
+  refresh      => refresh,
 
   cia_mode     => cia_mode,
   turbo_mode   => ((turbo_mode(1) and not disk_access) & turbo_mode(0)),
@@ -1664,15 +1665,10 @@ begin
       ioctl_rd_en <= '0';
     end if;
 
-    if old_upload = '0' and ioctl_upload = '1' then
-      ioctl_load_addr <= CRT_ADDR;
-      rd_cyc <= (others => '0');
-      ioctl_req_rd <= '0';
-      ioctl_rd_en <= '0';
-    end if;
-
     if ioctl_rd = '1' then
-      ioctl_load_addr <= CRT_ADDR + resize(ioctl_addr, ioctl_load_addr'length);
+      if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
+        ioctl_load_addr <= CRT_ADDR;
+      end if;
       ioctl_req_rd <= '1';
     end if;
 
@@ -1681,6 +1677,7 @@ begin
     if rd_cyc(2) = '1' then
       ioctl_din <= sdram_data;
       ioctl_req_rd <= '0';
+      ioctl_load_addr <= ioctl_load_addr + 1;
     end if;
 
     if ioctl_wr = '1' then

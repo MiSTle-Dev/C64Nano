@@ -37,9 +37,11 @@ module sdram (
 	input 		 		init,			// init signal after FPGA config to initialize RAM
 	input 		 		clk,			// sdram is accessed at up to 128MHz
 	
+    output logic        ready,
 	input      [24:0] addr,       // 25 bit byte address
 	input      [ 7:0] din,
 	output     [ 7:0]	dout,
+    output logic        dout_valid,
 
 	input 		 		refresh,    // refresh cycle
 	input 		 		ce,         // cpu/chipset access
@@ -64,7 +66,7 @@ localparam STATE_CMD_CONT  = STATE_CMD_START  + RASCAS_DELAY; // command can be 
 localparam STATE_READ      = STATE_CMD_CONT + CAS_LATENCY + 1'd1;
 localparam STATE_LAST      = 3'd7;   // last state in cycle
 
-logic [2:0] q = 0;
+logic [2:0] q = '0;
 logic last_ce = 0, last_refresh = 0;
 always_ff @(posedge clk) begin
 	last_ce <= ce;
@@ -84,9 +86,11 @@ end
 logic [4:0] reset = 5'h1f;
 always_ff @(posedge clk) begin
 	if(init)	reset <= 5'h1f;
-	else if((q == STATE_LAST) && (reset != 0)) reset <= reset - 5'd1;
+	else if((q == STATE_LAST) && (reset != 0)) 
+		reset <= reset - 5'd1;
 end
 
+assign ready = !(|reset);
 // ---------------------------------------------------------------------
 // ------------------ generate ram control signals ---------------------
 // ---------------------------------------------------------------------
@@ -125,8 +129,12 @@ always_ff @(posedge clk) begin
 
 	sd_cmd     <= CMD_NOP;
 	sd_data_oe <= 1'b0;
+    dout_valid <= 1'b0;
 
-	if(q == STATE_READ) dout_r <= sd_data;
+	if(q == STATE_READ) begin 
+		dout_r <= sd_data;
+		dout_valid <= 1'b1;
+	end
 
 	if(reset != 5'd0) begin
 		sd_ba <= 0;

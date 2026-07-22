@@ -28,9 +28,9 @@ module sdram8 (
     output              sd_clk,
     output              sd_cke,
     inout  [31:0]       sd_data,
-    output reg [10:0]   sd_addr,
+    output logic [10:0] sd_addr,
     output      [3:0]   sd_dqm,
-    output reg  [1:0]   sd_ba,
+    output logic [1:0]  sd_ba,
     output              sd_cs,
     output              sd_we,
     output              sd_ras,
@@ -40,16 +40,17 @@ module sdram8 (
     input               reset_n,
 
     output              ready,
-    input               refresh,
+
+    input      [22:0]   addr,
     input      [7:0]    din,
     output     [7:0]    dout,
-    input      [22:0]   addr,
-    input      [1:0]    ds,
-    input               cs,
+    output logic        dout_valid,
+
+    input               refresh,
+    input               ce,
     input               we
 );
 
-assign sd_clk = clk;
 assign sd_cke = 1'b1;
 
 localparam RASCAS_DELAY   = 3'd2;
@@ -76,27 +77,22 @@ localparam STATE_CMD_CONT  = STATE_CMD_START  + RASCAS_DELAY; // command can be 
 localparam STATE_READ      = STATE_CMD_CONT + CAS_LATENCY + 1'd1;
 localparam STATE_LAST      = 3'd7;   // last state in cycle
 
-reg [4:0] reset;
-reg [2:0] q /* synthesis noprune */;
-reg last_ce, last_refresh;
-always @(posedge clk) begin
-    last_ce <= cs;
+logic [2:0] q = '0;
+logic last_ce = 0, last_refresh = 0;
+always_ff @(posedge clk) begin
+    last_ce <= ce;
     last_refresh <= refresh;
 
-    if(q != 3'd0)
-        q <= q + 3'd1;
-    else if(cs && !last_ce)
-        q <= 3'd1;
-
-    if(q == STATE_LAST)
-        q <= 3'd0;
+    // start a new cycle on rising edge of ce
+    if(ce && !last_ce) q <= 3'd1;
+    if((q != 3'd0) || (reset != 5'd0)) q <= q + 3'd1;
 end
 
 // ---------------------------------------------------------------------
 // --------------------------- startup/reset ---------------------------
 // ---------------------------------------------------------------------
-
-always @(posedge clk) begin
+logic [4:0] reset = 5'h1f;
+always_ff @(posedge clk) begin
     if(!reset_n)
         reset <= 5'h1f;
     else if((q == STATE_LAST) && (reset != 0))
@@ -106,51 +102,55 @@ end
 assign ready = !(|reset);
 
 // all possible commands
-localparam CMD_NOP             = 3'b111;
-localparam CMD_ACTIVE          = 3'b011;
-localparam CMD_READ            = 3'b101;
-localparam CMD_WRITE           = 3'b100;
-localparam CMD_BURST_TERMINATE = 3'b110;
-localparam CMD_PRECHARGE       = 3'b010;
-localparam CMD_AUTO_REFRESH    = 3'b001;
-localparam CMD_LOAD_MODE       = 3'b000;
+localparam CMD_INHIBIT         = 4'b1111;
+localparam CMD_NOP             = 4'b0111;
+localparam CMD_ACTIVE          = 4'b0011;
+localparam CMD_READ            = 4'b0101;
+localparam CMD_WRITE           = 4'b0100;
+localparam CMD_BURST_TERMINATE = 4'b0110;
+localparam CMD_PRECHARGE       = 4'b0010;
+localparam CMD_AUTO_REFRESH    = 4'b0001;
+localparam CMD_LOAD_MODE       = 4'b0000;
 
-reg [2:0] sd_cmd;   // current command sent to sd ram
-reg [1:0] bt;
-reg [31:0] dout_r;
+logic [3:0] sd_cmd;   // current command sent to sd ram
+logic        wr;
+logic [3:0] dqm;
 
 // drive control signals according to current command
-assign sd_cs  = 1'b0;
+assign sd_cs  = sd_cmd[3];
 assign sd_ras = sd_cmd[2];
 assign sd_cas = sd_cmd[1];
 assign sd_we  = sd_cmd[0];
+assign sd_dqm = dqm;
 
-wire drive_write = wr && ((q == STATE_CMD_CONT) || (q == STATE_CMD_CONT + 3'd1));
-assign sd_data = drive_write ? sd_data_out : 32'hZZZZ_ZZZZ;
+logic [7:0] dout_q;
+logic [31:0] sd_data_out;
+logic        sd_data_oe;
 
-assign sd_dqm = !wr ? 4'b0000 :
-                (bt == 2'd0) ? 4'b1110 :
-                (bt == 2'd1) ? 4'b1101 :
-                (bt == 2'd2) ? 4'b1011 :
-                               4'b0111;
+assign dout = dout_q;
+assign sd_data = sd_data_oe ? sd_data_out : 32'hZZZZ_ZZZZ;
 
-assign dout = (bt == 2'd0) ? dout_r[7:0] :
-              (bt == 2'd1) ? dout_r[15:8] :
-              (bt == 2'd2) ? dout_r[23:16] :
-                             dout_r[31:24];
+always_ff @(posedge clk) begin
+    logic [7:0]  caddr ;
+    logic [7:0]  wrdata;
+    logic [1:0]  bt;
 
-reg [7:0] wrdata;
-reg [7:0] caddr;
-reg wr = 1'b0;
-reg [31:0] sd_data_out;
+    sd_cmd <= CMD_INHIBIT;
+    sd_data_oe <= 1'b0;
+    dout_valid <= 1'b0;
+    dqm <= 4'b0000;
 
-always @(posedge clk) begin
-    sd_cmd <= CMD_NOP;
+    if((q == STATE_READ) && !wr) begin
+        dout_valid <= 1'b1;
+        case(bt)
+            2'd0: dout_q <= sd_data[7:0];
+            2'd1: dout_q <= sd_data[15:8];
+            2'd2: dout_q <= sd_data[23:16];
+            default: dout_q <= sd_data[31:24];
+        endcase
+    end
 
-    if(q == STATE_READ) dout_r <= sd_data;
-
-    if(reset) begin
-        wr <= 1'b0;
+    if(reset != 5'd0) begin
         sd_ba <= 2'b00;
         if(q == STATE_CMD_START) begin
             if(reset == 5'd13) begin
@@ -164,9 +164,10 @@ always @(posedge clk) begin
         end
     end
     else begin
-        if(refresh && !last_refresh && q == STATE_CMD_START)
+        if(refresh && !last_refresh)
             sd_cmd <= CMD_AUTO_REFRESH;
-        if(cs && !last_ce) begin
+
+        if(ce && !last_ce) begin
             sd_cmd  <= CMD_ACTIVE;
             sd_ba   <= addr[22:21];     // bank
             sd_addr <= addr[20:10];     // 11‑bit row address
@@ -175,12 +176,39 @@ always @(posedge clk) begin
             wr      <= we;
             wrdata  <= din;
         end
+
         if(q == STATE_CMD_CONT) begin
-            if(wr) sd_data_out <= {wrdata, wrdata, wrdata, wrdata};
+            if(wr) begin
+                sd_data_out <= {wrdata, wrdata, wrdata, wrdata};
+                sd_data_oe  <= 1'b1;
+                dqm <= (bt == 2'd0) ? 4'b1110 :
+                       (bt == 2'd1) ? 4'b1101 :
+                       (bt == 2'd2) ? 4'b1011 :
+                                      4'b0111;
+            end
             sd_cmd  <= wr ? CMD_WRITE : CMD_READ;
             sd_addr <= {3'b100, caddr};
         end
+
+        if(q > STATE_CMD_CONT && q < STATE_READ)
+            sd_cmd <= CMD_NOP;
     end
 end
+
+`ifdef VERILATOR
+assign sd_clk = ~clk;
+`else
+ODDR #(
+    .TXCLK_POL(1'b0),
+    .INIT(1'b0)
+    ) sdramclk_ddr (
+    .Q0(sd_clk),
+    .Q1(),
+    .D0(1'b0),
+    .D1(1'b1),
+    .TX(1'b0),
+    .CLK(clk)
+);
+`endif
 
 endmodule

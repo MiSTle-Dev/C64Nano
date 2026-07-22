@@ -6,10 +6,10 @@
 
 module cartridge
 #(
-	parameter [24:0] RAM_ADDR = 25'h0000000,
-	parameter [24:0] CRM_ADDR = 25'h0010000,
-	parameter [24:0] CRT_ADDR = 25'h0200000,
-	parameter [24:0] GEO_ADDR = 25'h0C00000
+	parameter [24:0] RAM_ADDR = 23'h0000000,
+	parameter [24:0] CRM_ADDR = 23'h0010000,
+	parameter [24:0] CRT_ADDR = 23'h0200000,
+	parameter [24:0] GEO_ADDR = 23'h0400000
 )(
 	input  logic        clk32,				// 32mhz clock source
 	input  logic        reset_n,				// reset signal
@@ -45,7 +45,7 @@ module cartridge
 	output logic        mem_write_out,
 	input  logic [7:0]  mem_in,
 	output logic [7:0]  mem_out,
-	output logic [24:0] mem_addr,	         // translated address output
+	output logic [22:0] mem_addr,	         // translated address output
 	output logic        mem_req,
 	input  logic        mem_cycle,
 
@@ -790,13 +790,13 @@ always_ff @(posedge clk32) begin
 	endcase
 end
 
-logic [19:0] ezrom_addr /* synthesis syn_keep = 1 */;
-logic  [7:0] ezdq_out /* synthesis syn_keep = 1 */;
-logic        ezrom_ce /* synthesis syn_keep = 1 */;
-logic        ezrom_we /* synthesis syn_keep = 1 */;
-logic  [7:0] ezmem_out /* synthesis syn_keep = 1 */;
-logic        ezmem_oe /* synthesis syn_keep = 1 */;
-logic        ezdq_oe /* synthesis syn_keep = 1 */;
+logic [19:0] ezrom_addr;
+logic  [7:0] ezdq_out;
+logic        ezrom_ce;
+logic        ezrom_we;
+logic  [7:0] ezmem_out;
+logic        ezmem_oe;
+logic        ezdq_oe;
 
 ez_rom ez_rom
 (
@@ -818,15 +818,25 @@ ez_rom ez_rom
 	.mem_we(ezrom_we)
 );
 
-logic [24:0] ezmem_addr /* synthesis syn_keep = 1 */;
-logic        ezmem_we /* synthesis syn_keep = 1 */;
-logic [24:0] addr_out /* synthesis syn_keep = 1 */; 
+logic [22:0] ezmem_addr;
+logic        ezmem_we;
+logic [22:0] addr_out; 
 
-assign ezmem_addr = {5'(CRT_ADDR>>20), ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
-assign ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
+logic [5:0] ez_bank_idx;
+logic [6:0] ez_bank_sel;
+logic [2:0] ez_crt_prefix;
+
+assign ez_bank_idx  = ezrom_addr[18:13];
+assign ez_bank_sel  = ezrom_addr[19] ? hibanks[ez_bank_idx] : lobanks[ez_bank_idx];
+assign ez_crt_prefix = 3'(CRT_ADDR >> 20);
+assign ezmem_addr = {ez_crt_prefix, ez_bank_sel, ezrom_addr[12:0]};
+
+logic ez_bank_map_sel;
+assign ez_bank_map_sel = romH ? hibanks_map[ez_bank_idx] : lobanks_map[ez_bank_idx];
+assign ezmem_we        = ezrom_we & ez_bank_map_sel;
 
 assign mem_addr = (ezmem_oe) ? ezmem_addr : addr_out;
-assign mem_out  = (ezmem_oe) ?  ezmem_out : data_in;
+assign mem_out  = (ezmem_oe) ? ezmem_out : data_in;
 
 assign data_out = (ezdq_oe & (romH|romL)) ? ezdq_out : mem_in;
 
@@ -843,8 +853,8 @@ assign cs_iof = IOF && (mem_write ? IOF_wr_ena : IOF_ena);
 
 assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof) | ezrom_ce;
 
-function automatic logic [11:0] get_bank(input logic [7:0] bank, input logic ram);
-	get_bank = ram ? {9'(CRM_ADDR>>16), bank[2:0]} : {4'(CRT_ADDR>>21), bank[7:0]};
+function automatic logic [9:0] get_bank(input logic [7:0] bank, input logic ram);
+	get_bank = ram ? {7'(CRM_ADDR>>16), bank[2:0]} : {2'(CRT_ADDR>>21), bank[7:0]};
 endfunction
 
 always_comb begin
@@ -855,16 +865,16 @@ always_comb begin
 
 	//prohibit to write in ultimax mode into underlaying (actually non-existent) RAM
 	mem_write_out = (~(((romL & ~romL_we) | (romH & ~romH_we)) & exrom_overide & ~game_overide) & mem_write) | ezmem_we;
-	addr_out = {9'(RAM_ADDR>>18), addr_in};
+	addr_out = {7'(RAM_ADDR>>18), addr_in};
 
 	if(reset_n) begin
-		if(romH & (romH_we | ~mem_write)) addr_out[24:13] =  get_bank(bank_hi, romH_we);
+		if(romH & (romH_we | ~mem_write)) addr_out[22:13] =  get_bank(bank_hi, romH_we);
 		if(romL & (romL_we | ~mem_write)) addr_out        = {get_bank(bank_lo, romL_we), addr_in[12:0] & mask_lo};
 		
-		if(cs_ioe) addr_out[24:13] = get_bank(IOE_bank, IOE_wr_ena); // read/write to DExx
-		if(cs_iof) addr_out[24:13] = get_bank(IOF_bank, IOF_wr_ena); // read/write to DFxx
+		if(cs_ioe) addr_out[22:13] = get_bank(IOE_bank, IOE_wr_ena); // read/write to DExx
+		if(cs_iof) addr_out[22:13] = get_bank(IOF_bank, IOF_wr_ena); // read/write to DFxx
 
-		if(UMAXromH) addr_out[24:12] = {get_bank(bank_hi, 0), 1'b1}; // ULTIMAX CharROM
+		if(UMAXromH) addr_out[22:12] = {get_bank(bank_hi, 0), 1'b1}; // ULTIMAX CharROM
 
 		case(cart_id)
 			36: if(IOE && !(addr_in[7:0] & (clock_port ? 8'hF0 : 8'hFE)) && ~cart_disable) begin
@@ -874,10 +884,10 @@ always_comb begin
 				end
 			54: if(rom_kbb && addr_in[15:13] == 3'b111 && !mem_write) begin
 					force_ultimax = 1;
-					addr_out[24:13] = get_bank(2, 0);
+					addr_out[22:13] = get_bank(2, 0);
 				end
 			99: if(IOE) begin
-					addr_out[24:8] = {3'(GEO_ADDR>>22), geo_bank};
+					addr_out[22:8] = {1'(GEO_ADDR>>22), geo_bank};
 				end
 		default:;
 		endcase

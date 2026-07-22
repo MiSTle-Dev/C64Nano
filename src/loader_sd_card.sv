@@ -254,8 +254,6 @@ always_ff @(posedge clk) begin
 				io_state <= WRITE_PREPARE;
 			end
 			else begin
-				ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), upload_chip_data_idx};
-				ioctl_rd <= 1;
 				core_wait_cnt <= '0;
 				io_state <= WRITE_WAIT4CORE;
 			end
@@ -266,6 +264,10 @@ always_ff @(posedge clk) begin
 					core_wait_cnt <= core_wait_cnt + 1;
 					if(&core_wait_cnt) begin
 						upload_data <= ioctl_din;
+						if(upload_chip_data_idx != 13'd8191) begin
+							ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), (upload_chip_data_idx + 1'd1)};
+							ioctl_rd <= 1;
+						end
 						io_state <= WRITING;
 					end
 				end
@@ -293,6 +295,8 @@ always_ff @(posedge clk) begin
 			else if(upload_state == UP_CHIP_HDR) begin
 				if(upload_chip_hdr_idx == 4'd15) begin
 					upload_chip_data_idx <= '0;
+					ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), 13'd0};
+					ioctl_rd <= 1;
 					upload_state <= UP_CHIP_DATA;
 				end
 				else begin
