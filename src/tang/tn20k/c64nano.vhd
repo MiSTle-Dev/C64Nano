@@ -14,11 +14,11 @@ use IEEE.numeric_std.ALL;
 entity c64nano_top is
   generic
   (
-   DUAL  : integer := 0; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
-   U6551 : integer := 0;  -- 0:no, 1:yes optional 6551 UART
-   DIGIMAX : integer := 0;  -- 0:no, 1:yes optional DIGIMAX DAC
-   REU   : integer := 0;  -- 0:no, 1:yes optional REU
+   DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
+   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
+   U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
+   DIGIMAX : integer := 1;  -- 0:no, 1:yes optional DIGIMAX DAC
+   REU   : integer := 1;  -- 0:no, 1:yes optional REU
    C1541 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
