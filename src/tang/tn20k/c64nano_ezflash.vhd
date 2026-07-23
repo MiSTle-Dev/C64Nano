@@ -14,7 +14,7 @@ use IEEE.numeric_std.ALL;
 entity c64nano_top is
   generic
   (
-   DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
+   DUAL  : integer := 0; -- 0:no, 1:yes dual SID build option
    MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
    DIGIMAX : integer := 1;  -- 0:no, 1:yes optional DIGIMAX DAC
@@ -128,6 +128,7 @@ signal addr         : unsigned(22 downto 0);
 signal cs           : std_logic;
 signal we           : std_logic;
 signal din          : unsigned(7 downto 0);
+signal ds           : std_logic_vector(1 downto 0);
 -- IEC
 signal c64_iec_clk      : std_logic;
 signal c64_iec_data     : std_logic;
@@ -346,7 +347,7 @@ signal load_tap        : std_logic := '0';
 signal tap_play_addr   : unsigned(22 downto 0);
 signal reset_wait      : std_logic := '0';
 signal old_download_r  : std_logic;
-
+signal old_upload      : std_logic := '0';
 signal reset_n         : std_logic;
 signal por             : std_logic;
 signal c64rom_wr       : std_logic;
@@ -376,7 +377,7 @@ signal sid_ver        : std_logic;
 signal sid_mode       : unsigned(2 downto 0);
 signal sid_digifix    : std_logic;
 signal system_tape_sound : std_logic;
-signal uart_rxD         : std_logic_vector(1 downto 0);
+signal uart_rxD         : std_logic_vector(3 downto 0);
 signal uart_rx_filtered : std_logic;
 signal cnt2_i          : std_logic;
 signal cnt2_o          : std_logic;
@@ -420,6 +421,7 @@ signal pd1,pd2,pd3,pd4 : std_logic_vector(7 downto 0);
 signal detach_reset_d  : std_logic;
 signal detach_reset    : std_logic;
 signal disk_pause      : std_logic;
+signal pll_locked_i    : std_logic;
 signal pll_locked_d    : std_logic;
 signal pll_locked_d1   : std_logic;
 signal flash_ready      : std_logic;
@@ -444,9 +446,19 @@ signal reu_wrap         : std_logic;
 signal c64_data_in      : unsigned(7 downto 0);
 signal cart_mem_req     : std_logic;
 signal cart_wrdata      : unsigned(7 downto 0);
+signal cart_lobanks     : u7_array_t(0 to 63);
+signal cart_hibanks     : u7_array_t(0 to 63);
+signal cart_bank_cnt    : unsigned(7 downto 0);
+signal cart_lobanks_map : unsigned(63 downto 0);
+signal cart_hibanks_map : unsigned(63 downto 0);
 signal cart_bank_hi     : std_logic;
 signal cart_bank_16k    : std_logic;
+signal rd_cyc           : unsigned(2 downto 0);
+signal ioctl_rd_en      : std_logic := '0';
 signal cart_id_hi       : unsigned(7 downto 0);
+signal ioctl_req_rd     : std_logic := '0';
+signal ioctl_rd         : std_logic := '0';
+signal ioctl_din        : unsigned(7 downto 0);
 signal start_strk       : std_logic :='0';
 signal key              : std_logic_vector(7 downto 0) := (others => '0');
 signal key_strobe       : std_logic := '0';
@@ -456,7 +468,17 @@ signal run_prg          : std_logic;
 signal reset_counter    : integer range 0 to 100000 := 0;
 signal clear_ram        : std_logic;
 signal boot_easyflash   : std_logic;
+signal ezfl_save        : std_logic := '0';
+signal ezfl_save_old    : std_logic := '0';
+signal ezfl_mod         : std_logic := '0';
+signal save_cartridge   : std_logic := '0';
+signal autosave         : std_logic := '0';
+signal ezfl_idx         : std_logic := '0';
+signal ioctl_upload     : std_logic := '0';
 signal disk_sd_wr_data  : unsigned(7 downto 0);
+signal ext_old          : std_logic := '0';
+signal ext_crt          : std_logic := '0';
+signal ezfl_save_en     : std_logic := '0';
 attribute syn_preserve  : integer;
 attribute syn_preserve of spi_ext : signal is 1;
 signal tap_io_cycle     : std_logic := '0';
@@ -1105,7 +1127,7 @@ flashclock: entity work.Gowin_rPLL_flash
 pll_locked_comb <= pll_locked_hid and flash_lock;
 leds_n <=  not leds;
 leds(0) <= led1541;
-leds(1) <= ioctl_download;
+leds(1) <= ioctl_download or ioctl_upload;
 leds(5 downto 2) <= (others => '0');
 
 --                    6   5  4  3  2  1  0
@@ -1331,8 +1353,8 @@ hid_inst: entity work.hid
   system_run_prg      => run_prg,
   system_clear_ram    => clear_ram,
   system_boot_easyflash=> boot_easyflash,
-  system_autosave     => open,
-  system_save_cartridge => open,
+  system_autosave     => autosave,
+  system_save_cartridge => save_cartridge,
   system_digimax        => system_digimax,
 
   -- port io (used to expose rs232)
@@ -1614,6 +1636,11 @@ port map(
     cart_bank_addr  => ioctl_load_addr(20 downto 13),
     cart_bank_wr    => cart_hdr_wr,
     cart_boot       => boot_easyflash,
+    lobanks         => cart_lobanks,
+    hibanks         => cart_hibanks,
+    lobanks_map     => cart_lobanks_map,
+    hibanks_map     => cart_hibanks_map,
+    bank_cnt        => cart_bank_cnt,
 
     exrom           => exrom,
     game            => game,
@@ -1644,6 +1671,37 @@ port map(
     nmi         => nmi,
     nmi_ack     => nmi_ack
   );
+
+ezfl_save <= (save_cartridge or (autosave and ezfl_mod)) when cart_id = to_unsigned(32, cart_id'length) and cart_attached = '1' else '0';
+
+process(clk_sys)
+  begin
+  if rising_edge(clk_sys) then
+    if cart_mem_req = '1' then 
+      ezfl_mod <= '1'; 
+    end if;
+
+    if ioctl_download = '1' and load_crt = '1' then
+      ezfl_mod <= '0'; 
+    end if;
+    
+    if ioctl_upload = '1' then 
+      ezfl_mod <= '0';
+      ezfl_save_en <= '0';
+    end if;
+
+    ezfl_save_old <= ezfl_save;
+    if ezfl_save_old = '0' and ezfl_save = '1' then
+      ezfl_idx <= not save_cartridge;
+    end if;
+
+    ext_old <= ext_crt;
+	  if ext_old = '0' and ext_crt = '1' then
+      ezfl_save_en <= '1';
+    end if;
+
+  end if;
+end process;
 
 midi_en <= '1' when st_midi /= "000" else '0';
 
@@ -1704,17 +1762,28 @@ port map (
   load_reu          => load_reu,
   sd_img_size       => sd_img_size,
 
+  lobanks           => cart_lobanks,
+  hibanks           => cart_hibanks,
+  lobanks_map       => cart_lobanks_map,
+  hibanks_map       => cart_hibanks_map,
+  bank_cnt          => cart_bank_cnt,
+
   ioctl_download    => ioctl_download,
+  ioctl_upload_req  => ezfl_save,
+  ioctl_upload      => ioctl_upload,
+  ioctl_din         => ioctl_din,
   ioctl_addr(22 downto 0) => ioctl_addr,
   ioctl_dout        => ioctl_data,
   ioctl_wr          => ioctl_wr,
-  ioctl_wait        => ioctl_req_wr or reset_wait
+  ioctl_rd          => ioctl_rd,
+  ioctl_wait        => ioctl_req_wr or reset_wait or ioctl_req_rd
 );
 
 process(clk_sys)
 begin
   if rising_edge(clk_sys) then
     old_download <= ioctl_download;
+    old_upload <= ioctl_upload;
     io_cycleD <= io_cycle;
     cart_hdr_wr <= '0';
     detach_reset_d <= detach_reset;
@@ -1736,11 +1805,32 @@ begin
           io_cycle_data <= ioctl_data;
         end if;
       end if;
+
+      if ioctl_req_rd = '1' then
+        io_cycle_addr <= ioctl_load_addr;
+        ioctl_rd_en <= '1';
+      end if;
     end if;
 
     if io_cycle = '1' then
       io_cycle_ce <= '0';
       io_cycle_we <= '0';
+      ioctl_rd_en <= '0';
+    end if;
+
+    if ioctl_rd = '1' then
+      if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
+        ioctl_load_addr <= CRT_ADDR;
+      end if;
+      ioctl_req_rd <= '1';
+    end if;
+
+    rd_cyc <= rd_cyc(1 downto 0) & (io_cycle and io_cycle_ce and ioctl_rd_en);
+
+    if rd_cyc(2) = '1' then
+      ioctl_din <= sdram_data;
+      ioctl_req_rd <= '0';
+      ioctl_load_addr <= ioctl_load_addr + 1;
     end if;
 
     if ioctl_wr = '1' then
@@ -1841,6 +1931,7 @@ begin
     if old_download /= ioctl_download and load_crt = '1' then
       cart_attached <= old_download;
       erase_cram <= '1';
+      ext_crt <= ioctl_download and load_crt;
     end if;
 
     -- meminit for RAM injection
@@ -2069,7 +2160,7 @@ port map (
 -- 10 Userport UART to ext HW pins
 -- 11 6551 UART to ext HW pins 
 -- bl616_jtagsel BL616 USB UART if PMOD MPU in use
-uart_rx_muxed <= uart_rx when system_uart = "00" else '1'; -- uart_ext_rx ("01") not wired
+uart_rx_muxed <= uart_rx when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
 --uart_ext_tx <= uart_tx_i;
 
 -- UART_RX synchronizer
