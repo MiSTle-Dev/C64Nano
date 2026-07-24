@@ -41,7 +41,6 @@
         <File path="src/sid/sid_tables.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_top.sv" type="file.verilog" enable="1"/>
         <File path="src/sid/sid_voice.sv" type="file.verilog" enable="1"/>
-        <File path="src/tang/tn20k/am29f040.sv" type="file.verilog" enable="1"/>
         <File path="src/tang/tn20k/cartridge.sv" type="file.verilog" enable="1"/>
         <File path="src/tang/tn20k/loader_sd_card.sv" type="file.verilog" enable="1"/>
         <File path="src/uart6551/io_fifo.v" type="file.verilog" enable="1"/>

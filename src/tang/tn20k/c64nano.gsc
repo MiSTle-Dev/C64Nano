@@ -11,4 +11,5 @@
 //INS "sd_card_inst/sd_rw/u_sdcmd_ctrl" syn_ramstyle=block_ram
 //INS "yes_uart.uart_inst/uart_in_fifo" syn_ramstyle=block_ram
 //INS "yes_uart.uart_inst/uart_out_fifo" syn_ramstyle=block_ram
+INS "crt_inst" syn_ramstyle=block_ram
 

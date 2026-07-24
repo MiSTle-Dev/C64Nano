@@ -4,7 +4,7 @@ add_file src/am29f040.sv
 add_file src/gowin_rpll/gowin_rpll_flash.vhd
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/tang/tn20k/cartridge.sv
+add_file src/tang/tn20k/cartridge_ezflash.sv
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
 add_file src/gowin_dpb/sector_dpram.v
@@ -56,7 +56,8 @@ add_file src/t65/T65_Pack.vhd
 add_file src/tang/tn20k/c64nano_ezflash.vhd
 add_file src/video_vicII_656x.vhd
 add_file src/tang/tn20k/c64nano.cst
-add_file src/tang/tn20k/c64nano.sdc
+add_file src/tang/tn20k/c64nano_ezflash.sdc
+add_file src/tang/tn20k/c64nano.gsc
 add_file src/loader_sd_card.sv
 add_file src/fifo_sc_hs/fifo_sc_hs.vhd
 add_file src/c1530.vhd
@@ -89,8 +90,8 @@ set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -multi_boot 0
 set_option -mspi_jump 0
-set_option -place_option 2
-set_option -route_option 1
+#set_option -place_option 2
+#set_option -route_option 1
 set_option -ireg_in_iob 1
 set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1

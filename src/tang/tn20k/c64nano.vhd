@@ -442,7 +442,7 @@ signal uart_tx_i        : std_logic;
 signal palette          : unsigned(2 downto 0);
 signal reu_wrap         : std_logic;
 signal c64_data_in      : unsigned(7 downto 0);
-signal cart_mem_req     : std_logic;
+signal cart_mem_req     : std_logic := '0';
 signal cart_wrdata      : unsigned(7 downto 0);
 signal cart_bank_hi     : std_logic;
 signal cart_bank_16k    : std_logic;
@@ -1630,7 +1630,7 @@ port map(
     mem_in      => sdram_data,
     mem_out     => cart_wrdata,
     mem_addr(22 downto 0) => cart_addr,
-    mem_req     => cart_mem_req,
+    mem_req     => open,
     mem_cycle   => io_cycle,
     IO_rom      => io_rom,
     IO_rd       => cart_oe,
