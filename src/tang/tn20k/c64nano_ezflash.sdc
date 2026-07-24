@@ -10,9 +10,7 @@ set_clock_groups -asynchronous -group [get_clocks {clk_sys}] -group [get_clocks 
 set_clock_groups -asynchronous -group [get_clocks {clk_sys}] -group [get_clocks {spi_io_clk}]
 report_timing -hold -from_clock [all_clocks] -to_clock [all_clocks] -max_paths 100 -max_common_paths 1
 report_timing -setup -from_clock [all_clocks] -to_clock [all_clocks] -max_paths 100 -max_common_paths 1
-
 create_clock -name clk_audio -period 20833 -waveform {0 10416.5} [get_nets {video_inst/clk_audio}] -add
-//set_clock_groups -asynchronous -group [get_clocks {clk_sys}] -group [get_clocks {clk}]
-//set_clock_groups -asynchronous -group [get_clocks {clk_sys}] -group [get_clocks {clk_audio}]
-//set_clock_groups -asynchronous -group [get_clocks {clk_sys}] -group [get_clocks {clk64}]
-//set_clock_groups -asynchronous -group [get_clocks {clk_sys}] -group [get_clocks {i2sclk}]
+set_clock_groups -asynchronous -group [get_clocks {clk_sys}] -group [get_clocks {clk}]
+set_clock_groups -asynchronous -group [get_clocks {clk_sys}] -group [get_clocks {clk_audio}]
+set_clock_groups -asynchronous -group [get_clocks {clk_sys}] -group [get_clocks {clk64}]

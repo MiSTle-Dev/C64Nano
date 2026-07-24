@@ -1,15 +1,10 @@
 set_device GW2AR-LV18QN88C8/I7 -name GW2AR-18C
 
-# Generic configuration parameters (Gowin SUG1220-1.1E)
-set DUAL  0  ;# 0=single SID, 1=dual SID
-set MIDI  1  ;# 0=disabled, 1=enabled optional MIDI Interface
-set U6551 1  ;# 0=disabled, 1=enabled optional 6551 UART
-set C1541 1  ;# 0=disabled, 1=enabled optional C1541 Interface
-
+add_file src/am29f040.sv
 add_file src/gowin_rpll/gowin_rpll_flash.vhd
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
-add_file src/tang/tn20k/cartridge.sv
+add_file src/tang/tn20k/cartridge_ezflash.sv
 add_file src/gowin_dpb/gowin_dpb_track_buffer_b.v
 add_file src/gowin_dpb/gowin_dpb_trkbuf.v
 add_file src/gowin_dpb/sector_dpram.v
@@ -58,10 +53,11 @@ add_file src/t65/T65.vhd
 add_file src/t65/T65_ALU.vhd
 add_file src/t65/T65_MCode.vhd
 add_file src/t65/T65_Pack.vhd
-add_file src/tang/tn20k/c64nano.vhd
+add_file src/tang/tn20k/c64nano_ezflash.vhd
 add_file src/video_vicII_656x.vhd
 add_file src/tang/tn20k/c64nano.cst
-add_file src/tang/tn20k/c64nano.sdc
+add_file src/tang/tn20k/c64nano_ezflash.sdc
+add_file src/tang/tn20k/c64nano.gsc
 add_file src/loader_sd_card.sv
 add_file src/fifo_sc_hs/fifo_sc_hs.vhd
 add_file src/c1530.vhd
@@ -77,6 +73,7 @@ add_file src/uart6551/uart_6551.v
 add_file src/misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
+set_option -output_base_name C64Nano_TN20k_ezflash
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
 set_option -top_module c64nano_top
@@ -93,28 +90,11 @@ set_option -rw_check_on_ram 0
 set_option -user_code 00000001
 set_option -multi_boot 0
 set_option -mspi_jump 0
-set_option -place_option 2
-set_option -route_option 1
+#set_option -place_option 2
+#set_option -route_option 1
 set_option -ireg_in_iob 1
 set_option -oreg_in_iob 1
 set_option -ioreg_in_iob 1
-
-# Apply generic configuration to c64nano_top entity
-# set_property not working !
-#read_ipc "src/tang/tn20k/c64nano.ipc"
-#set_property c64nano_top.DUAL {$DUAL} [get_ips c64nano]
-# Conditionally add files based on DUAL parameter
-#generate_target [get_ips c64nano]
-if {$DUAL == 0} {
-	puts "single SID EZFlash save/load build"
-    set_option -output_base_name C64Nano_TN20k_ezflash
-    add_file src/am29f040.sv
-} else { 
-    # DUAL == 1
-	puts "dual SID build"
-    set_option -output_base_name C64Nano_TN20k
-    add_file src/tang/tn20k/am29f040.sv
-}
 
 #run syn
 run all
