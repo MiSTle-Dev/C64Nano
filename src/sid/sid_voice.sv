@@ -186,7 +186,7 @@ always @(posedge clock) begin
 
 	if(ce_1m) begin
 		if(control[7:4]) begin
-			keep_cnt <= mode ? WF_0_TTL_6581 : WF_0_TTL_8580;
+			keep_cnt <= mode ? WF_0_TTL_8580 : WF_0_TTL_6581;
 			dac_out  <= wave_sum - waveform_dc;
 		end
 		else if(keep_cnt) keep_cnt <= keep_cnt - 1'd1;
