@@ -128,6 +128,9 @@ To **resume** a saved game, load it again via **CRT ROM:** and use the in-game l
 
 This feature behaves differently than on MiSTer: MiSTer rewrites the CRT image in Linux userspace and creates a different file. Here, the rewrite is done directly by the Mistle C64 core in HDL, and the original CRT file is overwritten.
 
+> [!WARNING]  
+> This feature isn't supported on TN20k ! 
+
 ## BASIC Program Loader (.PRG)
 
 A BASIC Program *.PRG file can be loaded via OSD file selection.  Auto RUN after load can be disabled via OSD.

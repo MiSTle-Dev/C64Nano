@@ -25,6 +25,11 @@ module cartridge
 	input  logic        cart_bank_wr,
 	input  logic        cart_boot,
 
+	output logic [6:0] lobanks[0:63],
+	output logic [6:0] hibanks[0:63],
+	output logic [63:0] lobanks_map,
+	output logic [63:0] hibanks_map,
+	output logic [7:0]  bank_cnt,
 
 	output logic        exrom,				// exrom line
 	output logic        game,					// game line
@@ -61,11 +66,6 @@ logic [7:0]  bank_lo;
 logic [7:0]  bank_hi;
 logic [12:0] mask_lo;
 logic [5:0]  bank_no;
-logic [6:0] lobanks[0:63];
-logic [6:0] hibanks[0:63];
-logic [63:0] lobanks_map;
-logic [63:0] hibanks_map;
-logic [7:0]  bank_cnt;
 
 logic [13:0] geo_bank;
 logic [7:0]  IOE_bank;
@@ -785,10 +785,55 @@ always_ff @(posedge clk32) begin
 	endcase
 end
 
-logic [22:0] addr_out;
-assign mem_addr = addr_out;
-assign mem_out  = data_in;
-assign data_out = mem_in;
+logic [19:0] ezrom_addr;
+logic  [7:0] ezdq_out;
+logic        ezrom_ce;
+logic        ezrom_we;
+logic  [7:0] ezmem_out;
+logic        ezmem_oe;
+logic        ezdq_oe;
+
+ez_rom ez_rom
+(
+	.clk(clk32),
+	.reset_n(reset_n & ezrom_en),
+	.ce(mem_ce & (romH|romL)),
+	.we(mem_write),
+	.addr({romH, bank_no, addr_in[12:0]}),
+	.dq_in(data_in),
+	.dq_out(ezdq_out),
+	.dq_oe(ezdq_oe),
+	.mem_req(mem_req),
+	.mem_cycle(mem_cycle),
+	.mem_oe(ezmem_oe),
+	.mem_addr(ezrom_addr),
+	.mem_in(mem_in),
+	.mem_out(ezmem_out),
+	.mem_ce(ezrom_ce),
+	.mem_we(ezrom_we)
+);
+
+logic [22:0] ezmem_addr;
+logic        ezmem_we;
+logic [22:0] addr_out; 
+
+logic [5:0] ez_bank_idx;
+logic [6:0] ez_bank_sel;
+logic [2:0] ez_crt_prefix;
+
+assign ez_bank_idx  = ezrom_addr[18:13];
+assign ez_bank_sel  = ezrom_addr[19] ? hibanks[ez_bank_idx] : lobanks[ez_bank_idx];
+assign ez_crt_prefix = 3'(CRT_ADDR >> 20);
+assign ezmem_addr = {ez_crt_prefix, ez_bank_sel, ezrom_addr[12:0]};
+
+logic ez_bank_map_sel;
+assign ez_bank_map_sel = romH ? hibanks_map[ez_bank_idx] : lobanks_map[ez_bank_idx];
+assign ezmem_we        = ezrom_we & ez_bank_map_sel;
+
+assign mem_addr = (ezmem_oe) ? ezmem_addr : addr_out;
+assign mem_out  = (ezmem_oe) ? ezmem_out : data_in;
+
+assign data_out = (ezdq_oe & (romH|romL)) ? ezdq_out : mem_in;
 
 
 // ************************************************************************************************************
@@ -801,7 +846,7 @@ logic cs_iof;
 assign cs_ioe = IOE && (mem_write ? IOE_wr_ena : IOE_ena);
 assign cs_iof = IOF && (mem_write ? IOF_wr_ena : IOF_ena);
 
-assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof);
+assign mem_ce_out = mem_ce | (cs_ioe & stb_ioe) | (cs_iof & stb_iof) | ezrom_ce;
 
 function automatic logic [9:0] get_bank(input logic [7:0] bank, input logic ram);
 	get_bank = ram ? {7'(CRM_ADDR>>16), bank[2:0]} : {2'(CRT_ADDR>>21), bank[7:0]};
@@ -814,7 +859,7 @@ always_comb begin
 	force_ultimax = 0;
 
 	//prohibit to write in ultimax mode into underlaying (actually non-existent) RAM
-	mem_write_out = (~(((romL & ~romL_we) | (romH & ~romH_we)) & exrom_overide & ~game_overide) & mem_write);
+	mem_write_out = (~(((romL & ~romL_we) | (romH & ~romH_we)) & exrom_overide & ~game_overide) & mem_write) | ezmem_we;
 	addr_out = {7'(RAM_ADDR>>18), addr_in};
 
 	if(reset_n) begin

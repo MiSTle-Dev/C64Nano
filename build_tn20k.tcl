@@ -1,6 +1,5 @@
 set_device GW2AR-LV18QN88C8/I7 -name GW2AR-18C
 
-add_file src/tang/tn20k/am29f040.sv
 add_file src/gowin_rpll/gowin_rpll_flash.vhd
 add_file src/gen_uart.v
 add_file src/c1541/mist_sd_card.sv
@@ -57,7 +56,7 @@ add_file src/tang/tn20k/c64nano.vhd
 add_file src/video_vicII_656x.vhd
 add_file src/tang/tn20k/c64nano.cst
 add_file src/tang/tn20k/c64nano.sdc
-add_file src/loader_sd_card.sv
+add_file src/tang/tn20k/loader_sd_card.sv
 add_file src/fifo_sc_hs/fifo_sc_hs.vhd
 add_file src/c1530.vhd
 add_file src/sid/sid_dac.sv

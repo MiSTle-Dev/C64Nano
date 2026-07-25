@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------
---  C64 Top level for Tang Nano Mega 138k Pro
+--  C64 Top level for Tang Nano 20k
 --  2023...2026 Stefan Voss
 --  based on the work of many others
 --
@@ -14,30 +14,26 @@ use IEEE.numeric_std.ALL;
 entity c64nano_top is
   generic
   (
-   DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
-   U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
+   DUAL  : integer := 0; -- 0:no, 1:yes dual SID build option
+   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
+   U6551 : integer := 0;  -- 0:no, 1:yes optional 6551 UART
+   DIGIMAX : integer := 0;  -- 0:no, 1:yes optional DIGIMAX DAC
+   REU   : integer := 1;  -- 0:no, 1:yes optional REU
    C1541 : integer := 1  -- 0:no, 1:yes optional 6551 UART
    );
   port
   (
-    bl616_jtagsel : in std_logic;
-    jtagseln    : out std_logic;
     clk         : in std_logic;
-    key_n       : in std_logic_vector(3 downto 0);
-    key_som_n   : in std_logic; -- SOM button
+    reset       : in std_logic; -- S2 button
+    user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(5 downto 0);
-    somleds_n   : out std_logic_vector(1 downto 0);
-    io          : inout std_logic_vector(5 downto 0);
+    io          : inout std_logic_vector(5 downto 0); -- JS0 Joystick D9
+    ext_drive_interface : out std_logic;
     -- USB-C BL616 UART
     uart_rx     : in std_logic;
-    --uart_tx     : out std_logic;
+  --uart_tx     : out std_logic; -- is now spi_irqn ! 
     -- monitor port
-    twimux       : out std_logic_vector(2 downto 0);
     bl616_mon_tx : out std_logic;
-   -- external hw pin UART
-    uart_ext_rx : in std_logic;
-    uart_ext_tx : out std_logic;
     -- SPI interface external uC
     pmod_companion_din : in std_logic;
     pmod_companion_dout : out std_logic;
@@ -55,35 +51,24 @@ entity c64nano_top is
     tmds_clk_p  : out std_logic;
     tmds_d_n    : out std_logic_vector( 2 downto 0);
     tmds_d_p    : out std_logic_vector( 2 downto 0);
-    -- internal lcd
-    lcd_clk     : out std_logic; -- lcd is RGB 565
-    lcd_hs      : out std_logic; -- lcd horizontal synchronization
-    lcd_vs      : out std_logic; -- lcd vertical synchronization        
-    lcd_de      : out std_logic; -- lcd data enable     
-    lcd_bl      : out std_logic; -- lcd backlight control
-    lcd_r       : out std_logic_vector(5 downto 0);  -- lcd red
-    lcd_g       : out std_logic_vector(5 downto 0);  -- lcd green
-    lcd_b       : out std_logic_vector(5 downto 0);  -- lcd blue
-    -- audio
-    hp_bck      : out std_logic;
-    hp_ws       : out std_logic;
-    hp_din      : out std_logic;
-    pa_en       : out std_logic;
     -- sd interface
     sd_clk      : out std_logic;
     sd_cmd      : inout std_logic;
     sd_dat      : inout std_logic_vector(3 downto 0);
     ws2812      : out std_logic;
-    -- MiSTer SDRAM module
-    O_sdram_clk     : out std_logic;
-    O_sdram_cs_n    : out std_logic; -- chip select
-    O_sdram_cas_n   : out std_logic;
-    O_sdram_ras_n   : out std_logic; -- row address select
-    O_sdram_wen_n   : out std_logic; -- write enable
-    IO_sdram_dq     : inout std_logic_vector(15 downto 0); -- 16 bit bidirectional data bus
-    O_sdram_addr    : out std_logic_vector(12 downto 0); -- 13 bit multiplexed address bus
-    O_sdram_ba      : out std_logic_vector(1 downto 0); -- two banks
-    O_sdram_dqm     : out std_logic_vector(1 downto 0); -- 16/2
+    -- "Magic" port names that the gowin compiler connects to the on-chip SDRAM
+    O_sdram_clk  : out std_logic;
+    O_sdram_cke  : out std_logic;
+    O_sdram_cs_n : out std_logic;            -- chip select
+    O_sdram_cas_n : out std_logic;           -- columns address select
+    O_sdram_ras_n : out std_logic;           -- row address select
+    O_sdram_wen_n : out std_logic;           -- write enable
+    IO_sdram_dq  : inout std_logic_vector(31 downto 0); -- 32 bit bidirectional data bus
+    O_sdram_addr : out std_logic_vector(10 downto 0);  -- 11 bit multiplexed address bus
+    O_sdram_ba   : out std_logic_vector(1 downto 0);     -- two banks
+    O_sdram_dqm  : out std_logic_vector(3 downto 0);     -- 32/4
+    -- spare / 2nd D9
+    spare         : inout std_logic_vector(5 downto 0); -- JS1 Joystick D9
     -- MIDI
     midi_rx       : in std_logic;
     midi_tx       : out std_logic;
@@ -98,31 +83,38 @@ entity c64nano_top is
 end;
 
 architecture Behavioral_top of c64nano_top is
-signal spare               : std_logic_vector(5 downto 0) := (others => '1'); -- JS1 Joystick D9
+
+type states is (
+  FSM_RESET,
+  FSM_WAIT_LOCK,
+  FSM_LOCKED,
+  FSM_WAIT4SWITCH,
+  FSM_PAL,
+  FSM_NTSC,
+  FSM_SWITCHED
+);
 
 type unsigned_array_9b is array (natural range <>) of unsigned(8 downto 0);
 type u7_array_t is array (natural range <>) of unsigned(6 downto 0);
 signal dac            : unsigned_array_9b(3 downto 0) := (others => (others => '0'));
+signal state          : states := FSM_RESET;
 signal clk64          : std_logic;
 signal clk_sys        : std_logic;
 signal pll_locked     : std_logic;
+signal pll_locked_hid : std_logic;
+signal clk_pixel_x10  : std_logic;
 signal clk_pixel_x5   : std_logic;
-signal clk64_ntsc     : std_logic;
-signal pll_locked_ntsc: std_logic;
-signal clk_pixel_x5_ntsc  : std_logic;
-signal clk64_pal      : std_logic;
-signal pll_locked_pal : std_logic;
-signal clk_pixel_x5_pal: std_logic;
 signal spi_io_clk     : std_logic;
+signal flash_clk      : std_logic;
 attribute syn_keep : integer;
 attribute syn_keep of clk64             : signal is 1;
 attribute syn_keep of clk_sys           : signal is 1;
 attribute syn_keep of clk_pixel_x5      : signal is 1;
-attribute syn_keep of clk64_pal         : signal is 1;
-attribute syn_keep of clk64_ntsc        : signal is 1;
-attribute syn_keep of clk_pixel_x5_pal  : signal is 1;
-attribute syn_keep of clk_pixel_x5_ntsc : signal is 1;
-attribute syn_keep of spi_io_clk        : signal is 1;
+attribute syn_keep of spi_io_clk    : signal is 1;
+attribute syn_keep of flash_clk     : signal is 1;
+-- custom pins
+signal uart_ext_rx   : std_logic;
+signal uart_ext_tx   : std_logic;
 
 signal audio_data_l  : std_logic_vector(17 downto 0);
 signal audio_data_r  : std_logic_vector(17 downto 0);
@@ -132,7 +124,7 @@ signal c64_data_out : unsigned(7 downto 0);
 signal sdram_data   : unsigned(7 downto 0);
 signal refresh      : std_logic;
 signal ram_ready    : std_logic;
-signal addr         : unsigned(24 downto 0);
+signal addr         : unsigned(22 downto 0);
 signal cs           : std_logic;
 signal we           : std_logic;
 signal din          : unsigned(7 downto 0);
@@ -252,7 +244,6 @@ signal c1541_osd_reset : std_logic;
 signal system_screen  : std_logic_vector(1 downto 0);
 signal system_floppy_wprot : std_logic_vector(1 downto 0);
 signal leds           : std_logic_vector(5 downto 0);
-signal somleds        : std_logic_vector(1 downto 0);
 signal led1541        : std_logic;
 signal reu_cfg        : std_logic_vector(1 downto 0); 
 signal dma_req        : std_logic;
@@ -263,7 +254,7 @@ signal dma_din        : unsigned(7 downto 0);
 signal dma_we         : std_logic;
 signal ext_cycle      : std_logic;
 signal ext_cycle_d    : std_logic;
-signal reu_ram_addr   : unsigned(24 downto 0);
+signal reu_ram_addr   : unsigned(22 downto 0);
 signal reu_ram_dout   : unsigned(7 downto 0);
 signal reu_ram_we     : std_logic;
 signal reu_irq        : std_logic;
@@ -276,7 +267,7 @@ signal reu_ram_ce     : std_logic;
 signal cart_ce        : std_logic;
 signal cart_we        : std_logic;
 signal cart_data      : unsigned(7 downto 0);
-signal cart_addr      : unsigned(24 downto 0);
+signal cart_addr      : unsigned(22 downto 0);
 signal exrom          : std_logic;
 signal game           : std_logic;
 signal romL           : std_logic;
@@ -309,10 +300,15 @@ signal midi_nmi_n      : std_logic := '1';
 signal st_midi         : std_logic_vector(2 downto 0);
 signal phi             : std_logic;
 signal system_pause    : std_logic;
+signal IDSEL           : std_logic_vector(5 downto 0) := "111101";
+signal FBDSEL          : std_logic_vector(5 downto 0) := "011101";
+signal ntscModeD       : std_logic;
+signal ntscModeD1      : std_logic;
+signal ntscModeD2      : std_logic;
 signal audio_div       : unsigned(8 downto 0);
-signal dcsclksel       : std_logic_vector(3 downto 0);
+signal flash_lock      : std_logic;
 signal ioctl_download  : std_logic := '0';
-signal ioctl_load_addr : unsigned(24 downto 0);
+signal ioctl_load_addr : unsigned(22 downto 0);
 signal ioctl_req_wr    : std_logic := '0';
 signal cart_id         : unsigned(7 downto 0);
 signal cart_bank_num   : unsigned(7 downto 0);
@@ -325,14 +321,14 @@ signal cart_blk_len    : unsigned(15 downto 0);
 signal io_cycle        : std_logic;
 signal io_cycle_ce     : std_logic;
 signal io_cycle_we     : std_logic;
-signal io_cycle_addr   : unsigned(24 downto 0);
+signal io_cycle_addr   : unsigned(22 downto 0);
 signal io_cycle_data   : unsigned(7 downto 0);
 signal load_crt        : std_logic := '0';
 signal old_download    : std_logic := '0';
 signal io_cycleD       : std_logic;
 signal ioctl_wr        : std_logic;
 signal ioctl_data      : unsigned(7 downto 0);
-signal ioctl_addr      : unsigned(24 downto 0);
+signal ioctl_addr      : unsigned(22 downto 0);
 signal cid             : unsigned(7 downto 0);
 -- crt loader
 signal erase_to        : unsigned(4 downto 0);
@@ -348,7 +344,7 @@ signal load_prg        : std_logic := '0';
 signal load_rom        : std_logic := '0';
 signal load_reu        : std_logic := '0';
 signal load_tap        : std_logic := '0';
-signal tap_play_addr   : unsigned(24 downto 0);
+signal tap_play_addr   : unsigned(22 downto 0);
 signal reset_wait      : std_logic := '0';
 signal old_download_r  : std_logic;
 signal old_upload      : std_logic := '0';
@@ -370,7 +366,7 @@ signal cass_snd       : std_logic;
 signal tap_download   : std_logic;
 signal tap_reset      : std_logic;
 signal tap_loaded     : std_logic;
-signal tap_last_addr  : unsigned(24 downto 0);
+signal tap_last_addr  : unsigned(22 downto 0);
 signal tap_wrreq      : std_logic_vector(1 downto 0);
 signal tap_wrfull     : std_logic;
 signal tap_start      : std_logic;
@@ -425,7 +421,11 @@ signal pd1,pd2,pd3,pd4 : std_logic_vector(7 downto 0);
 signal detach_reset_d  : std_logic;
 signal detach_reset    : std_logic;
 signal disk_pause      : std_logic;
+signal pll_locked_i    : std_logic;
+signal pll_locked_d    : std_logic;
+signal pll_locked_d1   : std_logic;
 signal flash_ready      : std_logic;
+signal pll_locked_comb  : std_logic;
 signal rts_cts          : std_logic;
 signal dtr              : std_logic;
 signal serial_status    : std_logic_vector(31 downto 0);
@@ -441,9 +441,6 @@ signal mod_key          : std_logic;
 signal kbd_strobe       : std_logic;
 signal spi_intn         : std_logic;
 signal uart_tx_i        : std_logic;
-signal boot_button_detected : std_logic := '1';
-signal key_user_n       : std_logic;
-signal key_reset_n      : std_logic;
 signal palette          : unsigned(2 downto 0);
 signal reu_wrap         : std_logic;
 signal c64_data_in      : unsigned(7 downto 0);
@@ -483,7 +480,7 @@ signal ext_old          : std_logic := '0';
 signal ext_crt          : std_logic := '0';
 signal ezfl_save_en     : std_logic := '0';
 attribute syn_preserve  : integer;
-attribute syn_preserve of boot_button_detected : signal is 1;
+attribute syn_preserve of spi_ext : signal is 1;
 signal tap_io_cycle     : std_logic := '0';
 signal dac_l, dac_r     : unsigned(8 downto 0);
 signal alo, aro         : signed(15 downto 0);
@@ -492,16 +489,18 @@ signal system_digimax   : unsigned(1 downto 0) := (others => '0');
 signal ioe_we, iof_we   : std_logic;
 signal old_ioe, old_iof : std_logic;
 
-constant RAM_ADDR      : unsigned(24 downto 0) := 25x"0000000";-- System RAM: 64k
-constant CRM_ADDR      : unsigned(24 downto 0) := 25x"0010000";-- Cartridge RAM: 64k
-constant CRT_ADDR      : unsigned(24 downto 0) := 25x"0200000";-- Cartridge: 2M
-constant TAP_ADDR      : unsigned(24 downto 0) := 25x"0400000";-- Tape buffer
-constant GEO_ADDR      : unsigned(24 downto 0) := 25x"0C00000";-- GeoRAM: 4M
-constant REU_ADDR      : unsigned(24 downto 0) := 25x"1000000";-- REU: 16M
+constant RAM_ADDR      : unsigned(22 downto 0) := 23x"0000000";-- System RAM: 64k
+constant CRM_ADDR      : unsigned(22 downto 0) := 23x"0010000";-- Cartridge RAM: 64k
+constant CRT_ADDR      : unsigned(22 downto 0) := 23x"0200000";-- Cartridge: 2M
+constant TAP_ADDR      : unsigned(22 downto 0) := 23x"0400000";-- Tape buffer
+constant GEO_ADDR      : unsigned(22 downto 0) := 23x"0400000";-- GeoRAM: 4M
+constant REU_ADDR      : unsigned(22 downto 0) := 23x"0600000";-- REU: 2M !!!
+-- TAP, REU and GEORAM and overlap with TAP load due to TN20k DRAM constrains (mutual exclusive)
 
 component CLKDIV
     generic (
-        DIV_MODE : STRING := "2"
+        DIV_MODE : STRING := "2";
+        GSREN: in string := "false"
     );
     port (
         CLKOUT: out std_logic;
@@ -511,44 +510,60 @@ component CLKDIV
     );
 end component;
 
-component DCS
+component rPLL
     generic (
-        DCS_MODE : STRING := "RISING"
+        FCLKIN: in string := "100.0";
+        DEVICE: in string := "GW2A-18";
+        DYN_IDIV_SEL: in string := "false";
+        IDIV_SEL: in integer := 0;
+        DYN_FBDIV_SEL: in string := "false";
+        FBDIV_SEL: in integer := 0;
+        DYN_ODIV_SEL: in string := "false";
+        ODIV_SEL: in integer := 8;
+        PSDA_SEL: in string := "0000";
+        DYN_DA_EN: in string := "false";
+        DUTYDA_SEL: in string := "1000";
+        CLKOUT_FT_DIR: in bit := '1';
+        CLKOUTP_FT_DIR: in bit := '1';
+        CLKOUT_DLY_STEP: in integer := 0;
+        CLKOUTP_DLY_STEP: in integer := 0;
+        CLKOUTD3_SRC: in string := "CLKOUT";
+        CLKFB_SEL: in string := "internal";
+        CLKOUT_BYPASS: in string := "false";
+        CLKOUTP_BYPASS: in string := "false";
+        CLKOUTD_BYPASS: in string := "false";
+        CLKOUTD_SRC: in string := "CLKOUT";
+        DYN_SDIV_SEL: in integer := 2
     );
     port (
         CLKOUT: out std_logic;
-        CLKSEL: in std_logic_vector(3 downto 0);
-        CLKIN0: in std_logic;
-        CLKIN1: in std_logic;
-        CLKIN2: in std_logic;
-        CLKIN3: in std_logic;
-        SELFORCE: in std_logic
+        LOCK: out std_logic;
+        CLKOUTP: out std_logic;
+        CLKOUTD: out std_logic;
+        CLKOUTD3: out std_logic;
+        RESET: in std_logic;
+        RESET_P: in std_logic;
+        CLKIN: in std_logic;
+        CLKFB: in std_logic;
+        FBDSEL: in std_logic_vector(5 downto 0);
+        IDSEL: in std_logic_vector(5 downto 0);
+        ODSEL: in std_logic_vector(5 downto 0);
+        PSDA: in std_logic_vector(3 downto 0);
+        DUTYDA: in std_logic_vector(3 downto 0);
+        FDLY: in std_logic_vector(3 downto 0)
     );
 end component;
 
 begin
 
-  key_reset_n <= key_n(0);
-  key_user_n <= key_n(1);
+  bl616_mon_tx <= uart_rx; -- BL616 console debug output
 
-  process (pll_locked_pal)
-  begin
-    if rising_edge(pll_locked_pal) then
-      boot_button_detected <= '1' when key_user_n = '0' or key_reset_n = '0' else '0';
-    end if;
-  end process;
-
--- enable JTAG if any button has been pressed during boot and also once
--- the external FPGA Companion has been seen
-  jtagseln <= '1' when (not pll_locked_pal or boot_button_detected or spi_ext or bl616_jtagsel) = '0' else '0';
-  twimux <= "100"; -- connect BL616 TWI4 PLL1
-  -- BL616 console to hw pins for external USB-UART adapter
-  bl616_mon_tx <= uart_rx;
-
+-- by default the internal SPI is being used. Once there is
+-- a select from the external spi (M0S Dock) , then the connection is being switched
   process (clk)
   begin
     if rising_edge(clk) then
-      if pll_locked_pal = '0' then
+      if flash_lock = '0' then
         spi_ext <= '0';
       elsif pmod_companion_ss = '0' then
         spi_ext <= '1';
@@ -560,12 +575,9 @@ begin
   spi_io_ss <= pmod_companion_ss when spi_ext = '1' else spi_csn;
   spi_io_clk <= pmod_companion_clk when spi_ext = '1' else spi_sclk;
   spi_dir <= spi_io_dout;
-  spi_irqn <= uart_tx_i when spi_ext = '1' else spi_intn;
+  spi_irqn <= spi_intn;
   pmod_companion_dout <= spi_io_dout;
   pmod_companion_intn <= spi_intn;
-
-  somleds(0) <= not jtagseln;
-  somleds(1) <= bl616_jtagsel;
 
   ext_iec_clk  <= '1' when ext_iec_en = "00" else  -- USER_IN[2]
                     io(0) when ext_iec_en = "01" else
@@ -610,13 +622,13 @@ begin
   drive_iec_clk  <= drive_iec_clk_o  and ext_iec_clk;
   drive_iec_data <= drive_iec_data_o and ext_iec_data;
 
-    led_ws2812: entity work.ws2812
-    port map
-    (
-     clk    => clk_sys,
-     color  => ws2812_color,
-     data   => ws2812
-    );
+  led_ws2812: entity work.ws2812
+  port map
+  (
+    clk    => clk_sys,
+    color  => ws2812_color,
+    data   => ws2812
+  );
 
 process(clk_sys)
 variable reset_cnt : integer range 0 to 2147483647;
@@ -652,9 +664,9 @@ end process;
 disk_reset <= '1' when not flash_ready or disk_pause or c1541_osd_reset or not reset_n or por or c1541_reset else '0';
 
 -- rising edge sd_change triggers detection of new disk
-process(clk_sys, pll_locked)
+process(clk_sys, pll_locked_hid)
   begin
-  if pll_locked = '0' then
+  if pll_locked_hid = '0' then
     sd_change <= '0';
     disk_g64 <= '0';
     sd_img_size_d <= (others => '0');
@@ -763,7 +775,7 @@ generic map (
     IMAGE_FIFO_BITS => 9
   )
     port map (
-    rstn            => pll_locked,
+    rstn            => pll_locked_hid,
     clk             => clk_sys,
   
     -- SD card signals
@@ -813,7 +825,9 @@ audio_div  <= to_unsigned(342,9) when ntscMode = '1' else to_unsigned(327,9);
 
 cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_finish;
 
+yes_digimax: if DIGIMAX /= 0 generate
 process(clk_sys)
+    variable dac_index : integer range 0 to 3;
 begin
     if rising_edge(clk_sys) then
         old_ioe <= IOE;
@@ -821,14 +835,7 @@ begin
 
         old_iof <= IOF;
         iof_we <= (not old_iof) and IOF and ram_we;
-    end if;
-end process;
 
-process(clk_sys)
-    variable dac_index : integer range 0 to 3;
-    variable alm, arm : signed(16 downto 0);
-begin
-    if rising_edge(clk_sys) then
         if system_digimax = "00" or reset_n = '0' then
             dac <= (others => (others => '0'));
             sact <= (others => '0');
@@ -852,7 +859,19 @@ begin
             dac_l <= unsigned(dac(1)) + unsigned(dac(2));
             dac_r <= unsigned(dac(0)) + unsigned(dac(3));
         end if;
+    end if;
+end process;
 
+else generate
+  dac_l <= (others => '0');
+  dac_r <= (others => '0');
+end generate yes_digimax;
+
+process(clk_sys)
+    variable dac_index : integer range 0 to 3;
+    variable alm, arm : signed(16 downto 0);
+begin
+    if rising_edge(clk_sys) then
         alm := signed(audio_data_l(17) & std_logic_vector(audio_data_l(17 downto 2))) 
                + signed(std_logic_vector'("00") & std_logic_vector(dac_l) & std_logic_vector'("000000")) 
                + signed((0 => cass_snd) & std_logic_vector'("000000000"));
@@ -879,11 +898,7 @@ begin
     end if;
 end process;
 
-video_inst: entity work.video
-generic map
-(
-  STEREO  => true
-)
+video_inst: entity work.video 
 port map(
       pll_lock     => pll_locked, 
       clk          => clk_sys,
@@ -915,21 +930,7 @@ port map(
       tmds_clk_n => tmds_clk_n,
       tmds_clk_p => tmds_clk_p,
       tmds_d_n   => tmds_d_n,
-      tmds_d_p   => tmds_d_p,
-
-      lcd_clk  => lcd_clk,
-      lcd_hs_n => lcd_hs,
-      lcd_vs_n => lcd_vs,
-      lcd_de   => lcd_de,
-      lcd_r(7 downto 2) => lcd_r,
-      lcd_g(7 downto 2) => lcd_g,
-      lcd_b(7 downto 2) => lcd_b,
-      lcd_bl   => lcd_bl,
-
-      hp_bck   => hp_bck,
-      hp_ws    => hp_ws,
-      hp_din   => hp_din,
-      pa_en    => pa_en
+      tmds_d_p   => tmds_d_p
       );
 
 addr <= cart_addr
@@ -964,10 +965,11 @@ din <= cart_wrdata
            when ext_cycle = '1' else
        cart_wrdata;
 
-dram_inst: entity work.sdram
-port map(
+dram_inst: entity work.sdram8
+   port map(
     -- SDRAM side interface
     sd_clk    => O_sdram_clk,   -- sd clock
+    sd_cke    => O_sdram_cke,   -- clock enable
     sd_data   => IO_sdram_dq,   -- 32 bit bidirectional data bus
     sd_addr   => O_sdram_addr,  -- 11 bit multiplexed address bus
     sd_dqm    => O_sdram_dqm,   -- two byte masks
@@ -978,7 +980,8 @@ port map(
     sd_cas    => O_sdram_cas_n, -- columns address select
     -- cpu/chipset interface
     clk       => clk64,         -- sdram is accessed at 64MHz
-    init      => not pll_locked,-- init signal after FPGA config to initialize RAM
+    reset_n   => pll_locked,-- init signal after FPGA config to initialize RAM
+    ready     => ram_ready,     -- ram is ready and has been initialized
     refresh   => refresh,          -- chipset requests a refresh cycle
     din       => din,           -- data input from chipset/cpu
     dout      => sdram_data,
@@ -987,58 +990,123 @@ port map(
     we        => we             -- cpu/chipset requests write
   );
 
-ram_ready <= '1';
-
 -- Clock tree and all frequencies in Hz
--- TN 20k
--- pal                   / ntsc
--- pll         315000000 / 329400000
--- serdes      157500000 / 164700000
--- dram         63000000 /  65880000
--- core /pixel  31500000 /  32940000
+-- pll         31500000 / 329400000
+-- serdes      15750000 / 164700000
+-- dram        63000000 / 65880000
+-- core /pixel 31500000 / 32940000
+-- IDIV_SEL              2 / 4
+-- FBDIV_SEL            34 / 60
 
--- TP 25k /M 138k
--- pal                   / ntsc
--- pll         315000000 / 325000000
--- serdes      157500000 / 162500000
--- dram         63000000 /  65000000
--- core /pixel  31500000 /  32500000
+fsm_inst: process (flash_clk, flash_lock)
+begin
+  if flash_lock = '0' then
+    pll_locked_hid <= '0';
+    state <= FSM_RESET;
+    IDSEL <= "111101"; -- PAL
+    FBDSEL <= "011101";
+  elsif rising_edge(flash_clk) then
+    ntscModeD <= ntscMode;
+    ntscModeD1 <= ntscModeD;
+    ntscModeD2 <= ntscModeD1;
+    pll_locked_d <= pll_locked;
+    pll_locked_d1 <= pll_locked_d;
 
-clk_switch_2: DCS
-	generic map (
-		DCS_MODE => "RISING"
-	)
-	port map (
-		CLKIN0   => clk64_pal,  -- main pll 1
-		CLKIN1   => clk64_ntsc, -- main pll 2
-		CLKIN2   => '0',
-		CLKIN3   => '0',
-		CLKSEL   => dcsclksel,
-		SELFORCE => '0', -- glitch less mode
-		CLKOUT   => clk64 -- switched clock
-	);
-  
-pll_locked <= pll_locked_pal and pll_locked_ntsc;
-dcsclksel <= "0001" when ntscMode = '0' else "0010";
+    case state is
+        when FSM_RESET => 
+          pll_locked_hid <= '0';
+          IDSEL <= "111101"; -- PAL
+          FBDSEL <= "011101";
+          state <= FSM_WAIT_LOCK;
+        when FSM_WAIT_LOCK =>
+          if pll_locked_d1 = '1' and pll_locked_d = '1' then
+              state <= FSM_LOCKED;
+          end if;
+        when FSM_LOCKED =>
+          pll_locked_hid <= '1';
+          state <= FSM_WAIT4SWITCH;
+        when FSM_WAIT4SWITCH =>
+          if ntscModeD2 = '0' and ntscModeD1 = '1' then -- rising edge  NTSC
+              state <= FSM_NTSC;
+          elsif ntscModeD2 = '1' and ntscModeD1 = '0' then -- falling edge PAL
+              state <= FSM_PAL;
+          end if;
+        when FSM_NTSC =>
+            IDSEL <= "111011"; -- NTSC
+            FBDSEL <= "000011";
+            state <= FSM_SWITCHED;
+        when FSM_PAL =>
+            IDSEL <= "111101"; -- PAL
+            FBDSEL <= "011101";
+            state <= FSM_SWITCHED;
+        when FSM_SWITCHED =>
+            state <= FSM_WAIT_LOCK;
+        when others =>
+              null;
+			end case;
+	end if;
+end process;
 
-clk_switch_1: DCS
-generic map (
-    DCS_MODE => "RISING"
+
+mainclock: rPLL
+        generic map (
+            FCLKIN => "27",
+            DEVICE => "GW2AR-18C",
+            DYN_IDIV_SEL => "true",
+            IDIV_SEL => 2,
+            DYN_FBDIV_SEL => "true",
+            FBDIV_SEL => 34,
+            DYN_ODIV_SEL => "false",
+            ODIV_SEL => 2,
+            PSDA_SEL => "0110",   
+            DYN_DA_EN => "false", 
+            DUTYDA_SEL => "1000",
+            CLKOUT_FT_DIR => '1',
+            CLKOUTP_FT_DIR => '1',
+            CLKOUT_DLY_STEP => 0,
+            CLKOUTP_DLY_STEP => 0,
+            CLKFB_SEL => "internal",
+            CLKOUT_BYPASS => "false",
+            CLKOUTP_BYPASS => "false",
+            CLKOUTD_BYPASS => "false",
+            DYN_SDIV_SEL => 2,
+            CLKOUTD_SRC => "CLKOUT",
+            CLKOUTD3_SRC => "CLKOUT"
+        )
+        port map (
+            CLKOUT   => clk_pixel_x10,
+            LOCK     => pll_locked,
+            CLKOUTP  => open,
+            CLKOUTD  => clk_pixel_x5,
+            CLKOUTD3 => open,
+            RESET    => '0',
+            RESET_P  => '0',
+            CLKIN    => clk,
+            CLKFB    => '0',
+            FBDSEL   => FBDSEL,
+            IDSEL    => IDSEL,
+            ODSEL    => (others => '0'),
+            PSDA     => (others => '0'),
+            DUTYDA   => (others => '0'),
+            FDLY     => (others => '1')
+        );
+
+div1_inst: CLKDIV
+generic map(
+    DIV_MODE => "5",
+    GSREN    => "false"
 )
-port map (
-
-    CLKIN0 => clk_pixel_x5_pal,
-    CLKIN1 => clk_pixel_x5_ntsc,
-    CLKIN2 => '0',
-    CLKIN3 => '0',
-    SELFORCE => '1',
-    CLKOUT => clk_pixel_x5,
-    CLKSEL => dcsclksel
+port map(
+    CLKOUT => clk64,
+    HCLKIN => clk_pixel_x10,
+    RESETN => pll_locked,
+    CALIB  => '0'
 );
 
-div_inst: CLKDIV
+div2_inst: CLKDIV
 generic map(
-  DIV_MODE => "2"
+  DIV_MODE => "2",
+  GSREN    => "false"
 )
 port map(
     CLKOUT => clk_sys,
@@ -1047,37 +1115,26 @@ port map(
     CALIB  => '0'
 );
 
-mainclock_pal: entity work.Gowin_PLL_138k_pal
-port map (
-    clkin => clk,
-    init_clk => clk,
-    clkout0 => open,
-    clkout1 => clk_pixel_x5_pal,
-    clkout2 => clk64_pal,
-    clkout3 => mspi_clk, -- 64Mhz 180 deg phase
-    lock => pll_locked_pal
-);
+flashclock: entity work.Gowin_rPLL_flash
+    port map (
+        clkout  => flash_clk,
+        lock    => flash_lock,
+        clkoutp => mspi_clk,
+        clkoutd => open, -- 32Mhz
+        clkin   => clk
+    );
 
-mainclock_ntsc: entity work.Gowin_PLL_138k_ntsc
-port map (
-    clkin => clk,
-    init_clk => clk,
-    clkout0 => open,
-    clkout1 => clk_pixel_x5_ntsc,
-    clkout2 => clk64_ntsc,
-    lock => pll_locked_ntsc
-);
-
-leds_n(1 downto 0) <=  not leds(1 downto 0);
-somleds_n <=  not somleds;
+pll_locked_comb <= pll_locked_hid and flash_lock;
+leds_n <=  not leds;
 leds(0) <= led1541;
 leds(1) <= ioctl_download or ioctl_upload;
+leds(5 downto 2) <= (others => '0');
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
 -- 3rd button of GS controller are triggerd also by extra buttons mapped Joysticks
-joyDigital0 <= (others => '0') when (ext_iec_en = "01") or (osd_status = '1') else not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
-joyDigital1 <= (others => '0') when (ext_iec_en = "10") or (osd_status = '1') else not('1' & spare(5) & spare(0) & spare(3) & spare(4) & spare(1) & spare(2));
+joyDigital0 <= 7x"00" when (ext_iec_en = "01") or (osd_status = '1') else not('1' & io(5) & io(0) & io(3) & io(4) & io(1) & io(2));
+joyDigital1 <= 7x"00" when (ext_iec_en = "10") or (osd_status = '1') else not('1' & spare(5) & spare(0) & spare(3) & spare(4) & spare(1) & spare(2));
 joyUsb1     <= (joystick1(6) or extra_button1(2)) & joystick1(5 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
 joyUsb2     <= (joystick2(6) or extra_button2(2)) & joystick2(5 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
 joyNumpad   <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);
@@ -1193,7 +1250,7 @@ end process;
 mcu_spi_inst: entity work.mcu_spi 
 port map (
   clk            => clk_sys,
-  reset          => not pll_locked,
+  reset          => not pll_locked_hid,
   -- SPI interface to BL616 MCU
   spi_io_ss      => spi_io_ss,      -- SPI CSn
   spi_io_clk     => spi_io_clk,     -- SPI SCLK
@@ -1217,7 +1274,7 @@ hid_inst: entity work.hid
  port map 
  (
   clk             => clk_sys,
-  reset           => not pll_locked,
+  reset           => not pll_locked_hid,
   -- interface to receive user data from MCU (mouse, kbd, ...)
   data_in_strobe  => mcu_hid_strobe,
   data_in_start   => mcu_start,
@@ -1252,7 +1309,7 @@ hid_inst: entity work.hid
  port map 
  (
   clk                 => clk_sys,
-  reset               => not pll_locked,
+  reset               => not pll_locked_hid,
 --
   data_in_strobe      => mcu_sys_strobe,
   data_in_start       => mcu_start,
@@ -1313,10 +1370,12 @@ hid_inst: entity work.hid
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not key_user_n & not key_reset_n), -- S0 and S1 buttons
+  buttons             => unsigned'(user & reset), -- S2 and S1 buttons
   leds                => open,
   color               => ws2812_color
 );
+
+ext_drive_interface <= '1' when ext_iec_en /= "00" else '0';
 
 process(clk_sys)
 variable toX:	integer := 0;
@@ -1487,9 +1546,10 @@ end process;
 reu_oe  <= '1' when IOF = '1' and reu_cfg /= "00" else '0';
 reu_ram_ce <= not ext_cycle_d and ext_cycle and dma_req;
 
+yes_reu: if REU /= 0 generate
 reu_inst: entity work.reu
 generic map(
-  REU_ADDR => REU_ADDR
+  REU_ADDR => unsigned'("00" & REU_ADDR)
 )
 port map(
     clk       => clk_sys,
@@ -1505,7 +1565,7 @@ port map(
     dma_we    => dma_we,
   
     ram_cycle => ext_cycle,
-    ram_addr  => reu_ram_addr,
+    ram_addr(22 downto 0) => reu_ram_addr,
     ram_dout  => reu_ram_dout,
     ram_din   => sdram_data,
     ram_we    => reu_ram_we,
@@ -1518,6 +1578,17 @@ port map(
     
     irq       => reu_irq
   ); 
+else generate
+  dma_req <= '0';
+  dma_addr <= (others => '0');
+  dma_dout <= (others => '1');
+  dma_we <= '0';
+  reu_ram_addr <= (others => '0');
+  reu_ram_dout <= (others => '1');
+  reu_ram_we   <= '0';
+  reu_dout  <= (others => '0');
+  reu_irq   <= '0';
+end generate yes_reu;
 
 -- c1541 ROM's SPI Flash
 -- TN20k  Winbond 25Q64JVIQ
@@ -1525,14 +1596,14 @@ port map(
 -- TM138k Winbond 25Q128BVEA
 -- TM60k  Winbond 25Q64JVIQ
 -- phase shift 135° TN, TP and 270° TM
--- offset in spi flash TN20K, TP25K $200000, TM138K $A00000, TM60k $700000
+-- offset in spi flash TN20K, TP25K $200000, TM138K $A00000
 flash_inst: entity work.flash 
 port map(
-    clk       => clk64_pal,
-    resetn    => pll_locked_pal and jtagseln,
+    clk       => flash_clk,
+    resetn    => flash_lock,
     ready     => flash_ready,
     busy      => open,
-    address   => (X"7" & "000" & dos_sel & c1541rom_addr),
+    address   => (X"2" & "000" & dos_sel & c1541rom_addr),
     cs        => c1541rom_cs,
     dout      => c1541rom_data,
     mspi_cs   => mspi_cs,
@@ -1546,10 +1617,10 @@ cid <= cart_id when cart_attached = '1' else x"63" when georam ='1' else x"FF";
 
 cartridge_inst: entity work.cartridge
 generic map(
-  RAM_ADDR => RAM_ADDR,
-  CRM_ADDR => CRM_ADDR,
-  CRT_ADDR => CRT_ADDR,
-  GEO_ADDR => GEO_ADDR
+  RAM_ADDR => unsigned'(RAM_ADDR),
+  CRM_ADDR => unsigned'(CRM_ADDR),
+  CRT_ADDR => unsigned'(CRT_ADDR),
+  GEO_ADDR => unsigned'(GEO_ADDR)
 )
 port map(
     clk32           => clk_sys,
@@ -1585,7 +1656,7 @@ port map(
     mem_write_out => cart_we,
     mem_in      => sdram_data,
     mem_out     => cart_wrdata,
-    mem_addr    => cart_addr,
+    mem_addr(22 downto 0) => cart_addr,
     mem_req     => cart_mem_req,
     mem_cycle   => io_cycle,
     IO_rom      => io_rom,
@@ -1701,7 +1772,7 @@ port map (
   ioctl_upload_req  => ezfl_save,
   ioctl_upload      => ioctl_upload,
   ioctl_din         => ioctl_din,
-  ioctl_addr        => ioctl_addr,
+  ioctl_addr(22 downto 0) => ioctl_addr,
   ioctl_dout        => ioctl_data,
   ioctl_wr          => ioctl_wr,
   ioctl_rd          => ioctl_rd,
@@ -2089,8 +2160,8 @@ port map (
 -- 10 Userport UART to ext HW pins
 -- 11 6551 UART to ext HW pins 
 -- bl616_jtagsel BL616 USB UART if PMOD MPU in use
-uart_rx_muxed <= bl616_jtagsel when system_uart = "01" else uart_ext_rx when system_uart = "10" else '1';
-uart_ext_tx <= uart_rx when system_uart = "00" else uart_tx_i;
+uart_rx_muxed <= uart_rx when system_uart = "00" else uart_ext_rx when system_uart = "01" else '1';
+--uart_ext_tx <= uart_tx_i;
 
 -- UART_RX synchronizer
 process(clk_sys)
@@ -2212,6 +2283,10 @@ else generate
   tx_6551 <= '1';
   uart_data <= x"FF";
   uart_irq <= '1';
+  serial_status <= (others => '0');
+  serial_tx_available <= (others => '0');
+  serial_tx_data <= (others => '0');
+  serial_rx_available <= (others => '0');
 end generate yes_uart;
 
 end Behavioral_top;

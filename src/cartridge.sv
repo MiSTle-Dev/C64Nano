@@ -195,10 +195,6 @@ always_ff @(posedge clk32) begin
 		rom_kbb <= 0;
 		geo_bank <= 0;
 		ezrom_en <= 0;
-	//	mf_porta <= 8'd0;
-	//	mf_portb <= 8'd0;
-	//	mf_cra2  <= 0;
-	//	mf_crb2  <= 0;
 	end
 	else
 	case(cart_id)
@@ -790,13 +786,13 @@ always_ff @(posedge clk32) begin
 	endcase
 end
 
-logic [19:0] ezrom_addr /* synthesis syn_keep = 1 */;
-logic  [7:0] ezdq_out /* synthesis syn_keep = 1 */;
-logic        ezrom_ce /* synthesis syn_keep = 1 */;
-logic        ezrom_we /* synthesis syn_keep = 1 */;
-logic  [7:0] ezmem_out /* synthesis syn_keep = 1 */;
-logic        ezmem_oe /* synthesis syn_keep = 1 */;
-logic        ezdq_oe /* synthesis syn_keep = 1 */;
+logic [19:0] ezrom_addr;
+logic  [7:0] ezdq_out;
+logic        ezrom_ce;
+logic        ezrom_we;
+logic  [7:0] ezmem_out;
+logic        ezmem_oe;
+logic        ezdq_oe;
 
 ez_rom ez_rom
 (
@@ -818,9 +814,9 @@ ez_rom ez_rom
 	.mem_we(ezrom_we)
 );
 
-logic [24:0] ezmem_addr /* synthesis syn_keep = 1 */;
-logic        ezmem_we /* synthesis syn_keep = 1 */;
-logic [24:0] addr_out /* synthesis syn_keep = 1 */; 
+logic [24:0] ezmem_addr;
+logic        ezmem_we;
+logic [24:0] addr_out; 
 
 assign ezmem_addr = {5'(CRT_ADDR>>20), ezrom_addr[19] ? hibanks[ezrom_addr[18:13]] : lobanks[ezrom_addr[18:13]], ezrom_addr[12:0]};
 assign ezmem_we   = ezrom_we & (romH ? hibanks_map[ezrom_addr[18:13]] : lobanks_map[ezrom_addr[18:13]]);
