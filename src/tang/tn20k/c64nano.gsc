@@ -1,5 +1,6 @@
 
 //INS "yes_c1541.c1541_sd_inst" syn_ramstyle=block_ram
+INS "yes_c1541.c1541_sd_inst/sd" syn_ramstyle=block_ram
 //INS "fpga64_sid_iec_inst/not_dual.sid/chip[0].v1" syn_ramstyle=block_ram
 //INS "fpga64_sid_iec_inst/not_dual.sid/chip[0].v2" syn_ramstyle=block_ram
 //INS "fpga64_sid_iec_inst/not_dual.sid/chip[0].v3" syn_ramstyle=block_ram
