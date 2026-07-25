@@ -56,6 +56,15 @@ Features:
 
 <img src="./.assets/c64_core.png" alt="image" width="80%" height="auto">
 
+## Featureset
+
+| feature        |  TN20k |all other|
+| ------------   |  ----- |-----|
+|REU 512k/2M capacity| ✅ |✅|
+|REU 16MB capacity| ❌    |✅|
+|EasyFlash Save 2 SDcard |  ❌    |✅|
+
+
 ## Installation
 
 The installation of C64 Nano on the Tang Nano 20k board can be done using a Linux PC or a Windows PC
@@ -127,9 +136,6 @@ To **resume** a saved game, load it again via **CRT ROM:** and use the in-game l
 > Some games that support flash writes require the standard C64 Kernal and standard C1541 CBM DOS.
 
 This feature behaves differently than on MiSTer: MiSTer rewrites the CRT image in Linux userspace and creates a different file. Here, the rewrite is done directly by the Mistle C64 core in HDL, and the original CRT file is overwritten.
-
-> [!WARNING]  
-> This feature isn't supported on TN20k ! 
 
 ## BASIC Program Loader (.PRG)
 
