@@ -24,7 +24,7 @@ entity c64nano_top is
     clk         : in std_logic;
 
     key_reset   : in std_logic; -- button low active
-    key_user    : in std_logic; -- button low active
+    key_user_n  : in std_logic; -- button low active
 
     leds        : out std_logic_vector(5 downto 0);
     ws2812      : out std_logic;
@@ -1231,7 +1231,7 @@ hid_inst: entity work.hid
   int_in              => unsigned'(x"0" & sdc_int & '0' & hid_int & '0'),
   int_ack             => int_ack,
 
-  buttons             => unsigned'(not key_user & not key_reset),
+  buttons             => unsigned'(not key_user_n & key_reset),
   leds                => open,
   color               => ws2812_color
 );
