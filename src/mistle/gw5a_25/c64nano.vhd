@@ -16,8 +16,8 @@ entity c64nano_top is
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
    MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
-   U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
-   C1541 : integer := 1  -- 0:no, 1:yes optional 6551 UART
+   U6551 : integer := 1; -- 0:no, 1:yes optional 6551 UART
+   C1541 : integer := 1  -- 0:no, 1:yes c1541 disk drive emulation
    );
   port
   (
@@ -31,12 +31,11 @@ entity c64nano_top is
 
     i_joya      : inout std_logic_vector(5 downto 0);
     i_joyb      : inout std_logic_vector(5 downto 0);
+    -- IEC drive interface and external UART
+    io_ext      : inout std_logic_vector(5 downto 0);
    -- MIDI interface
     midi_rx     : in std_logic;
     midi_tx     : out std_logic;
-   -- external hw pin UART
-    uart_ext_rx : in std_logic;
-    uart_ext_tx : out std_logic;
     -- SPI interface external uC
     pmod_companion_din : in std_logic;
     pmod_companion_dout : out std_logic;
@@ -73,9 +72,6 @@ entity c64nano_top is
 end;
 
 architecture Behavioral_top of c64nano_top is
-
--- unused
-signal ext_drive_interface : std_logic;
 
 type unsigned_array_9b is array (natural range <>) of unsigned(8 downto 0);
 type u7_array_t is array (natural range <>) of unsigned(6 downto 0);
@@ -118,6 +114,9 @@ signal ds           : std_logic_vector(1 downto 0);
 signal c64_iec_clk      : std_logic;
 signal c64_iec_data     : std_logic;
 signal c64_iec_atn      : std_logic;
+signal ext_iec_en       : std_logic_vector(1 downto 0);
+signal ext_iec_clk      : std_logic;
+signal ext_iec_data     : std_logic;
 signal drive_iec_clk    : std_logic;
 signal drive_iec_data   : std_logic;
 signal drive_iec_clk_o  : std_logic;
@@ -501,14 +500,28 @@ begin
   pmod_companion_dout <= spi_io_dout;
   pmod_companion_intn <= spi_intn;
 
--- Joystick 2 / joyb
-  i_joyb(5 downto 0) <= "ZZZZZZ";
+  ext_iec_clk  <= '1' when ext_iec_en = "00" else  -- USER_IN[2]
+                    io_ext(0);
 
--- Joystick 1
-  i_joya(5 downto 0) <= "ZZZZZZ";
+  ext_iec_data <= '1' when ext_iec_en = "00" else  -- USER_IN[4]
+                    io_ext(1);
 
-  drive_iec_clk  <= drive_iec_clk_o;
-  drive_iec_data <= drive_iec_data_o;
+  io_ext(0) <= 'Z' when (c64_iec_clk = '1' and drive_iec_clk_o = '1') or
+              ext_iec_en = "00" else '0'; -- USER_OUT[2]
+
+  io_ext(2) <= 'Z' when ((reset_n = '1' and c1541_osd_reset = '0') or 
+              ext_iec_en = "00") else '0'; -- USER_OUT[3] 
+
+  io_ext(1) <= 'Z' when ((c64_iec_data = '1' and drive_iec_data_o = '1') or 
+              ext_iec_en = "00")
+              else '0'; -- USER_OUT[4]
+
+  io_ext(3) <= 'Z' when (c64_iec_atn = '1' or 
+              ext_iec_en = "00") 
+              else '0';-- USER_OUT[5]
+
+  drive_iec_clk  <= drive_iec_clk_o  and ext_iec_clk;
+  drive_iec_data <= drive_iec_data_o and ext_iec_data;
 
   led_ws2812: entity work.ws2812
   port map
@@ -611,8 +624,8 @@ yes_c1541: if C1541 /= 0 generate
       disk_g64      => disk_g64,
 
       iec_atn_i     => c64_iec_atn,
-      iec_data_i    => c64_iec_data,
-      iec_clk_i     => c64_iec_clk,
+      iec_data_i    => c64_iec_data and ext_iec_data,
+      iec_clk_i     => c64_iec_clk and ext_iec_clk,
 
       iec_data_o    => drive_iec_data_o,
       iec_clk_o     => drive_iec_clk_o,
@@ -1171,7 +1184,7 @@ hid_inst: entity work.hid
   system_detach_reset => detach_reset,
   system_shift_mod    => shift_mod,
   system_palette      => palette,
---  system_ext_iec_en   => ext_iec_en,
+  system_ext_iec_en   => ext_iec_en,
   system_int_iec_drv  => int_iec_drv,
   system_reu_wrap     => reu_wrap,
   system_run_prg      => run_prg,
@@ -1970,13 +1983,13 @@ port map (
 -- 10 Userport UART to ext HW pins
 -- 11 6551 UART to ext HW pins 
 
-uart_ext_tx <= uart_tx_i;
+io_ext(4) <= uart_tx_i;
 
 -- UART_RX synchronizer
 process(clk_sys)
 begin
     if rising_edge(clk_sys) then
-      uart_rxD(0) <= uart_ext_rx;
+      uart_rxD(0) <= io_ext(5);
       uart_rxD(1) <= uart_rxD(0);
       if uart_rxD(0) = uart_rxD(1) then
         uart_rx_filtered <= uart_rxD(1);

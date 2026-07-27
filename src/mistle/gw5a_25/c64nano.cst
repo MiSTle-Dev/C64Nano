@@ -1,7 +1,18 @@
-IO_LOC "uart_ext_rx" 96;
-IO_PORT "uart_ext_rx" PULL_MODE=UP IO_TYPE=LVCMOS33;
-IO_LOC "uart_ext_tx" 97;
-IO_PORT "uart_ext_tx" PULL_MODE=NONE IO_TYPE=LVCMOS33;
+// ext io connector
+// IEC drive 
+// and external UART
+IO_LOC "io_ext[0]" 124;
+IO_PORT "io_ext[0]" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC "io_ext[1]" 125;
+IO_PORT "io_ext[1]" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC "io_ext[2]" 126;
+IO_PORT "io_ext[2]" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC "io_ext[3]" 128;
+IO_PORT "io_ext[3]" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC "io_ext[4]" 97;
+IO_PORT "io_ext[4]" PULL_MODE=UP IO_TYPE=LVCMOS33;
+IO_LOC "io_ext[5]" 96;
+IO_PORT "io_ext[5]" PULL_MODE=UP IO_TYPE=LVCMOS33;
 
 // MIDI
 IO_LOC "midi_rx" 85;
