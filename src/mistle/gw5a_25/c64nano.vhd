@@ -523,6 +523,10 @@ begin
   drive_iec_clk  <= drive_iec_clk_o  and ext_iec_clk;
   drive_iec_data <= drive_iec_data_o and ext_iec_data;
 
+
+  i_joya <= (others => 'Z');
+  i_joyb <= (others => 'Z');
+
   led_ws2812: entity work.ws2812
   port map
   (
