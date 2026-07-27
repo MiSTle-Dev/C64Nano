@@ -100,8 +100,8 @@ always @(posedge clk_sys) begin
 		if(vs_out != vs_in) scanline <= 0;
 
 		// toggle scanlines at begin of every hsync
-		if(hs_out && !hs_sd) scanline <= !scanline;
-
+	        if(hs_out && !hs_sd) scanline <= !scanline;
+	   
 		// if no scanlines or not a scanline
 		if(!scanline || !scanlines) begin
 			r_out <= {r, 2'b00 };
@@ -121,13 +121,35 @@ always @(posedge clk_sys) begin
 					b_out <= {1'b0, b, 1'b0};
 				end
 
+			        // this is the old "75%" mode which is now being replaced
+			        // by the balanced mode
 				3: begin // reduce 75% = 1/4
 					r_out <= {2'b00, r};
 					g_out <= {2'b00, g};
 					b_out <= {2'b00, b};
 				end
 			endcase
-		end
+		end // else: !if(!scanline || !scanlines)
+
+	        // balanced mode a la https://www.buffee.ca/scanlines/
+	        if(scanlines == 2'd3) begin
+//                        if(scanline) 
+//			  {r_out,g_out,b_out} <= { { r[2:0], 3'b111 } & {6{r[3]}},
+//						   { g[2:0], 3'b111 } & {6{g[3]}},
+//						   { b[2:0], 3'b111 } & {6{b[3]}} };         
+//			else
+//			  {r_out,g_out,b_out} <= { { r[2:0], 3'b000 } | {6{r[3]}},
+//						   { g[2:0], 3'b000 } | {6{g[3]}},
+//						   { b[2:0], 3'b000 } | {6{b[3]}} }; 
+                        if(!scanline) 
+			  {r_out,g_out,b_out} <= { { r[2:0], 1'b1 } & {4{r[3]}}, 2'b11,
+						   { g[2:0], 1'b1 } & {4{g[3]}}, 2'b11,
+						   { b[2:0], 1'b1 } & {4{b[3]}}, 2'b11 };         
+			else
+			  {r_out,g_out,b_out} <= { { r[2:0], 1'b0 } | {4{r[3]}}, 2'b00,
+						   { g[2:0], 1'b0 } | {4{g[3]}}, 2'b00,
+						   { b[2:0], 1'b0 } | {4{b[3]}}, 2'b00 }; 
+	        end
 	end
 end
 
