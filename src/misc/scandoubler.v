@@ -133,14 +133,6 @@ always @(posedge clk_sys) begin
 
 	        // balanced mode a la https://www.buffee.ca/scanlines/
 	        if(scanlines == 2'd3) begin
-//                        if(scanline) 
-//			  {r_out,g_out,b_out} <= { { r[2:0], 3'b111 } & {6{r[3]}},
-//						   { g[2:0], 3'b111 } & {6{g[3]}},
-//						   { b[2:0], 3'b111 } & {6{b[3]}} };         
-//			else
-//			  {r_out,g_out,b_out} <= { { r[2:0], 3'b000 } | {6{r[3]}},
-//						   { g[2:0], 3'b000 } | {6{g[3]}},
-//						   { b[2:0], 3'b000 } | {6{b[3]}} }; 
                         if(!scanline) 
 			  {r_out,g_out,b_out} <= { { r[2:0], 1'b1 } & {4{r[3]}}, 2'b11,
 						   { g[2:0], 1'b1 } & {4{g[3]}}, 2'b11,
