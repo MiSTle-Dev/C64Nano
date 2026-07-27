@@ -23,10 +23,10 @@ entity c64nano_top is
   (
     clk         : in std_logic;
 
-    key_reset   : in std_logic; -- button low active
+    key_reset   : in std_logic; -- button high active
     key_user_n  : in std_logic; -- button low active
 
-    leds        : out std_logic_vector(5 downto 0);
+    leds_n      : out std_logic_vector(5 downto 0);
     ws2812      : out std_logic;
 
     i_joya      : inout std_logic_vector(5 downto 0);
@@ -118,9 +118,6 @@ signal ds           : std_logic_vector(1 downto 0);
 signal c64_iec_clk      : std_logic;
 signal c64_iec_data     : std_logic;
 signal c64_iec_atn      : std_logic;
-signal ext_iec_en       : std_logic_vector(1 downto 0);
-signal ext_iec_clk      : std_logic;
-signal ext_iec_data     : std_logic;
 signal drive_iec_clk    : std_logic;
 signal drive_iec_data   : std_logic;
 signal drive_iec_clk_o  : std_logic;
@@ -504,48 +501,14 @@ begin
   pmod_companion_dout <= spi_io_dout;
   pmod_companion_intn <= spi_intn;
 
-  ext_iec_clk  <= '1' when ext_iec_en = "00" else  -- USER_IN[2]
-                    i_joya(0) when ext_iec_en = "01" else
-                    i_joyb(0) when ext_iec_en = "10" else
-                    '0';
-
-  ext_iec_data <= '1' when ext_iec_en = "00" else  -- USER_IN[4]
-                    i_joya(1) when ext_iec_en = "01" else
-                    i_joyb(1) when ext_iec_en = "10" else
-                    '0';
-
 -- Joystick 2 / joyb
-  i_joyb(0) <= 'Z' when ((c64_iec_clk = '1' and drive_iec_clk_o = '1') or (ext_iec_en = "00") or (ext_iec_en = "01"))
-              else '0'; -- USER_OUT[2]
-
-  i_joyb(2) <= 'Z' when ((reset_n = '1' and c1541_osd_reset = '0') or (ext_iec_en = "00") or (ext_iec_en = "01"))
-              else '0'; -- USER_OUT[3] 
-
-  i_joyb(1) <= 'Z' when ((c64_iec_data = '1' and drive_iec_data_o = '1') or (ext_iec_en = "00") or (ext_iec_en = "01"))
-              else '0'; -- USER_OUT[4]
-
-  i_joyb(3) <= 'Z' when (c64_iec_atn = '1') or (ext_iec_en = "00" or (ext_iec_en = "01")) 
-              else '0';-- USER_OUT[5]
-
-  i_joyb(5 downto 4) <= "ZZ";
+  i_joyb(5 downto 0) <= "ZZZZZZ";
 
 -- Joystick 1
-  i_joya(0) <= 'Z' when ((c64_iec_clk = '1' and drive_iec_clk_o = '1') or (ext_iec_en = "00") or (ext_iec_en = "10"))
-              else '0'; -- USER_OUT[2]
+  i_joya(5 downto 0) <= "ZZZZZZ";
 
-  i_joya(2) <= 'Z' when ((reset_n = '1' and c1541_osd_reset = '0') or (ext_iec_en = "00") or (ext_iec_en = "10"))
-              else '0'; -- USER_OUT[3] 
-
-  i_joya(1) <= 'Z' when ((c64_iec_data = '1' and drive_iec_data_o = '1') or (ext_iec_en = "00") or (ext_iec_en = "10"))
-              else '0'; -- USER_OUT[4]
-
-  i_joya(3) <= 'Z' when (c64_iec_atn = '1') or (ext_iec_en = "00" or (ext_iec_en = "10"))
-              else '0';-- USER_OUT[5]
-
-  i_joya(5 downto 4) <= "ZZ";
-
-  drive_iec_clk  <= drive_iec_clk_o  and ext_iec_clk;
-  drive_iec_data <= drive_iec_data_o and ext_iec_data;
+  drive_iec_clk  <= drive_iec_clk_o;
+  drive_iec_data <= drive_iec_data_o;
 
   led_ws2812: entity work.ws2812
   port map
@@ -648,8 +611,8 @@ yes_c1541: if C1541 /= 0 generate
       disk_g64      => disk_g64,
 
       iec_atn_i     => c64_iec_atn,
-      iec_data_i    => c64_iec_data and ext_iec_data,
-      iec_clk_i     => c64_iec_clk and ext_iec_clk,
+      iec_data_i    => c64_iec_data,
+      iec_clk_i     => c64_iec_clk,
 
       iec_data_o    => drive_iec_data_o,
       iec_clk_o     => drive_iec_clk_o,
@@ -987,15 +950,15 @@ port map (
     mdclk => clk
 );
 
-leds(0) <= led1541;
-leds(1) <= ioctl_download or ioctl_upload;
-leds(5 downto 2) <= (others => '0');
+leds_n(0) <= not led1541;
+leds_n(1) <= not (ioctl_download or ioctl_upload);
+leds_n(5 downto 2) <= (others => '1');
 
 --                    6   5  4  3  2  1  0
 --                  TR3 TR2 TR RI LE DN UP digital c64 
 -- 3rd button of GS controller are triggerd also by extra buttons mapped Joysticks
-joyDigital0 <= (others => '0') when (ext_iec_en = "01") or (osd_status = '1') else not('1' & i_joya(5) & i_joya(0) & i_joya(3) & i_joya(4) & i_joya(1) & i_joya(2));
-joyDigital1 <= (others => '0') when (ext_iec_en = "10") or (osd_status = '1') else not('1' & i_joyb(5) & i_joyb(0) & i_joyb(3) & i_joyb(4) & i_joyb(1) & i_joyb(2));
+joyDigital0 <= (others => '0') when (osd_status = '1') else not('1' & i_joya(5) & i_joya(0) & i_joya(3) & i_joya(4) & i_joya(1) & i_joya(2));
+joyDigital1 <= (others => '0') when (osd_status = '1') else not('1' & i_joyb(5) & i_joyb(0) & i_joyb(3) & i_joyb(4) & i_joyb(1) & i_joyb(2));
 joyUsb1     <= (joystick1(6) or extra_button1(2)) & joystick1(5 downto 4) & joystick1(0) & joystick1(1) & joystick1(2) & joystick1(3);
 joyUsb2     <= (joystick2(6) or extra_button2(2)) & joystick2(5 downto 4) & joystick2(0) & joystick2(1) & joystick2(2) & joystick2(3);
 joyNumpad   <= '0' & numpad(5 downto 4) & numpad(0) & numpad(1) & numpad(2) & numpad(3);
@@ -1004,7 +967,7 @@ joyUsb1A    <= "00" & '0' & joystick1(5) & joystick1(4) & "00"; -- Y,X button
 joyUsb2A    <= "00" & '0' & joystick2(5) & joystick2(4) & "00"; -- Y,X button
 
 -- send external DB9 joystick port to µC
-db9_joy <= (others => '0') when ext_iec_en = "01" else not(i_joya(5) & i_joya(0) & i_joya(2) & i_joya(1) & i_joya(4) & i_joya(3));
+db9_joy <= not(i_joya(5) & i_joya(0) & i_joya(2) & i_joya(1) & i_joya(4) & i_joya(3));
 
 process(clk_sys)
 begin
@@ -1208,7 +1171,7 @@ hid_inst: entity work.hid
   system_detach_reset => detach_reset,
   system_shift_mod    => shift_mod,
   system_palette      => palette,
-  system_ext_iec_en   => ext_iec_en,
+--  system_ext_iec_en   => ext_iec_en,
   system_int_iec_drv  => int_iec_drv,
   system_reu_wrap     => reu_wrap,
   system_run_prg      => run_prg,
