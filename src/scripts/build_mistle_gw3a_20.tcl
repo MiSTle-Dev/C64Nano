@@ -1,8 +1,8 @@
-set board "mistle_gw5a_25"
+set board "mistle_gw3a_20"
 set config "c64"
 source scripts/update_xml.tcl
 
-set_device GW5A-LV25LQ144C1/I0 -name GW5A-25A
+set_device GW3A-LV20LQ144C1/I0 -name GW3A-20A
 
 add_file am29f040.sv
 add_file gen_uart.v
@@ -80,7 +80,7 @@ add_file uart6551/uart_6551.v
 add_file misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
-set_option -output_base_name c64_mistle_gw5a_25
+set_option -output_base_name c64_mistle_gw3a_20
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
 set_option -top_module c64nano_top

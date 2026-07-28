@@ -1,5 +1,5 @@
 set board "tang_nano20k"
-set config "amiga"
+set config "c64"
 source scripts/update_xml.tcl
 
 set_device GW2AR-LV18QN88C8/I7 -name GW2AR-18C
