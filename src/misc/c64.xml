@@ -132,7 +132,10 @@
  <listentry label="Off" value="0"/>
  <listentry label="512KB" value="1"/>
  <listentry label="2MB" value="2"/>
+	<!-- 32 MByte SDRAM module needed -->
+	<!--IS tang_primer25k tang_console60k tang_console138k tang_mega138kpro tang_mega60k -->
  <listentry label="16MB" value="3"/>
+	<!--END-->
       </list>
       <list label="REU wrap:" id="4" default="0">
  <listentry label="512KB" value="0"/>

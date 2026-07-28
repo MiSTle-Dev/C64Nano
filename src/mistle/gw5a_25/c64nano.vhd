@@ -352,7 +352,7 @@ signal sid_ver        : std_logic;
 signal sid_mode       : unsigned(2 downto 0);
 signal sid_digifix    : std_logic;
 signal system_tape_sound : std_logic;
-signal uart_rxD         : std_logic_vector(3 downto 0);
+signal uart_rxD       : std_logic_vector(1 downto 0);
 signal uart_rx_filtered : std_logic;
 signal cnt2_i          : std_logic;
 signal cnt2_o          : std_logic;
@@ -500,29 +500,30 @@ begin
   pmod_companion_dout <= spi_io_dout;
   pmod_companion_intn <= spi_intn;
 
+  io_ext <= (others => 'Z');
+
   ext_iec_clk  <= '1' when ext_iec_en = "00" else  -- USER_IN[2]
-                    io_ext(0);
+                    io_ext(2);
 
   ext_iec_data <= '1' when ext_iec_en = "00" else  -- USER_IN[4]
-                    io_ext(1);
+                    io_ext(4);
 
-  io_ext(0) <= 'Z' when (c64_iec_clk = '1' and drive_iec_clk_o = '1') or
+  io_ext(2) <= 'Z' when (c64_iec_clk = '1' and drive_iec_clk_o = '1') or
               ext_iec_en = "00" else '0'; -- USER_OUT[2]
 
-  io_ext(2) <= 'Z' when ((reset_n = '1' and c1541_osd_reset = '0') or 
+  io_ext(3) <= 'Z' when ((reset_n = '1' and c1541_osd_reset = '0') or 
               ext_iec_en = "00") else '0'; -- USER_OUT[3] 
 
-  io_ext(1) <= 'Z' when ((c64_iec_data = '1' and drive_iec_data_o = '1') or 
+  io_ext(4) <= 'Z' when ((c64_iec_data = '1' and drive_iec_data_o = '1') or 
               ext_iec_en = "00")
               else '0'; -- USER_OUT[4]
 
-  io_ext(3) <= 'Z' when (c64_iec_atn = '1' or 
+  io_ext(5) <= 'Z' when (c64_iec_atn = '1' or 
               ext_iec_en = "00") 
               else '0';-- USER_OUT[5]
 
   drive_iec_clk  <= drive_iec_clk_o  and ext_iec_clk;
   drive_iec_data <= drive_iec_data_o and ext_iec_data;
-
 
   i_joya <= (others => 'Z');
   i_joyb <= (others => 'Z');
@@ -551,14 +552,14 @@ variable reset_cnt : integer range 0 to 2147483647;
 end process;
 
 -- delay disk start to keep loader at power-up intact
-process(clk_sys, por)
+process(clk_sys)
   variable pause_cnt : integer range 0 to 2147483647;
   begin
-  if por = '1' then
-    disk_pause <= '1';
-    pause_cnt := 34000000;
-  elsif rising_edge(clk_sys) then
-    if pause_cnt /= 0 then
+  if rising_edge(clk_sys) then
+    if por = '1' then
+      disk_pause <= '1';
+      pause_cnt := 34000000;
+    elsif pause_cnt /= 0 then
       pause_cnt := pause_cnt - 1;
     elsif pause_cnt = 0 then 
       disk_pause <= '0';
@@ -569,44 +570,46 @@ end process;
 disk_reset <= '1' when not flash_ready or disk_pause or c1541_osd_reset or not reset_n or por or c1541_reset else '0';
 
 -- rising edge sd_change triggers detection of new disk
-process(clk_sys, pll_locked)
+process(clk_sys)
   begin
-  if pll_locked = '0' then
-    sd_change <= '0';
-    disk_g64 <= '0';
-    sd_img_size_d <= (others => '0');
-    disk_chg_trg_d <= '0';
-    img_present <= '0';
-  elsif rising_edge(clk_sys) then
-      sd_img_mounted_d <= sd_img_mounted(0);
-      disk_chg_trg_d <= disk_chg_trg;
-      disk_g64_d <= disk_g64;
-
-      if sd_img_mounted(0) = '1' then
-        img_present <= '0' when sd_img_size = x"00000000" else '1';
-      end if;
-
-      if sd_img_mounted_d = '0' and sd_img_mounted(0) = '1' then
-        sd_img_size_d <= sd_img_size;
-      end if;
-
-      if (sd_img_mounted(0) /= sd_img_mounted_d) or
-         (disk_chg_trg_d = '0' and disk_chg_trg = '1') then
-          sd_change  <= '1';
-          else
-          sd_change  <= '0';
-      end if;
-
-      if unsigned(sd_img_size_d) >= to_unsigned(333744, sd_img_size_d'length) then  -- g64 disk selected
-        disk_g64 <= '1';
-      else
+  if rising_edge(clk_sys) then
+      if pll_locked = '0' then
+        sd_change <= '0';
         disk_g64 <= '0';
-      end if;
-
-      if (disk_g64 /= disk_g64_d) then
-        c1541_reset  <= '1'; -- reset needed after G64 change
+        sd_img_size_d <= (others => '0');
+        disk_chg_trg_d <= '0';
+        img_present <= '0';
       else
-        c1541_reset  <= '0';
+        sd_img_mounted_d <= sd_img_mounted(0);
+        disk_chg_trg_d <= disk_chg_trg;
+        disk_g64_d <= disk_g64;
+
+        if sd_img_mounted(0) = '1' then
+          img_present <= '0' when sd_img_size = x"00000000" else '1';
+        end if;
+
+        if sd_img_mounted_d = '0' and sd_img_mounted(0) = '1' then
+          sd_img_size_d <= sd_img_size;
+        end if;
+
+        if (sd_img_mounted(0) /= sd_img_mounted_d) or
+          (disk_chg_trg_d = '0' and disk_chg_trg = '1') then
+            sd_change  <= '1';
+            else
+            sd_change  <= '0';
+        end if;
+
+        if unsigned(sd_img_size_d) >= to_unsigned(333744, sd_img_size_d'length) then  -- g64 disk selected
+          disk_g64 <= '1';
+        else
+          disk_g64 <= '0';
+        end if;
+
+        if (disk_g64 /= disk_g64_d) then
+          c1541_reset  <= '1'; -- reset needed after G64 change
+        else
+          c1541_reset  <= '0';
+        end if;
       end if;
   end if;
 end process;
@@ -1987,13 +1990,13 @@ port map (
 -- 10 Userport UART to ext HW pins
 -- 11 6551 UART to ext HW pins 
 
-io_ext(4) <= uart_tx_i;
+io_ext(1) <= uart_tx_i;  -- USER_OUT[1]
 
 -- UART_RX synchronizer
 process(clk_sys)
 begin
     if rising_edge(clk_sys) then
-      uart_rxD(0) <= io_ext(5);
+      uart_rxD(0) <= io_ext(0); -- USER_IN[0]
       uart_rxD(1) <= uart_rxD(0);
       if uart_rxD(0) = uart_rxD(1) then
         uart_rx_filtered <= uart_rxD(1);

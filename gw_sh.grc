@@ -1,11 +1,11 @@
 # NOTE lines
 regexp=^NOTE.*
-colour=green
+colour=bold green
 -
 # WARNing lines
 regexp=^WARN.*
-colour=yellow
+colour=bold yellow
 -
 # ERROR lines
 regexp=^ERROR.*
-colour=red
+colour=bold red
