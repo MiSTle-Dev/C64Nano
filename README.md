@@ -10,7 +10,7 @@ The C64Nano is a port of some [MiST](https://github.com/mist-devel/mist-board/wi
 | [Tang Nano 20k](https://wiki.sipeed.com/nano20k)     | [GW2AR](https://www.gowinsemi.com/en/product/detail/38/)  | HDMI / LCD |2nd D9 Joystick via MiSTeryShield20k spare header|
 | [Tang Primer 25K](https://wiki.sipeed.com/hardware/en/tang/tang-primer-25k/primer-25k.html) | [GW5A-25](https://www.gowinsemi.com/en/product/detail/60/) | HDMI |Retro D9 Joystick, no MIDI, onboard BL616 only |
 | [Tang Mega NEO 60k Dock](https://wiki.sipeed.com/hardware/en/tang/tang-mega-60k/mega-60k.html) | [GW5AT-60](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |  |
-| [Tang Mega 138k Pro](https://wiki.sipeed.com/hardware/en/tang/tang-mega-138k/mega-138k-pro.html)|[GW5AST-138](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD | |
+| [Tang Mega 138k Pro](https://wiki.sipeed.com/hardware/en/tang/tang-mega-138k/mega-138k-pro.html)|[GW5AST-138](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |Retro D9 Joystick|
 | [Tang Console 60K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)|[GW5AT-60](https://www.gowinsemi.com/en/product/detail/60/) | HDMI / LCD |Retro D9 Joystick|
 | [Tang Console 138K NEO](https://wiki.sipeed.com/hardware/en/tang/tang-console/mega-console.html)|[GW5AST-138](https://www.gowinsemi.com/en/product/detail/60/)|HDMI / LCD | Retro D9 Joystick|
 
@@ -61,8 +61,8 @@ Features:
 
 | feature                | TN20k |MiSTle-25k|all other|
 | -----------------------|------ |--|--|
-|REU 16MB capacity mode  | ❌    |❌|✅|
-|EasyFlash Save 2 SDcard |❌     |✅|✅|
+|REU 16MB capacity mode  | ❌    |✅|✅|
+|EasyFlash Save 2 SDcard | ❌    |✅|✅|
 
 
 ## Installation

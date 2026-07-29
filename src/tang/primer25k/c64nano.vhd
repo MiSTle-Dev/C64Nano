@@ -17,7 +17,9 @@ entity c64nano_top is
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
    MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
-   C1541 : integer := 1  -- 0:no, 1:yes optional 6551 UART
+   DIGIMAX : integer := 1;  -- 0:no, 1:yes optional DIGIMAX DAC
+   REU   : integer := 1;  -- 0:no, 1:yes optional REU
+   C1541 : integer := 1  -- 0:no, 1:yes c1541 drive
    );
   port
   (
@@ -114,7 +116,6 @@ signal addr         : unsigned(24 downto 0);
 signal cs           : std_logic;
 signal we           : std_logic;
 signal din          : unsigned(7 downto 0);
-signal ds           : std_logic_vector(1 downto 0);
 -- IEC
 signal c64_iec_clk      : std_logic;
 signal c64_iec_data     : std_logic;
@@ -358,7 +359,7 @@ signal sid_ver        : std_logic;
 signal sid_mode       : unsigned(2 downto 0);
 signal sid_digifix    : std_logic;
 signal system_tape_sound : std_logic;
-signal uart_rxD         : std_logic_vector(3 downto 0);
+signal uart_rxD       : std_logic_vector(1 downto 0);
 signal uart_rx_filtered : std_logic;
 signal cnt2_i          : std_logic;
 signal cnt2_o          : std_logic;
@@ -454,9 +455,6 @@ signal autosave         : std_logic := '0';
 signal ezfl_idx         : std_logic := '0';
 signal ioctl_upload     : std_logic := '0';
 signal disk_sd_wr_data  : unsigned(7 downto 0);
-signal ext_old          : std_logic := '0';
-signal ext_crt          : std_logic := '0';
-signal ezfl_save_en     : std_logic := '0';
 attribute syn_preserve  : integer;
 attribute syn_preserve of boot_button_detected : signal is 1;
 signal tap_io_cycle     : std_logic := '0';
@@ -771,7 +769,9 @@ audio_div  <= to_unsigned(342,9) when ntscMode = '1' else to_unsigned(327,9);
 
 cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_finish;
 
+yes_digimax: if DIGIMAX /= 0 generate
 process(clk_sys)
+    variable dac_index : integer range 0 to 3;
 begin
     if rising_edge(clk_sys) then
         old_ioe <= IOE;
@@ -779,14 +779,7 @@ begin
 
         old_iof <= IOF;
         iof_we <= (not old_iof) and IOF and ram_we;
-    end if;
-end process;
 
-process(clk_sys)
-    variable dac_index : integer range 0 to 3;
-    variable alm, arm : signed(16 downto 0);
-begin
-    if rising_edge(clk_sys) then
         if system_digimax = "00" or reset_n = '0' then
             dac <= (others => (others => '0'));
             sact <= (others => '0');
@@ -810,7 +803,19 @@ begin
             dac_l <= unsigned(dac(1)) + unsigned(dac(2));
             dac_r <= unsigned(dac(0)) + unsigned(dac(3));
         end if;
+    end if;
+end process;
 
+else generate
+  dac_l <= (others => '0');
+  dac_r <= (others => '0');
+end generate yes_digimax;
+
+process(clk_sys)
+    variable dac_index : integer range 0 to 3;
+    variable alm, arm : signed(16 downto 0);
+begin
+    if rising_edge(clk_sys) then
         alm := signed(audio_data_l(17) & std_logic_vector(audio_data_l(17 downto 2))) 
                + signed(std_logic_vector'("00") & std_logic_vector(dac_l) & std_logic_vector'("000000")) 
                + signed((0 => cass_snd) & std_logic_vector'("000000000"));
@@ -1429,6 +1434,7 @@ end process;
 reu_oe  <= '1' when IOF = '1' and reu_cfg /= "00" else '0';
 reu_ram_ce <= not ext_cycle_d and ext_cycle and dma_req;
 
+yes_reu: if REU /= 0 generate
 reu_inst: entity work.reu
 generic map(
   REU_ADDR => REU_ADDR
@@ -1460,6 +1466,17 @@ port map(
     
     irq       => reu_irq
   ); 
+else generate
+  dma_req <= '0';
+  dma_addr <= (others => '0');
+  dma_dout <= (others => '1');
+  dma_we <= '0';
+  reu_ram_addr <= (others => '0');
+  reu_ram_dout <= (others => '1');
+  reu_ram_we   <= '0';
+  reu_dout  <= (others => '0');
+  reu_irq   <= '0';
+end generate yes_reu;
 
 -- c1541 ROM's SPI Flash
 -- TN20k  Winbond 25Q64JVIQ
@@ -1558,17 +1575,11 @@ process(clk_sys)
     
     if ioctl_upload = '1' then 
       ezfl_mod <= '0';
-      ezfl_save_en <= '0';
     end if;
 
     ezfl_save_old <= ezfl_save;
     if ezfl_save_old = '0' and ezfl_save = '1' then
       ezfl_idx <= not save_cartridge;
-    end if;
-
-    ext_old <= ext_crt;
-	  if ext_old = '0' and ext_crt = '1' then
-      ezfl_save_en <= '1';
     end if;
 
   end if;
@@ -1802,7 +1813,6 @@ begin
     if old_download /= ioctl_download and load_crt = '1' then
       cart_attached <= old_download;
       erase_cram <= '1';
-      ext_crt <= ioctl_download and load_crt;
     end if;
 
     -- meminit for RAM injection
@@ -2154,6 +2164,10 @@ else generate
   tx_6551 <= '1';
   uart_data <= x"FF";
   uart_irq <= '1';
+  serial_status <= (others => '0');
+  serial_tx_available <= (others => '0');
+  serial_tx_data <= (others => '0');
+  serial_rx_available <= (others => '0');
 end generate yes_uart;
 
 end Behavioral_top;
