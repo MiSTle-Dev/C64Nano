@@ -1,6 +1,9 @@
 impl/gwsynthesis/**
 impl/temp/**
 impl/pnr/**
+src/impl/gwsynthesis/**
+src/impl/temp/**
+src/impl/pnr/**
 simulation/sim/**
 simulation/transcript
 impl/pnr/device.cfg

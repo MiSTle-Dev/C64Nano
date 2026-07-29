@@ -634,14 +634,14 @@ variable reset_cnt : integer range 0 to 2147483647;
 end process;
 
 -- delay disk start to keep loader at power-up intact
-process(clk_sys, por)
+process(clk_sys)
   variable pause_cnt : integer range 0 to 2147483647;
   begin
-  if por = '1' then
-    disk_pause <= '1';
-    pause_cnt := 34000000;
-  elsif rising_edge(clk_sys) then
-    if pause_cnt /= 0 then
+  if rising_edge(clk_sys) then
+    if por = '1' then
+      disk_pause <= '1';
+      pause_cnt := 34000000;
+    elsif pause_cnt /= 0 then
       pause_cnt := pause_cnt - 1;
     elsif pause_cnt = 0 then 
       disk_pause <= '0';
@@ -652,44 +652,46 @@ end process;
 disk_reset <= '1' when not flash_ready or disk_pause or c1541_osd_reset or not reset_n or por or c1541_reset else '0';
 
 -- rising edge sd_change triggers detection of new disk
-process(clk_sys, pll_locked)
+process(clk_sys)
   begin
-  if pll_locked = '0' then
-    sd_change <= '0';
-    disk_g64 <= '0';
-    sd_img_size_d <= (others => '0');
-    disk_chg_trg_d <= '0';
-    img_present <= '0';
-  elsif rising_edge(clk_sys) then
-      sd_img_mounted_d <= sd_img_mounted(0);
-      disk_chg_trg_d <= disk_chg_trg;
-      disk_g64_d <= disk_g64;
-
-      if sd_img_mounted(0) = '1' then
-        img_present <= '0' when sd_img_size = x"00000000" else '1';
-      end if;
-
-      if sd_img_mounted_d = '0' and sd_img_mounted(0) = '1' then
-        sd_img_size_d <= sd_img_size;
-      end if;
-
-      if (sd_img_mounted(0) /= sd_img_mounted_d) or
-         (disk_chg_trg_d = '0' and disk_chg_trg = '1') then
-          sd_change  <= '1';
-          else
-          sd_change  <= '0';
-      end if;
-
-      if unsigned(sd_img_size_d) >= to_unsigned(333744, sd_img_size_d'length) then  -- g64 disk selected
-        disk_g64 <= '1';
-      else
+  if rising_edge(clk_sys) then
+      if pll_locked = '0' then
+        sd_change <= '0';
         disk_g64 <= '0';
-      end if;
-
-      if (disk_g64 /= disk_g64_d) then
-        c1541_reset  <= '1'; -- reset needed after G64 change
+        sd_img_size_d <= (others => '0');
+        disk_chg_trg_d <= '0';
+        img_present <= '0';
       else
-        c1541_reset  <= '0';
+        sd_img_mounted_d <= sd_img_mounted(0);
+        disk_chg_trg_d <= disk_chg_trg;
+        disk_g64_d <= disk_g64;
+
+        if sd_img_mounted(0) = '1' then
+          img_present <= '0' when sd_img_size = x"00000000" else '1';
+        end if;
+
+        if sd_img_mounted_d = '0' and sd_img_mounted(0) = '1' then
+          sd_img_size_d <= sd_img_size;
+        end if;
+
+        if (sd_img_mounted(0) /= sd_img_mounted_d) or
+          (disk_chg_trg_d = '0' and disk_chg_trg = '1') then
+            sd_change  <= '1';
+            else
+            sd_change  <= '0';
+        end if;
+
+        if unsigned(sd_img_size_d) >= to_unsigned(333744, sd_img_size_d'length) then  -- g64 disk selected
+          disk_g64 <= '1';
+        else
+          disk_g64 <= '0';
+        end if;
+
+        if (disk_g64 /= disk_g64_d) then
+          c1541_reset  <= '1'; -- reset needed after G64 change
+        else
+          c1541_reset  <= '0';
+        end if;
       end if;
   end if;
 end process;

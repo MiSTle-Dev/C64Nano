@@ -1,0 +1,11 @@
+# NOTE lines
+regexp=^NOTE.*
+colour=bold green
+-
+# WARNing lines
+regexp=^WARN.*
+colour=bold yellow
+-
+# ERROR lines
+regexp=^ERROR.*
+colour=bold red
