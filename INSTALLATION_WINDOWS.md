@@ -8,8 +8,7 @@ This has been tested on Windows 11. It should work on older versions too.
 
 Software needed:
 
-  - [Gowin V1.9.11.01](https://www.gowinsemi.com/en/support/home/) **to synthesize the core**
-  - [Gowin V1.9.11.02](https://www.gowinsemi.com/en/support/home/) **to program the flash of the TANG FPGA**
+  - [Gowin V1.9.12.03](https://www.gowinsemi.com/en/support/home/) **to synthesize the core**
   - [BouffaloLabDevCube](https://dev.bouffalolab.com/download) **to flash the BL616**
   - [Latest release](https://github.com/MiSTle-Dev/C64Nano/releases/latest) of C64Nano **FPGA** bitstream
   - [Latest release](http://github.com/harbaum/FPGA-Companion) of FPGA-Companion **BL616 µC firmware** (if not otherwise stated in the release note)

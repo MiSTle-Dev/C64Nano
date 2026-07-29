@@ -257,6 +257,11 @@ Only MiSTeryShieldRpPico20k-dualD9 port has two D9 ports.
 | --   | J4‑19 | 3V3      | –  | –           | 7           | –        | –       |
 | --   | J7‑1  | 5V       | 7  | 5V          | 8           | –        | –       |
 
+MiSTle-GW5A-25k
+| FPGA | MiSTle| Signal   | header | IEC     |
+|------|-------|----------|----    |---------|
+||||    ||
+
 **Cable** side !
 
 | Pin | Name   | Description        |
@@ -404,7 +409,14 @@ Remember that in + out to be crossed to connect to external device. Level are 3V
 
 ## Getting started
 
-
 [Board Setup](https://github.com/MiSTle-Dev/.github/wiki/Board-Setup)
 
 
+## Build
+
+```shell
+cd src
+./build.sh 
+
+or ./build lcd or tp25 or tc60k or tm138kpro etc.
+```
