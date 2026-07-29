@@ -54,7 +54,7 @@
     "Max_Fanout": 1000,
     "Multi_Boot": false,
     "Netlist_Hierarchy": true,
-    "OUTPUT_BASE_NAME": "C64Nano_Primer25k",
+    "OUTPUT_BASE_NAME": "c64nano_tp25k",
     "Optimization_Goal": "Auto",
     "POWER_ON_RESET_MONITOR": true,
     "PRINT_BSRAM_MODE": "Default Mode",

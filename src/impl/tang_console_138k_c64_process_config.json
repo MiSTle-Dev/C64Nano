@@ -51,7 +51,7 @@
  "MULTIJUMP_MODE" : "Single",
  "MULTIJUMP_SPI_FLASH_ADDRESS" : "000000",
  "Multi_Boot" : false,
- "OUTPUT_BASE_NAME" : "C64Nano_Console138k",
+ "OUTPUT_BASE_NAME" : "c64nano_tc138k",
  "POWER_ON_RESET_MONITOR" : true,
  "PRINT_BSRAM_MODE" : "Default Mode",
  "PRINT_BSRAM_VALUE" : true,

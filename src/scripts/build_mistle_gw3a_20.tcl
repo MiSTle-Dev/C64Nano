@@ -80,7 +80,7 @@ add_file uart6551/uart_6551.v
 add_file misc/c64_xml.hex
 
 set_option -synthesis_tool gowinsynthesis
-set_option -output_base_name c64_mistle_gw3a_20
+set_option -output_base_name c64nano_mistle_gw3a_20
 set_option -verilog_std sysv2017
 set_option -vhdl_std vhd2008
 set_option -top_module c64nano_top

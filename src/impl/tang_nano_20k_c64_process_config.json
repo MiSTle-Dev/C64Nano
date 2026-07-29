@@ -53,7 +53,7 @@
     "Max_Fanout": 1000,
     "Multi_Boot": false,
     "Netlist_Hierarchy": true,
-    "OUTPUT_BASE_NAME": "C64Nano_TN20k",
+    "OUTPUT_BASE_NAME": "c64nano",
     "Optimization_Goal": "Auto",
     "POWER_ON_RESET_MONITOR": true,
     "PRINT_BSRAM_MODE": "Default Mode",
