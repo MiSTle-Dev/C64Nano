@@ -785,6 +785,7 @@ always_ff @(posedge clk32) begin
 	endcase
 end
 
+assign mem_req = 0;
 logic [22:0] addr_out;
 assign mem_addr = addr_out;
 assign mem_out  = data_in;

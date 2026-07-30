@@ -111,7 +111,7 @@ assign sd_rd      = loader_busy ? {loader_sd_rd, 1'b0} : {7'b0000000, c1541_sd_r
 assign sd_wr      = loader_busy ? {loader_sd_wr, 1'b0} : {7'b0000000, c1541_sd_wr};
 
 // CRT header ROM - 64 bytes of static configuration data
-localparam logic [7:0] CRT_HEADER[0:63] = '{
+logic [7:0] CRT_HEADER[0:63] = '{
 	8'h43, 8'h36, 8'h34, 8'h20, 8'h43, 8'h41, 8'h52, 8'h54,  // "C64 CART"
 	8'h52, 8'h49, 8'h44, 8'h47, 8'h45, 8'h20, 8'h20, 8'h20,  // "RIDGE   "
 	8'h00, 8'h00, 8'h00, 8'h40, 8'h01, 8'h00, 8'h00, 8'h20,  // header size, EasyFlash type
@@ -123,11 +123,11 @@ localparam logic [7:0] CRT_HEADER[0:63] = '{
 } /* synthesis syn_ramstyle = "block_ram" */;
 
 function automatic logic [7:0] crt_header_byte(input logic [5:0] idx);
-	return CRT_HEADER[idx] /* synthesis syn_ramstyle = "block_ram" */;
+	return CRT_HEADER[idx];
 endfunction
 
 // CHIP header base ROM - indices 0-10 static, 11-12 computed with bank/address
-localparam logic [7:0] CHIP_HEADER_BASE[0:15] = '{
+logic [7:0] CHIP_HEADER_BASE[0:15] = '{
 	8'h43, 8'h48, 8'h49, 8'h50,              // "CHIP"
 	8'h00, 8'h00, 8'h20, 8'h10,              // header size (0x20), total size (0x10 = 16-byte header + 8KB)
 	8'h00, 8'h02, 8'h00, 8'h00,              // reserved, chip type (0x02 = ROM)
@@ -138,7 +138,7 @@ function automatic logic [7:0] chip_header_byte(input logic [3:0] idx, input log
 	case(idx)
 		4'd11: return {1'b0, bank};
 		4'd12: return hi ? 8'hA0 : 8'h80;
-		default: return CHIP_HEADER_BASE[idx] /* synthesis syn_ramstyle = "block_ram" */;
+		default: return CHIP_HEADER_BASE[idx];
 	endcase
 endfunction
 
