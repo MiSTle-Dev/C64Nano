@@ -227,7 +227,7 @@
  <listentry label="On" value="1"/>
       </list>
       <list label="RS232 port:" id="*" default="0">
-	<!--IS tang_nano20k tang_primer25k tang_console60k tang_console138k tang_mega138kpro tang_mega60k -->
+	<!--IS tang_nano20k tang_nano20k_ezflash tang_primer25k tang_console60k tang_console138k tang_mega138kpro tang_mega60k -->
  <listentry label="BL616 debug" value="0"/>
  <listentry label="Tang USB-C" value="1"/>
  <listentry label="UserP Ext" value="2"/>
@@ -263,7 +263,7 @@
       </list>
       <list label="External IEC:" id="2" default="0" action="c1541_reset">
  <listentry label="Off" value="0"/>
-	<!--IS tang_nano20k -->
+	<!--IS tang_nano20k tang_nano20k_ezflash -->
  <listentry label="Retro D9 #1" value="1"/>
  <listentry label="D9 #2/spare" value="2"/>
 	<!--END-->
