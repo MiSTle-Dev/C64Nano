@@ -29,10 +29,10 @@ entity c64nano_top is
     key_reset   : in std_logic; -- S2 button high active
     key_user    : in std_logic; -- S1 button high active
     leds_n      : out std_logic_vector(1 downto 0);
-    io          : inout std_logic_vector(5 downto 0); -- JS0 Joystick D9
-   -- external hw pin UART
-    uart_ext_rx : in std_logic;
-    uart_ext_tx : out std_logic;
+    io          : inout std_logic_vector(7 downto 0); -- PMOD D9 Joystick and UART
+    -- MIDI interface
+    midi_rx     : in std_logic;
+    midi_tx     : out std_logic;
     -- SPI interface external uC
 --    pmod_companion_din : in std_logic;
 --    pmod_companion_dout : out std_logic;
@@ -77,8 +77,6 @@ end;
 architecture Behavioral_top of c64nano_top is
 
 signal spare               : std_logic_vector(5 downto 0) := (others => '1'); -- JS1 Joystick D9
-signal midi_rx             : std_logic;
-signal midi_tx             : std_logic;
 
 type unsigned_array_9b is array (natural range <>) of unsigned(8 downto 0);
 type u7_array_t is array (natural range <>) of unsigned(6 downto 0);
@@ -517,9 +515,9 @@ begin
   spi_io_clk <= spi_sclk;
   spi_dir <= spi_io_dout;
   spi_irqn <=  spi_intn;
+--spi_irqn <= uart_tx_i when spi_ext = '1' else spi_intn;
 
-  midi_rx <= uart_ext_rx;
-  uart_ext_tx <= midi_tx when midi_en = '1' else uart_tx_i;
+  io <= (others => 'Z');
 
   ext_iec_clk  <= '1' when ext_iec_en = "00" else  -- USER_IN[2]
                     io(0) when ext_iec_en = "01" else
@@ -2040,9 +2038,13 @@ port map (
 -- 01 USB-C BL616 UART to Userport UART if ext MPU in use
 -- 10 Userport UART to ext HW pins
 -- 11 6551 UART to ext HW pins 
--- bl616_jtagsel BL616 USB UART if PMOD MPU in use
-uart_rx_muxed <= bl616_jtagsel when system_uart = "01" else uart_ext_rx when system_uart = "10" else '1';
---uart_ext_tx <= uart_rx when system_uart = "00" else uart_tx_i;
+-- bl616_jtagsel BL616 USB UART if PMOD MPU in use (primer 25k not supported) 
+
+  uart_rx_muxed <= bl616_jtagsel when system_uart = "01" else 
+    io(7) when system_uart = "10" or system_uart = "11" else 
+    '1';
+
+  io(6) <= uart_tx_i;
 
 -- UART_RX synchronizer
 process(clk_sys)

@@ -60,9 +60,10 @@ localparam logic [9:0] start_sectors[42] =
 		'{  0,  0, 21, 42, 63, 84,105,126,147,168,189,210,231,252,273,294,315,336,357,376,395,
 		  414,433,452,471,490,508,526,544,562,580,598,615,632,649,666,683,700,717,734,751,768} /* synthesis syn_ramstyle = "block_ram" */;
 
-logic  [23:0] g64_offsets[88];
+logic  [23:0] g64_offsets[88] /* synthesis syn_ramstyle = "block_ram" */;
 logic  [23:0] g64_offsets_din;
-wire  [6:0] g64_offs_idx = sd_buff_addr[8:2] - 1'd1;
+logic   [6:0] g64_offs_idx;
+assign g64_offs_idx = sd_buff_addr[8:2] - 1'd1;
 logic   [6:0] g64_track_idx;
 logic  [23:0] g64_offsets_dout;
 
@@ -81,7 +82,8 @@ logic   [4:0] rel_lba;
 logic   [4:0] track_lbas;
 
 logic         new_disk;
-wire  [6:0] new_track = new_disk ? raw ? 7'b1111111 : {6'h12, 1'b0} : track;
+logic  [6:0] new_track;
+assign new_track = new_disk ? raw ? 7'b1111111 : {6'h12, 1'b0} : track;
 
 logic   [8:0] sector_offset;
 
@@ -259,14 +261,16 @@ end
 // track buffer for maximum of 8192+512 bytes storage
 
 // track buffer - IO controller side
-wire [13:0] sd_ram_addr = { rel_lba, sd_buff_addr };
-wire [7:0] track_buffer_do_sd;
-wire [7:0] track_buffer_b_do_sd;
+logic [13:0] sd_ram_addr; 
+assign sd_ram_addr = { rel_lba, sd_buff_addr };
+logic [7:0] track_buffer_do_sd;
+logic [7:0] track_buffer_b_do_sd;
 
 // track buffer - GCR floppy side
-wire [13:0] fd_ram_addr = ram_addr + sector_offset;
-wire   [7:0] track_buffer_do_fd;
-wire   [7:0] track_buffer_b_do_fd;
+logic [13:0] fd_ram_addr;
+assign fd_ram_addr = ram_addr + sector_offset;
+logic   [7:0] track_buffer_do_fd;
+logic   [7:0] track_buffer_b_do_fd;
 
 Gowin_DPB_trkbuf trkbuf_inst(
 	.douta(track_buffer_do_sd), 

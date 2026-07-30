@@ -226,20 +226,19 @@
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
       </list>
-	<!--IS tang_nano20k tang_primer25k tang_console60k tang_console138k tang_mega138kpro tang_mega60k -->
       <list label="RS232 port:" id="*" default="0">
+	<!--IS tang_nano20k tang_primer25k tang_console60k tang_console138k tang_mega138kpro tang_mega60k -->
  <listentry label="BL616 debug" value="0"/>
  <listentry label="Tang USB-C" value="1"/>
  <listentry label="UserP Ext" value="2"/>
  <listentry label="6551 Ext." value="3"/>
-      </list>
 	<!--END-->
 	<!--IS mistle_gw5a_25 mistle_gw3a_20 -->
-      <list label="RS232 port:" id="*" default="0">
- <listentry label="UserP Ext" value="0"/>
+ <listentry label="Userport" value="0"/>
  <listentry label="6551 Ext." value="1"/>
-      </list>
+ <listentry label="dummy" value="2"/>
 	<!--END-->
+      </list>
       <list label="Key modifier:" id="$" default="0">
  <listentry label="L+R Shift" value="0"/>
  <listentry label="L Shift" value="1"/>
@@ -262,19 +261,17 @@
  <listentry label="10" value="2"/>
  <listentry label="11" value="3"/>
       </list>
-	<!--IS tang_nano20k -->
       <list label="External IEC:" id="2" default="0" action="c1541_reset">
  <listentry label="Off" value="0"/>
+	<!--IS tang_nano20k -->
  <listentry label="Retro D9 #1" value="1"/>
  <listentry label="D9 #2/spare" value="2"/>
-      </list>
 	<!--END-->
 	<!--IS mistle_gw5a_25 mistle_gw3a_20 tang_primer25k tang_console60k tang_console138k tang_mega138kpro tang_mega60k -->
-      <list label="External IEC:" id="2" default="0">
- <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
-      </list>
+ <listentry label="dummy" value="2"/>
 	<!--END-->
+      </list>
       <list label="Clear RAM on Reset" id="6" default="1">
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
@@ -283,10 +280,12 @@
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
       </list>
+      <!--NOT tang_nano20k tang_nano20k_lcd -->
       <list label="Autosave" id="8" default="0">
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
       </list>
+      <!--END-->
       <list label="Run PRG:" id="5" default="1">
  <listentry label="Off" value="0"/>
  <listentry label="On" value="1"/>
@@ -308,8 +307,9 @@
       <fileselector label="TAP TAPE:" ext="tap" index="4"/>
       <fileselector label="FLT FILTER:" ext="flt" index="5"/>
       <fileselector label="REU:" ext="reu" index="6"/>
-<!--  <fileselector label="Select EZFLASH:" ext="sav" index="7" default="ezflash.sav"/> -->
+      <!--NOT tang_nano20k tang_nano20k_lcd -->
       <button label="Save EZFLASH" action="save_cartridge_hide"/>
+      <!--END-->
       <list label="Disk prot.:" id="P" default="0">
 	<listentry label="None" value="0"/>
 	<listentry label="8:" value="1"/>
