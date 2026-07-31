@@ -33,11 +33,6 @@ IO_PORT "uart_rx" PULL_MODE=UP DRIVE=OFF IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 IO_LOC "uart_rx" K25; // GPIO_28 PLL1_TWI SCL, default N16
 //IO_LOC "uart_tx" K26; // GPIO_27 PLL1_TWI SDA, default P15
 
-IO_LOC "bl616_mon_tx" A17;
-IO_PORT "bl616_mon_tx" DRIVE=8 IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
-//IO_LOC "bl616_mon_rx" A18;
-//IO_PORT "bl616_mon_rx" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
-
 IO_PORT "twimux[0]" DRIVE=8 IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 IO_LOC "twimux[0]" N19;
 IO_PORT "twimux[1]" DRIVE=8 IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
@@ -87,9 +82,12 @@ IO_LOC "pmod_companion_ss" D25;
 IO_PORT "pmod_companion_ss" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3 BANK_VCCIO=3.3;
 IO_LOC "pmod_companion_intn" L18;
 IO_PORT "pmod_companion_intn" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
-
 //  spare but connected to ext MPU
 //IO_LOC "" L17;
+IO_LOC "bl616_mon_tx" H14;
+IO_PORT "bl616_mon_tx" IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
+//IO_LOC "bl616_mon_rx" H15;
+//IO_PORT "bl616_mon_rx" PULL_MODE=UP IO_TYPE=LVCMOS33 BANK_VCCIO=3.3;
 
 // PMD 2 right
 // D9 joystick
