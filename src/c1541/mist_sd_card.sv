@@ -58,19 +58,24 @@ module mist_sd_card
 
 localparam logic [9:0] start_sectors[42] =
 		'{  0,  0, 21, 42, 63, 84,105,126,147,168,189,210,231,252,273,294,315,336,357,376,395,
-		  414,433,452,471,490,508,526,544,562,580,598,615,632,649,666,683,700,717,734,751,768} /* synthesis syn_ramstyle = "block_ram" */;
+		  414,433,452,471,490,508,526,544,562,580,598,615,632,649,666,683,700,717,734,751,768};
 
-logic  [23:0] g64_offsets[88] /* synthesis syn_ramstyle = "block_ram" */;
+logic  [23:0] g64_offsets[88] /* synthesis syn_ramstyle="block_ram" */;
 logic  [23:0] g64_offsets_din;
 logic   [6:0] g64_offs_idx;
 assign g64_offs_idx = sd_buff_addr[8:2] - 1'd1;
 logic   [6:0] g64_track_idx;
 logic  [23:0] g64_offsets_dout;
+logic         g64_offs_we;
+logic   [6:0] g64_offs_waddr;
+logic  [23:0] g64_offs_wdata;
 
-always_ff @(negedge clk)
+always_ff @(posedge clk) begin
 	g64_offsets_dout <= g64_offsets[g64_track_idx];
+	if(g64_offs_we) g64_offsets[g64_offs_waddr] <= g64_offs_wdata;
+end
 
-logic         g64_rd, g64_wr;
+logic         g64_rd, g64_rd_req, g64_wr;
 logic   [7:0] g64_tlen_lo;
 
 logic   [1:0] freq_table[88];
@@ -106,10 +111,16 @@ always_ff @(posedge clk) begin
 		id1   <= 8'h20;
 		id2   <= 8'h20;
 		new_disk <= 0;
-		{g64_rd, g64_wr} <= 0;
+		{g64_rd, g64_rd_req, g64_wr} <= 0;
+		g64_offs_we <= 0;
 	end
 	else begin
 		old_ack <= sd_ack;
+		g64_offs_we <= 0;
+		if(g64_rd_req) begin
+			g64_rd <= 1;
+			g64_rd_req <= 0;
+		end
 		if(sd_ack) {sd_rd,sd_wr} <= 0;
 
 		old_change <= change;
@@ -122,7 +133,7 @@ always_ff @(posedge clk) begin
 		new_disk <= mount;
 		raw <= g64;
 		if(!g64) max_track <= 7'd80;
-		{g64_rd, g64_wr} <= 0;
+		{g64_rd, g64_rd_req, g64_wr} <= 0;
 	end
 	else
 	if(g64_rd) begin
@@ -166,7 +177,11 @@ always_ff @(posedge clk) begin
 				2'b00: g64_offsets_din[ 7: 0] <= sd_buff_dout;
 				2'b01: g64_offsets_din[15: 8] <= sd_buff_dout;
 				2'b10: g64_offsets_din[23:16] <= sd_buff_dout;
-				2'b11: g64_offsets[g64_offs_idx] <= g64_offsets_din;
+				2'b11: begin
+					g64_offs_we <= 1;
+					g64_offs_waddr <= g64_offs_idx;
+					g64_offs_wdata <= g64_offsets_din;
+				end
 				default: ;
 			endcase
 			// speed zones
@@ -196,7 +211,7 @@ always_ff @(posedge clk) begin
 				rel_lba <= 0;
 				if (raw) begin
 					g64_track_idx <= track;
-					g64_rd <= 1;
+					g64_rd_req <= 1;
 				end
 				else begin
 					sector_offset <= { start_sectors[track[6:1]][0], 8'd0 } ;
@@ -243,7 +258,7 @@ always_ff @(posedge clk) begin
 				end
 				else begin
 					g64_track_idx <= new_track;
-					g64_rd <= 1;
+					g64_rd_req <= 1;
 				end
 			end
 			else begin

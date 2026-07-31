@@ -230,13 +230,12 @@
 	<!--IS tang_nano20k tang_nano20k_ezflash tang_primer25k tang_console60k tang_console138k tang_mega138kpro tang_mega60k -->
  <listentry label="BL616 debug" value="0"/>
  <listentry label="Tang USB-C" value="1"/>
- <listentry label="UserP Ext" value="2"/>
+ <listentry label="Userport" value="2"/>
  <listentry label="6551 Ext." value="3"/>
 	<!--END-->
 	<!--IS mistle_gw5a_25 mistle_gw3a_20 -->
  <listentry label="Userport" value="0"/>
  <listentry label="6551 Ext." value="1"/>
- <listentry label="dummy" value="2"/>
 	<!--END-->
       </list>
       <list label="Key modifier:" id="$" default="0">
@@ -261,7 +260,7 @@
  <listentry label="10" value="2"/>
  <listentry label="11" value="3"/>
       </list>
-      <list label="External IEC:" id="2" default="0" action="c1541_reset">
+      <list label="External IEC:" id="2" default="0" action="c1541_reset_hide">
  <listentry label="Off" value="0"/>
 	<!--IS tang_nano20k tang_nano20k_ezflash -->
  <listentry label="Retro D9 #1" value="1"/>
@@ -269,7 +268,6 @@
 	<!--END-->
 	<!--IS mistle_gw5a_25 mistle_gw3a_20 tang_primer25k tang_console60k tang_console138k tang_mega138kpro tang_mega60k -->
  <listentry label="On" value="1"/>
- <listentry label="dummy" value="2"/>
 	<!--END-->
       </list>
       <list label="Clear RAM on Reset" id="6" default="1">
