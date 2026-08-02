@@ -52,7 +52,7 @@ Features:
 * Swiftlink-232 [6551](https://en.wikipedia.org/wiki/MOS_Technology_6551) WIFI Modem Interface to FPGA-Companion up to 38400 Baud
 * Freezer support (e.g. Action Replay)
 * external IEC device (C1541 Floppy / IEC Printer etc.)
-* DigiMax four channel audio DAC ($DE00 /$DF00)
+* DigiMax four channel audio DAC ($DE00 / $DF00 / Userport)
 * [EasyFlash](https://www.c64-wiki.com/wiki/EasyFlash) CRT Save (for enhanced Games that support write to [Flash](https://skoe.de/easyflash/) as gameplay progress storage)
 
 <img src="./.assets/c64_core.png" alt="image" width="80%" height="auto">

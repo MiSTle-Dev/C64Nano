@@ -292,7 +292,7 @@
  <listentry label="Off" value="0"/>
  <listentry label="DE00" value="1"/>
  <listentry label="DF00" value="2"/>
- <listentry label="reserved" value="3"/>
+ <listentry label="Userport" value="3"/>
       </list>
  <button label="C1541 Reset" action="c1541_reset_hide"/>
  <button label="Cold Boot" action="cold_reset_hide"/>

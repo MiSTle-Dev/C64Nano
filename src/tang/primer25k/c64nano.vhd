@@ -462,6 +462,7 @@ signal sact             : unsigned(3 downto 0);
 signal system_digimax   : unsigned(1 downto 0) := (others => '0');
 signal ioe_we, iof_we   : std_logic;
 signal old_ioe, old_iof : std_logic;
+signal pc2_n_o_d        : std_logic;
 
 constant RAM_ADDR      : unsigned(24 downto 0) := 25x"0000000";-- System RAM: 64k
 constant CRM_ADDR      : unsigned(24 downto 0) := 25x"0010000";-- Cartridge RAM: 64k
@@ -778,6 +779,7 @@ begin
         old_iof <= IOF;
         iof_we <= (not old_iof) and IOF and ram_we;
 
+        pc2_n_o_d <= pc2_n_o;
         if system_digimax = "00" or reset_n = '0' then
             dac <= (others => (others => '0'));
             sact <= (others => '0');
@@ -785,6 +787,9 @@ begin
                (system_digimax(1) = '0' and ioe_we = '1')) and c64_addr(2) = '0' then
             dac_index := to_integer(unsigned(c64_addr(1 downto 0)));
             dac(dac_index) <= resize(unsigned(c64_data_out), 9);
+        elsif system_digimax = "11" and pc2_n_o = '0' and pc2_n_o_d = '1' then
+            dac_index := to_integer(unsigned'(not c64_iec_atn & pa2_o));
+            dac(dac_index) <= resize(unsigned(pb_o), 9);
             if unsigned(c64_data_out) /= 0 then
                 sact(to_integer(unsigned(c64_addr(1 downto 0)))) <= '1';
             end if;
