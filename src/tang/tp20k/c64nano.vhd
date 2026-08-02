@@ -982,7 +982,7 @@ din <= cart_wrdata
 
 memtest_inst : entity work.memtest
 port map(
-    clk             => clk_sys,
+    clk             => clk64,
     sys_resetn      => pll_locked_hid,
     write_level_done => write_level_done,
     read_calib_done  => read_calib_done,
@@ -997,7 +997,7 @@ ram_ready <= not memerr;
 
 dram_inst: entity work.MemoryController
 port map(
-  clk        => clk_sys,
+  clk        => clk64,
   pclk       => pclk,      -- primary clock (rd, wr, etc), e.g. 100Mhz
   fclk       => clk_pixel_x10,    -- fast clock (4*pclk), e.g. 400Mhz
   ck         => clk_ck,    -- 90-degree shifted fclk for memory clock
