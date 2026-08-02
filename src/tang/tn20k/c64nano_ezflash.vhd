@@ -488,6 +488,7 @@ signal sact             : unsigned(3 downto 0);
 signal system_digimax   : unsigned(1 downto 0) := (others => '0');
 signal ioe_we, iof_we   : std_logic;
 signal old_ioe, old_iof : std_logic;
+signal pc2_n_o_d        : std_logic;
 
 constant RAM_ADDR      : unsigned(22 downto 0) := 23x"0000000";-- System RAM: 64k
 constant CRM_ADDR      : unsigned(22 downto 0) := 23x"0010000";-- Cartridge RAM: 64k
@@ -646,14 +647,14 @@ variable reset_cnt : integer range 0 to 2147483647;
 end process;
 
 -- delay disk start to keep loader at power-up intact
-process(clk_sys, por)
+process(clk_sys)
   variable pause_cnt : integer range 0 to 2147483647;
   begin
-  if por = '1' then
-    disk_pause <= '1';
-    pause_cnt := 34000000;
-  elsif rising_edge(clk_sys) then
-    if pause_cnt /= 0 then
+  if rising_edge(clk_sys) then
+    if por = '1' then
+      disk_pause <= '1';
+      pause_cnt := 34000000;
+    elsif pause_cnt /= 0 then
       pause_cnt := pause_cnt - 1;
     elsif pause_cnt = 0 then 
       disk_pause <= '0';
@@ -836,6 +837,7 @@ begin
         old_iof <= IOF;
         iof_we <= (not old_iof) and IOF and ram_we;
 
+        pc2_n_o_d <= pc2_n_o;
         if system_digimax = "00" or reset_n = '0' then
             dac <= (others => (others => '0'));
             sact <= (others => '0');
@@ -843,6 +845,9 @@ begin
                (system_digimax(1) = '0' and ioe_we = '1')) and c64_addr(2) = '0' then
             dac_index := to_integer(unsigned(c64_addr(1 downto 0)));
             dac(dac_index) <= resize(unsigned(c64_data_out), 9);
+        elsif system_digimax = "11" and pc2_n_o = '0' and pc2_n_o_d = '1' then
+            dac_index := to_integer(unsigned'(not c64_iec_atn & pa2_o));
+            dac(dac_index) <= resize(unsigned(pb_o), 9);
             if unsigned(c64_data_out) /= 0 then
                 sact(to_integer(unsigned(c64_addr(1 downto 0)))) <= '1';
             end if;

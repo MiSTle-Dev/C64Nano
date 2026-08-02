@@ -468,6 +468,7 @@ signal sact             : unsigned(3 downto 0);
 signal system_digimax   : unsigned(1 downto 0) := (others => '0');
 signal ioe_we, iof_we   : std_logic;
 signal old_ioe, old_iof : std_logic;
+signal pc2_n_o_d        : std_logic;
 
 constant RAM_ADDR      : unsigned(22 downto 0) := 23x"0000000";-- System RAM: 64k
 constant CRM_ADDR      : unsigned(22 downto 0) := 23x"0010000";-- Cartridge RAM: 64k
@@ -597,9 +598,9 @@ process(clk_sys)
   variable pause_cnt : integer range 0 to 2147483647;
   begin
   if rising_edge(clk_sys) then
-  if por = '1' then
-    disk_pause <= '1';
-    pause_cnt := 34000000;
+    if por = '1' then
+      disk_pause <= '1';
+      pause_cnt := 34000000;
     elsif pause_cnt /= 0 then
       pause_cnt := pause_cnt - 1;
     elsif pause_cnt = 0 then 
@@ -615,41 +616,41 @@ process(clk_sys)
   begin
   if rising_edge(clk_sys) then
       if pll_locked = '0' then
-    sd_change <= '0';
-    disk_g64 <= '0';
-    sd_img_size_d <= (others => '0');
-    disk_chg_trg_d <= '0';
-    img_present <= '0';
-      else
-      sd_img_mounted_d <= sd_img_mounted(0);
-      disk_chg_trg_d <= disk_chg_trg;
-      disk_g64_d <= disk_g64;
-
-      if sd_img_mounted(0) = '1' then
-        img_present <= '0' when sd_img_size = x"00000000" else '1';
-      end if;
-
-      if sd_img_mounted_d = '0' and sd_img_mounted(0) = '1' then
-        sd_img_size_d <= sd_img_size;
-      end if;
-
-      if (sd_img_mounted(0) /= sd_img_mounted_d) or
-         (disk_chg_trg_d = '0' and disk_chg_trg = '1') then
-          sd_change  <= '1';
-          else
-          sd_change  <= '0';
-      end if;
-
-      if unsigned(sd_img_size_d) >= to_unsigned(333744, sd_img_size_d'length) then  -- g64 disk selected
-        disk_g64 <= '1';
-      else
+        sd_change <= '0';
         disk_g64 <= '0';
-      end if;
-
-      if (disk_g64 /= disk_g64_d) then
-        c1541_reset  <= '1'; -- reset needed after G64 change
+        sd_img_size_d <= (others => '0');
+        disk_chg_trg_d <= '0';
+        img_present <= '0';
       else
-        c1541_reset  <= '0';
+        sd_img_mounted_d <= sd_img_mounted(0);
+        disk_chg_trg_d <= disk_chg_trg;
+        disk_g64_d <= disk_g64;
+
+        if sd_img_mounted(0) = '1' then
+          img_present <= '0' when sd_img_size = x"00000000" else '1';
+        end if;
+
+        if sd_img_mounted_d = '0' and sd_img_mounted(0) = '1' then
+          sd_img_size_d <= sd_img_size;
+        end if;
+
+        if (sd_img_mounted(0) /= sd_img_mounted_d) or
+          (disk_chg_trg_d = '0' and disk_chg_trg = '1') then
+            sd_change  <= '1';
+            else
+            sd_change  <= '0';
+        end if;
+
+        if unsigned(sd_img_size_d) >= to_unsigned(333744, sd_img_size_d'length) then  -- g64 disk selected
+          disk_g64 <= '1';
+        else
+          disk_g64 <= '0';
+        end if;
+
+        if (disk_g64 /= disk_g64_d) then
+          c1541_reset  <= '1'; -- reset needed after G64 change
+        else
+          c1541_reset  <= '0';
         end if;
       end if;
   end if;
@@ -783,6 +784,7 @@ begin
         old_iof <= IOF;
         iof_we <= (not old_iof) and IOF and ram_we;
 
+        pc2_n_o_d <= pc2_n_o;
         if system_digimax = "00" or reset_n = '0' then
             dac <= (others => (others => '0'));
             sact <= (others => '0');
@@ -790,6 +792,9 @@ begin
                (system_digimax(1) = '0' and ioe_we = '1')) and c64_addr(2) = '0' then
             dac_index := to_integer(unsigned(c64_addr(1 downto 0)));
             dac(dac_index) <= resize(unsigned(c64_data_out), 9);
+        elsif system_digimax = "11" and pc2_n_o = '0' and pc2_n_o_d = '1' then
+            dac_index := to_integer(unsigned'(not c64_iec_atn & pa2_o));
+            dac(dac_index) <= resize(unsigned(pb_o), 9);
             if unsigned(c64_data_out) /= 0 then
                 sact(to_integer(unsigned(c64_addr(1 downto 0)))) <= '1';
             end if;
