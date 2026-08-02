@@ -646,7 +646,7 @@ disk_reset <= '1' when not flash_ready or disk_pause or c1541_osd_reset or not r
 process(clk_sys)
   begin
   if rising_edge(clk_sys) then
-      if pll_locked = '0' then
+      if pll_locked_hid = '0' then
         sd_change <= '0';
         disk_g64 <= '0';
         sd_img_size_d <= (others => '0');
