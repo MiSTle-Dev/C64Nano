@@ -59,10 +59,10 @@ Features:
 
 ## Featureset
 
-| feature                | TN20k |MiSTle-25k|all other|
-| -----------------------|------ |--|--|
-|REU 16MB capacity mode  | ❌    |✅|✅|
-|EasyFlash Save 2 SDcard | ❌    |✅|✅|
+| feature                | TN20k |MiSTle-25k|all other|note|
+| -----------------------|------ |--|--|-|
+|REU 16MB capacity mode  | ❌    |✅|✅||
+|EasyFlash Save 2 SDcard | ✔️    |✅|✅|⚠️ 1 SID, ❌ MIDI ❌ UART6551 ❌ DIGIMAX|
 
 
 ## Installation
