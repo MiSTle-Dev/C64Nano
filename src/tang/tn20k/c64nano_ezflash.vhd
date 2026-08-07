@@ -122,6 +122,7 @@ signal audio_data_r  : std_logic_vector(17 downto 0);
 signal c64_addr     : unsigned(15 downto 0);
 signal c64_data_out : unsigned(7 downto 0);
 signal sdram_data   : unsigned(7 downto 0);
+signal sdram_data_valid : std_logic;
 signal refresh      : std_logic;
 signal ram_ready    : std_logic;
 signal addr         : unsigned(22 downto 0);
@@ -453,6 +454,16 @@ signal cart_bank_hi     : std_logic;
 signal cart_bank_16k    : std_logic;
 signal rd_cyc           : unsigned(2 downto 0);
 signal ioctl_rd_en      : std_logic := '0';
+signal ioctl_rd_inflight_sys : std_logic := '0';
+signal ioctl_rd_req_tog_sys : std_logic := '0';
+signal ioctl_rd_req_tog64_d0 : std_logic := '0';
+signal ioctl_rd_req_tog64_d1 : std_logic := '0';
+signal ioctl_rd_req_seen64   : std_logic := '0';
+signal ioctl_rd_pending64 : std_logic := '0';
+signal ioctl_rd_done64    : std_logic := '0';
+signal ioctl_rd_doneD     : std_logic := '0';
+signal ioctl_rd_doneD1    : std_logic := '0';
+signal ioctl_din_buf      : unsigned(7 downto 0);
 signal cart_id_hi       : unsigned(7 downto 0);
 signal ioctl_req_rd     : std_logic := '0';
 signal ioctl_rd         : std_logic := '0';
@@ -936,7 +947,7 @@ port map(
       );
 
 addr <= cart_addr
-           when io_cycle = '1' and cart_mem_req = '1' else
+        when io_cycle = '1' and cart_mem_req = '1' and not (ioctl_upload = '1' and (ioctl_rd_inflight_sys = '1' or ioctl_rd_en = '1')) else
         io_cycle_addr
            when io_cycle = '1' else
         reu_ram_addr
@@ -944,7 +955,7 @@ addr <= cart_addr
         cart_addr;
 
 cs <= cart_ce
-         when io_cycle = '1' and cart_mem_req = '1' else
+      when io_cycle = '1' and cart_mem_req = '1' and not (ioctl_upload = '1' and (ioctl_rd_inflight_sys = '1' or ioctl_rd_en = '1')) else
       io_cycle_ce
          when io_cycle = '1' else
       reu_ram_ce
@@ -952,7 +963,7 @@ cs <= cart_ce
       cart_ce;
 
 we <= cart_we
-         when io_cycle = '1' and cart_mem_req = '1' else
+      when io_cycle = '1' and cart_mem_req = '1' and not (ioctl_upload = '1' and (ioctl_rd_inflight_sys = '1' or ioctl_rd_en = '1')) else
       io_cycle_we
          when io_cycle = '1' else
       reu_ram_we
@@ -960,7 +971,7 @@ we <= cart_we
       cart_we;
 
 din <= cart_wrdata
-           when io_cycle = '1' and cart_mem_req = '1' else
+        when io_cycle = '1' and cart_mem_req = '1' and not (ioctl_upload = '1' and (ioctl_rd_inflight_sys = '1' or ioctl_rd_en = '1')) else
        io_cycle_data
            when io_cycle = '1' else
        reu_ram_dout
@@ -987,6 +998,7 @@ dram_inst: entity work.sdram8
     refresh   => refresh,          -- chipset requests a refresh cycle
     din       => din,           -- data input from chipset/cpu
     dout      => sdram_data,
+    dout_valid => sdram_data_valid,
     addr      => addr,          -- 25 bit word address
     ce        => cs,            -- cpu/chipset requests read/wrie
     we        => we             -- cpu/chipset requests write
@@ -1545,6 +1557,34 @@ begin
   end if;
 end process;
 
+process(clk64)
+begin
+  if rising_edge(clk64) then
+    if pll_locked = '0' then
+      ioctl_rd_req_tog64_d0 <= '0';
+      ioctl_rd_req_tog64_d1 <= '0';
+      ioctl_rd_req_seen64 <= '0';
+      ioctl_rd_pending64 <= '0';
+      ioctl_rd_done64 <= '0';
+      ioctl_din_buf <= (others => '0');
+    else
+      ioctl_rd_req_tog64_d0 <= ioctl_rd_req_tog_sys;
+      ioctl_rd_req_tog64_d1 <= ioctl_rd_req_tog64_d0;
+
+      if ioctl_rd_req_tog64_d1 /= ioctl_rd_req_seen64 then
+        ioctl_rd_req_seen64 <= ioctl_rd_req_tog64_d1;
+        ioctl_rd_pending64 <= '1';
+      end if;
+
+      if sdram_data_valid = '1' and ioctl_rd_pending64 = '1' then
+        ioctl_din_buf <= sdram_data;
+        ioctl_rd_pending64 <= '0';
+        ioctl_rd_done64 <= not ioctl_rd_done64;
+      end if;
+    end if;
+  end if;
+end process;
+
 reu_oe  <= '1' when IOF = '1' and reu_cfg /= "00" else '0';
 reu_ram_ce <= not ext_cycle_d and ext_cycle and dma_req;
 
@@ -1778,59 +1818,73 @@ port map (
 process(clk_sys)
 begin
   if rising_edge(clk_sys) then
-    old_download <= ioctl_download;
-    old_upload <= ioctl_upload;
-    io_cycleD <= io_cycle;
-    cart_hdr_wr <= '0';
-    detach_reset_d <= detach_reset;
+    if pll_locked_hid = '0' then
+      ioctl_rd_inflight_sys <= '0';
+      ioctl_rd_req_tog_sys <= '0';
+      ioctl_rd_doneD <= '0';
+      ioctl_rd_doneD1 <= '0';
+    else
+      old_download <= ioctl_download;
+      old_upload <= ioctl_upload;
+      io_cycleD <= io_cycle;
+      ioctl_rd_doneD <= ioctl_rd_done64;
+      ioctl_rd_doneD1 <= ioctl_rd_doneD;
+      cart_hdr_wr <= '0';
+      detach_reset_d <= detach_reset;
 
-    if io_cycle = '0' and io_cycleD = '1' then
-      io_cycle_ce <= '1';
-      io_cycle_we <= '0';
-      io_cycle_addr <= tap_play_addr + TAP_ADDR;
-      if ioctl_req_wr = '1' then
-        ioctl_req_wr <= '0';
-        io_cycle_we <= '1';
-        io_cycle_addr <= ioctl_load_addr;
-        ioctl_load_addr <= ioctl_load_addr + 1;
-        if erasing = '1' then  -- fill RAM with 64 bytes 0, 64 bytes ff
-          io_cycle_data <= (others => ioctl_load_addr(6));
-        elsif inj_meminit = '1' then 
-          io_cycle_data <= inj_meminit_data;
-        else 
-          io_cycle_data <= ioctl_data;
+      if io_cycle = '0' and io_cycleD = '1' then
+        io_cycle_ce <= '1';
+        io_cycle_we <= '0';
+        io_cycle_addr <= tap_play_addr + TAP_ADDR;
+        if ioctl_req_wr = '1' then
+          ioctl_req_wr <= '0';
+          io_cycle_we <= '1';
+          io_cycle_addr <= ioctl_load_addr;
+          ioctl_load_addr <= ioctl_load_addr + 1;
+          if erasing = '1' then  -- fill RAM with 64 bytes 0, 64 bytes ff
+            io_cycle_data <= (others => ioctl_load_addr(6));
+          elsif inj_meminit = '1' then 
+            io_cycle_data <= inj_meminit_data;
+          else 
+            io_cycle_data <= ioctl_data;
+          end if;
+        end if;
+
+        if ioctl_req_rd = '1' and ioctl_rd_inflight_sys = '0' then
+          io_cycle_addr <= ioctl_load_addr;
+          if cart_mem_req = '0' then
+            ioctl_rd_en <= '1';
+          end if;
         end if;
       end if;
 
-      if ioctl_req_rd = '1' then
-        io_cycle_addr <= ioctl_load_addr;
-        ioctl_rd_en <= '1';
+      if io_cycle = '1' then
+        -- Arm clk64-side capture only once a read cycle is actually active.
+        if ioctl_rd_en = '1' and ioctl_rd_inflight_sys = '0' then
+          ioctl_rd_req_tog_sys <= not ioctl_rd_req_tog_sys;
+          ioctl_rd_inflight_sys <= '1';
+        end if;
+        io_cycle_ce <= '0';
+        io_cycle_we <= '0';
+        ioctl_rd_en <= '0';
       end if;
-    end if;
 
-    if io_cycle = '1' then
-      io_cycle_ce <= '0';
-      io_cycle_we <= '0';
-      ioctl_rd_en <= '0';
-    end if;
-
-    if ioctl_rd = '1' then
-      if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
-        ioctl_load_addr <= CRT_ADDR;
+      if ioctl_rd = '1' then
+        if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
+          ioctl_load_addr <= CRT_ADDR;
+        end if;
+        ioctl_req_rd <= '1';
       end if;
-      ioctl_req_rd <= '1';
-    end if;
 
-    rd_cyc <= rd_cyc(1 downto 0) & (io_cycle and io_cycle_ce and ioctl_rd_en);
+      if ioctl_rd_doneD1 /= ioctl_rd_doneD then
+        ioctl_din <= ioctl_din_buf;
+        ioctl_req_rd <= '0';
+        ioctl_rd_inflight_sys <= '0';
+        ioctl_load_addr <= ioctl_load_addr + 1;
+      end if;
 
-    if rd_cyc(2) = '1' then
-      ioctl_din <= sdram_data;
-      ioctl_req_rd <= '0';
-      ioctl_load_addr <= ioctl_load_addr + 1;
-    end if;
-
-    if ioctl_wr = '1' then
-      if load_prg = '1' then
+      if ioctl_wr = '1' then
+        if load_prg = '1' then
         -- PRG header
         -- Load address low-byte
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
@@ -1846,7 +1900,7 @@ begin
           inj_end <= inj_end + 1;
         end if;
 
-      elsif load_crt = '1' then
+        elsif load_crt = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then
           ioctl_load_addr <= CRT_ADDR;
           cart_blk_len <= (others => '0');
@@ -1911,32 +1965,31 @@ begin
           end if;
         end if;
 
-      elsif load_tap = '1' then
+        elsif load_tap = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= TAP_ADDR; end if;
         if ioctl_addr = to_unsigned(12, ioctl_addr'length) then tap_version <= std_logic_vector(ioctl_data(1 downto 0)); end if;
         ioctl_req_wr <= '1';
 
-      elsif load_reu = '1' then
+        elsif load_reu = '1' then
         if ioctl_addr = to_unsigned(0, ioctl_addr'length) then ioctl_load_addr <= REU_ADDR; end if;
         ioctl_req_wr <= '1';
+        end if;
       end if;
 
-    end if;
+      -- cart added
+      if old_download /= ioctl_download and load_crt = '1' then
+        cart_attached <= old_download;
+        erase_cram <= '1';
+      end if;
 
-    -- cart added
-    if old_download /= ioctl_download and load_crt = '1' then
-      cart_attached <= old_download;
-      erase_cram <= '1';
-    end if;
+      -- meminit for RAM injection
+      if old_download /= ioctl_download and load_prg = '1' and inj_meminit = '0' then
+        inj_meminit <= '1';
+        ioctl_load_addr <= (others => '0');
+      end if;
 
-    -- meminit for RAM injection
-    if old_download /= ioctl_download and load_prg = '1' and inj_meminit = '0' then
-      inj_meminit <= '1';
-      ioctl_load_addr <= (others => '0');
-    end if;
-
-    if inj_meminit = '1' then
-      if ioctl_req_wr = '0' then
+      if inj_meminit = '1' then
+        if ioctl_req_wr = '0' then
         -- check if done
         if ioctl_load_addr(15 downto 0) = x"0100" then
           inj_meminit <= '0';
@@ -1961,31 +2014,32 @@ begin
               ioctl_load_addr <= ioctl_load_addr + 1;
           end case;
         end if;
+        end if;
       end if;
-    end if;
 
-    old_meminit <= inj_meminit;
-    start_strk  <= '1' when old_meminit = '1' and inj_meminit = '0' else '0';
+      old_meminit <= inj_meminit;
+      start_strk  <= '1' when old_meminit = '1' and inj_meminit = '0' else '0';
 
-    if detach_reset_d = '0' and detach_reset = '1' then
-      cart_attached <= '0';
-    end if;
+      if detach_reset_d = '0' and detach_reset = '1' then
+        cart_attached <= '0';
+      end if;
 
-    -- start RAM erasing
-    if erasing = '0' and force_erase ='1' then
-      erasing <= '1';
-      ioctl_load_addr <= (others => '0');
-    end if;
+      -- start RAM erasing
+      if erasing = '0' and force_erase ='1' then
+        erasing <= '1';
+        ioctl_load_addr <= (others => '0');
+      end if;
 
-    -- RAM erasing control
-    if erasing = '1' and ioctl_req_wr = '0' then
-      erase_to <= erase_to + 1;
-      if erase_to = "11111" then
-        if ioctl_load_addr(16 downto 0) < (erase_cram & x"FFFF") then 
-          ioctl_req_wr <= '1';
-        else
-          erasing <= '0';
-          erase_cram <= '0';
+      -- RAM erasing control
+      if erasing = '1' and ioctl_req_wr = '0' then
+        erase_to <= erase_to + 1;
+        if erase_to = "11111" then
+          if ioctl_load_addr(16 downto 0) < (erase_cram & x"FFFF") then 
+            ioctl_req_wr <= '1';
+          else
+            erasing <= '0';
+            erase_cram <= '0';
+          end if;
         end if;
       end if;
     end if;

@@ -62,7 +62,7 @@ add_file video_vicII_656x.vhd
 add_file tang/tn20k/c64nano.cst
 add_file tang/tn20k/c64nano_ezflash.sdc
 add_file tang/tn20k/c64nano.gsc
-add_file loader_sd_card.sv
+add_file tang/tn20k/loader_sd_card_ez.sv
 add_file fifo_sc_hs/fifo_sc_hs.vhd
 add_file c1530.vhd
 add_file sid/sid_dac.sv
