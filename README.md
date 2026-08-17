@@ -41,10 +41,10 @@ Features:
 * Direct BASIC program (*.PRG) injection loader
 * Tape (*.TAP) image loader as [C1530 Datasette](https://en.wikipedia.org/wiki/Commodore_Datasette)
 * Loadable 8K Kernal ROM (*.BIN)
-* REU (*.reu) image loader
+* REU (*.REU) image loader
 * [VIC-II](https://en.wikipedia.org/wiki/MOS_Technology_VIC-II) revision and [6526](https://en.wikipedia.org/wiki/MOS_Technology_CIA) / 8521 selection
 * [SID](https://en.wikipedia.org/wiki/MOS_Technology_6581) revision 6581 or 8580 selectable
-* 2nd dual SID Option and loadable Filter curves
+* dual SID Option and loadable Filter curves
 * emulated 512k / 2MB or 16MB [RAM Expansion Unit (REU)](https://en.wikipedia.org/wiki/Commodore_REU) or [GeoRAM](https://en.wikipedia.org/wiki/GeoRAM)
 * On Screen Display (OSD) for configuration and loadable image selection (D64/G64/CRT/PRG/BIN/TAP/FLT)
 * Physical MIDI-IN and OUT
@@ -62,7 +62,7 @@ Features:
 | feature                | TN20k |MiSTle-25k|all other|note|
 | -----------------------|------ |--|--|-|
 |REU 16MB capacity mode  | ❌    |✅|✅||
-|EasyFlash Save 2 SDcard | ✔️    |✅|✅|⚠️ 1 SID, ❌ MIDI ❌ UART6551 ❌ DIGIMAX|
+|EasyFlash Save 2 SDcard | ✔️    |✅|✅|⚠️ 1 SID, ❌ UART6551|
 
 
 ## Installation

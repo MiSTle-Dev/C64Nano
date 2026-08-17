@@ -347,7 +347,6 @@ signal tap_wrreq      : std_logic_vector(1 downto 0);
 signal tap_wrfull     : std_logic;
 signal tap_start      : std_logic;
 signal read_cyc       : std_logic := '0';
-signal io_cycle_rD    : std_logic;
 signal load_flt       : std_logic := '0';
 signal sid_ver        : std_logic;
 signal sid_mode       : unsigned(2 downto 0);
@@ -448,9 +447,6 @@ signal autosave         : std_logic := '0';
 signal ezfl_idx         : std_logic := '0';
 signal ioctl_upload     : std_logic := '0';
 signal disk_sd_wr_data  : unsigned(7 downto 0);
-signal ext_old          : std_logic := '0';
-signal ext_crt          : std_logic := '0';
-signal ezfl_save_en     : std_logic := '0';
 signal tap_io_cycle     : std_logic := '0';
 signal dac_l, dac_r     : unsigned(8 downto 0);
 signal alo, aro         : signed(15 downto 0);
@@ -1960,7 +1956,6 @@ tap_io_cycle <= not tap_wrfull and tap_loaded;
 process(clk_sys)
 begin
   if rising_edge(clk_sys) then
-      io_cycle_rD <= io_cycle;
       tap_wrreq(1 downto 0) <= tap_wrreq(1 downto 0) sll 1;
 
       if tap_reset = '1' then
@@ -1971,14 +1966,14 @@ begin
         tap_start <= tap_download;
       else
         tap_start <= '0';
-        if io_cycle = '0' and io_cycle_rD = '1' and tap_io_cycle = '1' then
+        if io_cycle = '0' and io_cycleD = '1' and tap_io_cycle = '1' then
             read_cyc <= '1';
-          end if;
-        if io_cycle = '1' and io_cycle_rD = '1' and read_cyc = '1' then
+        end if;
+        if io_cycle = '1' and io_cycleD = '1' and read_cyc = '1' then
             tap_play_addr <= tap_play_addr + 1;
             read_cyc <= '0';
             tap_wrreq(0) <= '1';
-          end if;
+        end if;
       end if;
   end if;
 end process;

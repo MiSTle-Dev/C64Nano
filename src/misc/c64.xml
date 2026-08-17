@@ -211,7 +211,7 @@
  <listentry label="4" value="4"/>
  <listentry label="5" value="5"/>
       </list>
-      <list label="RS232 mode:" id="<" default="0">
+     <list label="RS232 mode:" id="&lt;" default="0">
  <listentry label="VIC-1011" value="0"/>
  <listentry label="UP9600" value="1"/>
  <listentry label="SwiftLnk DE" value="2"/>

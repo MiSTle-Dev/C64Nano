@@ -115,30 +115,8 @@ assign sd_lba     = loader_busy ? loader_sd_lba     : c1541_lba;
 assign sd_wr_data = loader_busy ? loader_sd_wr_data : c1541_sd_wr_data;
 assign sd_rd      = loader_busy ? {loader_sd_rd, 1'b0} : {7'b0000000, c1541_sd_rd};
 assign sd_wr      = loader_busy ? {loader_sd_wr, 1'b0} : {7'b0000000, c1541_sd_wr};
-assign track_sd_wr_en = sd_rd_byte_strobe && !ioctl_upload;
-assign upload_sector_data = upload_sector_buf[sd_byte_index];
 assign loader_sd_wr_data = (sd_byte_index == 9'd0) ? loader_sector_byte0 :
 						   (ioctl_upload ? upload_sector_data : track_buffer_do_sd);
-assign ioctl_dout = track_buffer_do_fd;
-
-sector_dpram trkbuf_inst_loader (
-	.douta  (track_buffer_do_sd),
-	.doutb  (track_buffer_do_fd),
-	.clka   (clk),
-	.ocea   (1'b1),
-	.cea    (1'b1),
-	.reseta (reset),
-	.wrea   (track_sd_wr_en),
-	.clkb   (clk),
-	.oceb   (1'b1),
-	.ceb    (1'b1),
-	.resetb (reset),
-	.wreb   (write_strobe),
-	.ada    (sd_byte_index),
-	.dina   (sd_rd_data),
-	.adb    (buf_addr),
-	.dinb   (upload_data)
-);
 
 // CRT header ROM - 64 bytes of static configuration data
 logic [7:0] CRT_HEADER[0:63] = '{
@@ -176,8 +154,6 @@ integer i;
 
 always_ff @(posedge clk) begin
 
-    integer upload_buf_idx;
-
 	for(i = 0; i < 8; i = i + 1)
 	begin
 		img_presentD[i] <= img_present[i];
@@ -199,6 +175,8 @@ always_ff @(posedge clk) begin
 		loader_sd_wr <= '0;
 	end
 
+	upload_sector_data <= upload_sector_buf[sd_byte_index];
+
 	if(write_strobe && (buf_addr == 9'd0))
 		loader_sector_byte0 <= upload_data;
 
@@ -206,8 +184,6 @@ always_ff @(posedge clk) begin
 
 	if(reset)
 	begin
-		for(upload_buf_idx = 0; upload_buf_idx < 512; upload_buf_idx = upload_buf_idx + 1)
-			upload_sector_buf[upload_buf_idx] <= 8'h00;
 		upload_req <= 0;
 		ioctl_upload <= 0;
 		ioctl_rd <= 0;
@@ -247,8 +223,8 @@ always_ff @(posedge clk) begin
 	end
 	else
 	begin
-		if(write_strobe)
-			upload_sector_buf[buf_addr] <= upload_data;
+	if(write_strobe)
+		upload_sector_buf[buf_addr] <= upload_data;
 
 	if(~old_upload_req & ioctl_upload_req)
 		upload_req <= 1;
@@ -558,4 +534,78 @@ always_ff @(posedge clk) begin
 	end // else: !if(reset)
 end
 
+`ifdef VERILATOR
+sector_dpram #(8, 9) trkbuf_inst_loader
+(
+	.clock(clk),
+
+	.address_a(sd_byte_index),
+	.data_a(sd_rd_data),
+	.wren_a(sd_rd_byte_strobe && !ioctl_upload),
+	.q_a(track_buffer_do_sd),
+
+	.address_b(buf_addr),
+	.data_b(upload_data),
+	.wren_b(write_strobe),
+	.q_b(ioctl_dout)
+);
+`else
+sector_dpram trkbuf_inst_loader (
+	.douta  (track_buffer_do_sd),
+	.doutb(ioctl_dout),
+	.clka   (clk),
+	.ocea   (1'b1),
+	.cea    (1'b1),
+	.reseta (1'b0),
+	.wrea   (sd_rd_byte_strobe && !ioctl_upload),
+	.clkb   (clk),
+	.oceb   (1'b1),
+	.ceb    (1'b1),
+	.resetb (1'b0),
+	.wreb   (write_strobe),
+	.ada    (sd_byte_index),
+	.dina   (sd_rd_data),
+	.adb    (buf_addr),
+	.dinb   (upload_data)
+);
+`endif
 endmodule
+
+`ifdef VERILATOR
+module sector_dpram #(parameter DATAWIDTH=8, ADDRWIDTH=9)
+(
+	input                   clock,
+
+	input   [ADDRWIDTH-1:0] address_a,
+	input   [DATAWIDTH-1:0] data_a,
+	input                   wren_a,
+	output reg [DATAWIDTH-1:0] q_a,
+
+	input   [ADDRWIDTH-1:0] address_b,
+	input   [DATAWIDTH-1:0] data_b,
+	input                   wren_b,
+	output reg [DATAWIDTH-1:0] q_b
+);
+
+reg [DATAWIDTH-1:0] ram[0:(1<<ADDRWIDTH)-1];
+
+always @(posedge clock) begin
+	if(wren_a) begin
+		ram[address_a] <= data_a;
+		q_a <= data_a;
+	end else begin
+		q_a <= ram[address_a];
+	end
+end
+
+always @(posedge clock) begin
+	if(wren_b) begin
+		ram[address_b] <= data_b;
+		q_b <= data_b;
+	end else begin
+		q_b <= ram[address_b];
+	end
+end
+
+endmodule
+`endif
