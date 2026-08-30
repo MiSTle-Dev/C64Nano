@@ -110,6 +110,15 @@ logic [7:0]  loader_sd_wr_data;
 logic [7:0]  loader_sector_byte0;
 logic [7:0]  upload_sector_buf[0:511] /* synthesis syn_ramstyle = "block_ram" */;
 logic [7:0]  upload_sector_data;
+logic [24:0] addr_next;
+logic [6:0]  upload_source_bank;
+logic [24:0] upload_chip_base_addr;
+logic [24:0] upload_chip_data_addr;
+
+assign addr_next = addr + 25'd1;
+assign upload_source_bank = upload_chip_hi ? hibanks[upload_chip_bank[5:0]] : lobanks[upload_chip_bank[5:0]];
+assign upload_chip_base_addr = {5'd0, upload_source_bank, 13'd0};
+assign upload_chip_data_addr = upload_chip_base_addr | {12'd0, (upload_chip_data_idx + 13'd1)};
 
 assign sd_lba     = loader_busy ? loader_sd_lba     : c1541_lba;
 assign sd_wr_data = loader_busy ? loader_sd_wr_data : c1541_sd_wr_data;
@@ -250,7 +259,7 @@ always_ff @(posedge clk) begin
 				io_state <= WRITING;
 			end
 			else if(upload_state == UP_FIND_CHIP) begin
-				if((!upload_walk_hi && lobanks_map[upload_walk_bank]) || (upload_walk_hi && hibanks_map[upload_walk_bank])) begin
+				if((!upload_walk_hi && lobanks_map[upload_walk_bank[5:0]]) || (upload_walk_hi && hibanks_map[upload_walk_bank[5:0]])) begin
 					upload_chip_bank <= upload_walk_bank;
 					upload_chip_hi <= upload_walk_hi;
 					upload_chip_hdr_idx <= '0;
@@ -277,11 +286,11 @@ always_ff @(posedge clk) begin
 
 		WRITE_WAIT4CORE: begin
 				if(~ioctl_wait) begin
-					core_wait_cnt <= core_wait_cnt + 1;
+					core_wait_cnt <= core_wait_cnt + 2'd1;
 					if(&core_wait_cnt) begin
 						upload_data <= ioctl_din;
 						if(upload_chip_data_idx != 13'd8191) begin
-							ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), (upload_chip_data_idx + 1'd1)};
+							ioctl_addr <= upload_chip_data_addr;
 							ioctl_rd <= 1;
 						end
 						io_state <= WRITING;
@@ -295,8 +304,8 @@ always_ff @(posedge clk) begin
 		WRITING: begin
 			write_strobe <= 1;
 			buf_addr <= cnt;
-			addr <= addr + 1;
-			cnt <= cnt + 1;
+			addr <= addr_next;
+			cnt <= cnt + 9'd1;
 
 			if(upload_state == UP_GLOBAL_HDR) begin
 				if(upload_hdr_idx == 6'd63) begin
@@ -311,12 +320,12 @@ always_ff @(posedge clk) begin
 			else if(upload_state == UP_CHIP_HDR) begin
 				if(upload_chip_hdr_idx == 4'd15) begin
 					upload_chip_data_idx <= '0;
-					ioctl_addr <= {5'd0, (upload_chip_hi ? hibanks[upload_chip_bank] : lobanks[upload_chip_bank]), 13'd0};
+					ioctl_addr <= upload_chip_base_addr;
 					ioctl_rd <= 1;
 					upload_state <= UP_CHIP_DATA;
 				end
 				else begin
-					upload_chip_hdr_idx <= upload_chip_hdr_idx + 1'd1;
+					upload_chip_hdr_idx <= upload_chip_hdr_idx + 4'd1;
 				end
 			end
 			else if(upload_state == UP_CHIP_DATA) begin
@@ -336,7 +345,7 @@ always_ff @(posedge clk) begin
 					end
 				end
 				else begin
-					upload_chip_data_idx <= upload_chip_data_idx + 1'd1;
+					upload_chip_data_idx <= upload_chip_data_idx + 13'd1;
 				end
 			end
 
@@ -366,7 +375,7 @@ always_ff @(posedge clk) begin
 				else begin
 					io_state <= WRITE_PREPARE;
 					cnt <= '0;
-					loader_sd_lba <= loader_sd_lba + 1;
+					loader_sd_lba <= loader_sd_lba + 32'd1;
 				end
 			end
 		end
@@ -498,15 +507,15 @@ always_ff @(posedge clk) begin
 			end
 
 		READ_NEXT: begin
-				core_wait_cnt <= core_wait_cnt + 1;
+				core_wait_cnt <= core_wait_cnt + 2'd1;
 				if(~ioctl_wait && &core_wait_cnt) begin
 					wr <= 1;
 					buf_addr <= cnt;
 					ioctl_addr <= addr;
-					addr <= addr + 1;
-					cnt <= cnt + 1;
-					if(cnt == 511 && (addr + 1) < img_size[img_select]) begin
-							loader_sd_lba <= loader_sd_lba + 1;
+					addr <= addr_next;
+					cnt <= cnt + 9'd1;
+					if(cnt == 9'd511 && addr_next < img_size[img_select]) begin
+							loader_sd_lba <= loader_sd_lba + 32'd1;
 							io_state <= WAIT4CORE;
 						end
 					else

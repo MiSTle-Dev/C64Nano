@@ -23,7 +23,7 @@ entity c64nano_top is
    );
   port
   (
-    clk         : in std_logic;
+    clk_in      : in std_logic;
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(5 downto 0);
@@ -104,12 +104,18 @@ signal pll_locked     : std_logic;
 signal pll_locked_hid : std_logic;
 signal clk_pixel_x10  : std_logic;
 signal clk_pixel_x5   : std_logic;
+signal clk27          : std_logic;   -- CTA-861 pixel clock
+signal clk27_x5       : std_logic;   -- 135 MHz, phase locked to clk27
+signal clk27_x10      : std_logic;
+signal pll27_locked   : std_logic;
 signal spi_io_clk     : std_logic;
 signal flash_clk      : std_logic;
 attribute syn_keep : integer;
 attribute syn_keep of clk64             : signal is 1;
 attribute syn_keep of clk_sys           : signal is 1;
 attribute syn_keep of clk_pixel_x5      : signal is 1;
+attribute syn_keep of clk27             : signal is 1;
+attribute syn_keep of clk27_x5          : signal is 1;
 attribute syn_keep of spi_io_clk    : signal is 1;
 attribute syn_keep of flash_clk     : signal is 1;
 -- custom pins
@@ -200,7 +206,7 @@ signal sys_data_out   : std_logic_vector(7 downto 0);
 signal sdc_data_out   : std_logic_vector(7 downto 0);
 signal hid_int        : std_logic;
 signal system_scanlines : std_logic_vector(1 downto 0);
-signal system_volume  : std_logic_vector(1 downto 0);
+signal system_volume  : std_logic_vector(2 downto 0);
 signal joystick1      : std_logic_vector(7 downto 0);
 signal joystick2      : std_logic_vector(7 downto 0);
 signal mouse_btns     : std_logic_vector(1 downto 0);
@@ -304,7 +310,6 @@ signal FBDSEL          : std_logic_vector(5 downto 0) := "011101";
 signal ntscModeD       : std_logic;
 signal ntscModeD1      : std_logic;
 signal ntscModeD2      : std_logic;
-signal audio_div       : unsigned(8 downto 0);
 signal flash_lock      : std_logic;
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : unsigned(22 downto 0);
@@ -466,6 +471,7 @@ signal system_digimax   : unsigned(1 downto 0) := (others => '0');
 signal ioe_we, iof_we   : std_logic;
 signal old_ioe, old_iof : std_logic;
 signal pc2_n_o_d        : std_logic;
+signal system_stereo_mix: std_logic;
 
 constant RAM_ADDR      : unsigned(22 downto 0) := 23x"0000000";-- System RAM: 64k
 constant CRM_ADDR      : unsigned(22 downto 0) := 23x"0010000";-- Cartridge RAM: 64k
@@ -538,9 +544,9 @@ begin
 
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi (M0S Dock) , then the connection is being switched
-  process (clk)
+  process (clk_in)
   begin
-    if rising_edge(clk) then
+    if rising_edge(clk_in) then
       if flash_lock = '0' then
         spi_ext <= '0';
       elsif pmod_companion_ss = '0' then
@@ -801,8 +807,6 @@ generic map (
     outbyte         => sd_rd_data         -- a byte of sector content
 );
 
-audio_div  <= to_unsigned(342,9) when ntscMode = '1' else to_unsigned(327,9);
-
 cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_finish;
 
 yes_digimax: if DIGIMAX /= 0 generate
@@ -884,10 +888,10 @@ end process;
 
 video_inst: entity work.video 
 port map(
-      pll_lock     => pll_locked, 
+      pll_lock     => pll_locked and pll27_locked, 
       clk          => clk_sys,
-      clk_pixel_x5 => clk_pixel_x5,
-      audio_div    => audio_div,
+      clk27        => clk27,
+      clk27_x5     => clk27_x5,
 
       ntscmode  => ntscMode,
       hs_in_n   => hsync,
@@ -905,6 +909,7 @@ port map(
       mcu_start => mcu_start,
       mcu_osd_strobe => mcu_osd_strobe,
       mcu_data  => mcu_data_out,
+      osd_stereo_mix => system_stereo_mix,
 
       -- values that can be configure by the user via osd
       system_screen => system_screen,
@@ -1065,7 +1070,7 @@ mainclock: rPLL
             CLKOUTD3 => open,
             RESET    => '0',
             RESET_P  => '0',
-            CLKIN    => clk,
+            CLKIN    => clk_in,
             CLKFB    => '0',
             FBDSEL   => FBDSEL,
             IDSEL    => IDSEL,
@@ -1099,14 +1104,88 @@ port map(
     CALIB  => '0'
 );
 
-flashclock: entity work.Gowin_rPLL_flash
-    port map (
-        clkout  => flash_clk,
-        lock    => flash_lock,
-        clkoutp => mspi_clk,
-        clkoutd => open, -- 32Mhz
-        clkin   => clk
-    );
+-- --------------------------------------------------------------------
+-- CTA-861 pixel clock domain: 27 MHz and 135 MHz, phase locked.
+-- 27 MHz in, IDIV 1, FBDIV 10 -> VCO/CLKOUT 270 MHz, CLKOUTD 135 MHz.
+-- PFD = 27 MHz, well above the 3 MHz minimum.
+-- This PLL also sources the SPI flash clock (see div4 below): the
+-- GW2AR-18C only exposes two PLLs to the fabric (the hard DDR3 PHY eats
+-- the other two) and the formerly separate 64.125 MHz flash PLL did not
+-- fit next to mainclock and this one.
+-- --------------------------------------------------------------------
+ceaclock: rPLL
+        generic map (
+            FCLKIN => "27",
+            DEVICE => "GW2AR-18C",
+            DYN_IDIV_SEL => "false",
+            IDIV_SEL => 0,          -- divide by 1
+            DYN_FBDIV_SEL => "false",
+            FBDIV_SEL => 9,         -- multiply by 10  -> 270 MHz
+            DYN_ODIV_SEL => "false",
+            ODIV_SEL => 2,
+            PSDA_SEL => "0000",
+            DYN_DA_EN => "false",
+            DUTYDA_SEL => "1000",
+            CLKOUT_FT_DIR => '1',
+            CLKOUTP_FT_DIR => '1',
+            CLKOUT_DLY_STEP => 0,
+            CLKOUTP_DLY_STEP => 0,
+            CLKFB_SEL => "internal",
+            CLKOUT_BYPASS => "false",
+            CLKOUTP_BYPASS => "false",
+            CLKOUTD_BYPASS => "false",
+            DYN_SDIV_SEL => 2,      -- CLKOUTD = 270/2 = 135 MHz
+            CLKOUTD_SRC => "CLKOUT",
+            CLKOUTD3_SRC => "CLKOUT"
+        )
+        port map (
+            CLKOUT   => clk27_x10,
+            LOCK     => pll27_locked,
+            CLKOUTP  => open,
+            CLKOUTD  => clk27_x5,
+            CLKOUTD3 => open,
+            RESET    => '0',
+            RESET_P  => '0',
+            CLKIN    => clk_in,
+            CLKFB    => '0',
+            FBDSEL   => (others => '0'),
+            IDSEL    => (others => '0'),
+            ODSEL    => (others => '0'),
+            PSDA     => (others => '0'),
+            DUTYDA   => (others => '0'),
+            FDLY     => (others => '0')
+        );
+
+-- 270 MHz / 10 = 27 MHz, phase related to clk27_x5 as OSER10 requires
+div3_inst: CLKDIV
+generic map( 
+  DIV_MODE => "5", 
+  GSREN => "false" )
+port map( 
+  CLKOUT => clk27, 
+  HCLKIN => clk27_x5, 
+  RESETN => pll27_locked, 
+  CALIB => '0' 
+  );
+
+-- 270 MHz / 4 = 67.5 MHz SPI flash clock (was a dedicated 64.125 MHz PLL,
+-- folded into this domain because the device only provides two PLLs)
+div4_inst: CLKDIV
+generic map( 
+  DIV_MODE => "4", 
+  GSREN => "false" )
+port map( 
+  CLKOUT => flash_clk, 
+  HCLKIN => clk27_x10, 
+  RESETN => pll27_locked, 
+  CALIB => '0' 
+  );
+
+-- mspi_clk keeps the 180 degree offset to flash_clk the old flash PLL
+-- provided via its phase shifted CLKOUTP output; a 50% duty clock
+-- inverted is exactly the same half period relationship.
+flash_lock <= pll27_locked;
+mspi_clk   <= not flash_clk;
 
 pll_locked_comb <= pll_locked_hid and flash_lock;
 leds_n <=  not leds;
@@ -1339,7 +1418,8 @@ hid_inst: entity work.hid
   system_boot_easyflash=> boot_easyflash,
   system_autosave     => open,
   system_save_cartridge => open,
-  system_digimax        => system_digimax,
+  system_digimax      => system_digimax,
+  system_stereo_mix   => system_stereo_mix,
 
   -- port io (used to expose rs232)
   port_status       => serial_status,

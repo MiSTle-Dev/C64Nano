@@ -5,12 +5,11 @@
 module auxiliary_video_information_info_frame
 #(
     parameter bit [1:0] VIDEO_FORMAT = 2'b00, // 00 = RGB, 01 = YCbCr 4:2:2, 10 = YCbCr 4:4:4
-    parameter bit ACTIVE_FORMAT_INFO_PRESENT = 1'b0, // Not valid
+    parameter bit ACTIVE_FORMAT_INFO_PRESENT = 1'b1, // valid, see aspect input
     parameter bit [1:0] BAR_INFO = 2'b00, // Not valid
     parameter bit [1:0] SCAN_INFO = 2'b00, // No data
     parameter bit [1:0] COLORIMETRY = 2'b00, // No data
-    parameter bit [1:0] PICTURE_ASPECT_RATIO = 2'b00, // No data, See CEA-CEB16 for more information about Active Format Description processing.
-    parameter bit [3:0] ACTIVE_FORMAT_ASPECT_RATIO = 4'b1001, // Not valid unless ACTIVE_FORMAT_INFO_PRESENT = 1'b1, then Same as picture aspect ratio
+    parameter bit [3:0] ACTIVE_FORMAT_ASPECT_RATIO = 4'b1000, // Same as picture aspect ratio
     parameter bit IT_CONTENT = 1'b0, //  The IT content bit indicates when picture content is composed according to common IT practice (i.e. without regard to Nyquist criterion) and is unsuitable for analog reconstruction or filtering. When the IT content bit is set to 1, downstream processors should pass pixel data unfiltered and without analog reconstruction.
     parameter bit [2:0] EXTENDED_COLORIMETRY = 3'b000, // Not valid unless COLORIMETRY = 2'b11. The extended colorimetry bits, EC2, EC1, and EC0, describe optional colorimetry encoding that may be applicable to some implementations and are always present, whether their information is valid or not (see CEA 861-D Section 7.5.5).
     parameter bit [1:0] RGB_QUANTIZATION_RANGE = 2'b00, // Default. Displays conforming to CEA-861-D accept both a limited quantization range of 220 levels (16 to 235) anda full range of 256 levels (0 to 255) when receiving video with RGB color space (see CEA 861-D Sections 5.1, Section 5.2, Section 5.3 and Section 5.4). By default, RGB pixel data values should be assumed to have the limited range when receiving a CE video format, and the full range when receiving an IT format. The quantization bits allow the source to override this default and to explicitly indicate the current RGB quantization range.
@@ -22,6 +21,9 @@ module auxiliary_video_information_info_frame
 (
     input logic [1:0] stmode,
     input logic [7:0] cea,
+    // 00 = no data, 01 = 4:3, 10 = 16:9.  Was hardwired to 2'b00 ("no data"),
+    // which is why nothing downstream ever knew the picture was meant to be 4:3.
+    input logic [1:0] aspect,
     output logic [23:0] header,
     output logic [55:0] sub [3:0]
 );
@@ -41,7 +43,7 @@ logic [7:0] packet_bytes [27:0];
 
 assign packet_bytes[0] = 8'd1 + ~(header[23:16] + header[15:8] + header[7:0] + packet_bytes[13] + packet_bytes[12] + packet_bytes[11] + packet_bytes[10] + packet_bytes[9] + packet_bytes[8] + packet_bytes[7] + packet_bytes[6] + packet_bytes[5] + packet_bytes[4] + packet_bytes[3] + packet_bytes[2] + packet_bytes[1]);
 assign packet_bytes[1] = {1'b0, VIDEO_FORMAT, ACTIVE_FORMAT_INFO_PRESENT, BAR_INFO, SCAN_INFO};
-assign packet_bytes[2] = {COLORIMETRY, PICTURE_ASPECT_RATIO, ACTIVE_FORMAT_ASPECT_RATIO};
+assign packet_bytes[2] = {COLORIMETRY, aspect, ACTIVE_FORMAT_ASPECT_RATIO};
 assign packet_bytes[3] = {IT_CONTENT, EXTENDED_COLORIMETRY, RGB_QUANTIZATION_RANGE, NON_UNIFORM_PICTURE_SCALING};
 assign packet_bytes[4] = cea;
 assign packet_bytes[5] = {YCC_QUANTIZATION_RANGE, CONTENT_TYPE, PIXEL_REPETITION};

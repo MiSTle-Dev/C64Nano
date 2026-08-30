@@ -22,6 +22,7 @@ add_file hdmi/packet_picker.sv
 add_file hdmi/serializer.sv
 add_file hdmi/source_product_description_info_frame.sv
 add_file hdmi/tmds_channel.sv
+add_file misc/cea_linebuf.v
 add_file misc/flash_dspi.v
 add_file misc/hid.v
 add_file misc/mcu_spi.v
