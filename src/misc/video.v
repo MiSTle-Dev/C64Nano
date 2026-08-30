@@ -29,7 +29,7 @@ module video (
           input [1:0]  system_scanlines,
           input [2:0]  system_volume,
           input [1:0]  system_screen,
-          input    osd_stereo_mix,
+          input        osd_stereo_mix,
 
 	      // hdmi/tdms
 	      output	   tmds_clk_n,
@@ -114,10 +114,8 @@ osd_u8g2 osd_u8g2 (
 // latch audio, so it's stable during 48khz transfer
 reg [15:0] audio_reg [2]; // 16 bit signed audio for HDMI
 
-// Sign-extend inputs to 16-bit BEFORE mixing – intermediate sum
-// cannot overflow, result always fits back in 15 bit.
-wire signed [15:0] audio_left_s  = {{1{audio_l[14]}}, audio_l};
-wire signed [15:0] audio_right_s = {{1{audio_r[14]}}, audio_r};
+wire signed [15:0] audio_left_s  = {{1{audio_l[15]}}, audio_l[15:1]};
+wire signed [15:0] audio_right_s = {{1{audio_r[15]}}, audio_r[15:1]};
 
 reg signed [14:0] mixed_audio_left;
 reg signed [14:0] mixed_audio_right;
@@ -132,7 +130,7 @@ reg [31:0] aclk_acc;
 reg        clk_audio;
 reg        aclk_tick;
 
-always @(posedge clk) begin
+always @(posedge clk27) begin
     aclk_acc  <= aclk_acc + AUDIO_INC;
     clk_audio <= aclk_acc[31];                 // msb of the accumulator = 48kHz
     aclk_tick <= (clk_audio != aclk_acc[31]);  // high the cycle after each edge
@@ -148,8 +146,8 @@ always @(posedge clk) begin
         // always fits in 15 bit and is truncated safely on assignment. 
 	    case (osd_stereo_mix)
             1'b0: begin   // no mix
-                mixed_audio_left  <= audio_l;
-                mixed_audio_right <= audio_r;
+                mixed_audio_left  <= $signed(audio_l) >>> 1;
+                mixed_audio_right <= $signed(audio_r) >>> 1;
             end
             default: begin  // 75 / 25 blend
                 mixed_audio_left  <= (audio_left_s  - (audio_left_s  >>> 2))

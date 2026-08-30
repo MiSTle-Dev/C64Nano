@@ -15,8 +15,8 @@ entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
-   U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
+   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
+   U6551 : integer := 0;  -- 0:no, 1:yes optional 6551 UART
    DIGIMAX : integer := 1;  -- 0:no, 1:yes optional DIGIMAX DAC
    REU   : integer := 1;  -- 0:no, 1:yes optional REU
    C1541 : integer := 1  -- 0:no, 1:yes optional 6551 UART
@@ -380,13 +380,13 @@ signal sid_ver        : std_logic;
 signal sid_mode       : unsigned(2 downto 0);
 signal sid_digifix    : std_logic;
 signal system_tape_sound : std_logic;
-signal uart_rxD         : std_logic_vector(1 downto 0);
+signal uart_rxD       : std_logic_vector(1 downto 0);
 signal uart_rx_filtered : std_logic;
 signal cnt2_i          : std_logic;
 signal cnt2_o          : std_logic;
 signal sp2_i           : std_logic;
 signal sp1_o           : std_logic;
-signal system_up9600   : unsigned(2 downto 0);
+signal system_up9600   : unsigned(2 downto 0) := (others =>'0');
 signal sid_fc_offset   : std_logic_vector(2 downto 0);
 signal sid_fc_lr       : std_logic_vector(12 downto 0);
 signal sid_filter      : std_logic_vector(2 downto 0);
@@ -1368,7 +1368,7 @@ hid_inst: entity work.hid
   extra_button1   => extra_button2
 );
 
- module_inst: entity work.sysctrl 
+ module_inst: entity work.sysctrl
  port map 
  (
   clk                 => clk_sys,
@@ -1416,8 +1416,8 @@ hid_inst: entity work.hid
   system_run_prg      => run_prg,
   system_clear_ram    => clear_ram,
   system_boot_easyflash=> boot_easyflash,
-  system_autosave     => open,
-  system_save_cartridge => open,
+
+
   system_digimax      => system_digimax,
   system_stereo_mix   => system_stereo_mix,
 
@@ -1716,7 +1716,7 @@ port map(
     mem_in      => sdram_data,
     mem_out     => cart_wrdata,
     mem_addr(22 downto 0) => cart_addr,
-    mem_req     => open,
+
     mem_cycle   => io_cycle,
     IO_rom      => io_rom,
     IO_rd       => cart_oe,
@@ -1731,7 +1731,7 @@ port map(
     nmi_ack     => nmi_ack
   );
 
-midi_en <= '1' when st_midi /= "000" else '0';
+midi_en <= '1' when MIDI /= 0 and st_midi /= "000" else '0';
 
 yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi
