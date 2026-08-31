@@ -212,7 +212,7 @@ reg[7:0] wave6581_p_t[0:2047] =
 	'he0, 'hf0, 'hf0, 'hf8, 'hf0, 'hf8, 'hf8, 'hfa, 'hf0, 'hf8, 'hf8, 'hfb, 'hf8, 'hfb, 'hfb, 'hfb,
 	'he0, 'hf0, 'hf0, 'hf8, 'hf0, 'hf8, 'hfc, 'hfc, 'hf8, 'hfc, 'hfc, 'hfd, 'hfc, 'hfd, 'hfd, 'hfd,
 	'hf8, 'hfc, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff
-} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
+} /* synthesis syn_ramstyle = "block_ram" */;
 
 
 reg [7:0] wave6581_ps_[0:2047] = 
@@ -345,7 +345,7 @@ reg [7:0] wave6581_ps_[0:2047] =
 	'h00, 'h00, 'h00, 'h70, 'h40, 'h70, 'h70, 'h7d, 'h40, 'h70, 'h78, 'h7d, 'h78, 'h7d, 'h7d, 'h7d,
 	'h00, 'h40, 'h40, 'h78, 'h60, 'h78, 'h78, 'h7e, 'h60, 'h78, 'h78, 'h7e, 'h7c, 'h7e, 'h7e, 'h7e,
 	'h70, 'h7c, 'h7c, 'h7f, 'h7e, 'h7f, 'h7f, 'h7f, 'h7e, 'h7f, 'h7f, 'h7f, 'h7f, 'h7f, 'h7f, 'h7f
-} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
+} /* synthesis syn_ramstyle = "block_ram" */;
 
 
 reg [7:0] wave8580_p_t[0:2047] =
@@ -478,7 +478,7 @@ reg [7:0] wave8580_p_t[0:2047] =
 	'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hf8, 'hfa, 'hfa, 'hfb, 'hfb, 'hfb,
 	'hf8, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfd, 'hfd, 'hfd,
 	'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff
-} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
+} /* synthesis syn_ramstyle = "block_ram" */;
 
 
 reg [7:0] wave8580_ps_[0:4095] =
@@ -739,7 +739,7 @@ reg [7:0] wave8580_ps_[0:4095] =
 	'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfc, 'hfd, 'hfc, 'hfc, 'hfc, 'hfd, 'hfd, 'hfd, 'hfd, 'hfd,
 	'hfc, 'hfc, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe, 'hfe,
 	'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff, 'hff
-} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
+} /* synthesis syn_ramstyle = "block_ram" */;
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -764,18 +764,25 @@ sid_dac #(.BITS(11)) fc_dac
   .vout (fc_6581)
 );
 
-function [9:0] tanh_x_mirror(signed [10:0] x);
-    tanh_x_mirror = 10'(x < 0 ? -x : x);
+function automatic logic [9:0] tanh_x_mirror(
+	input logic signed [10:0] x);
+    tanh_x_mirror = (x < 0) ? -x : x;
 endfunction
 
-function signed [10:0] tanh_x_clamp(signed [12:0] x);
-    tanh_x_clamp = (x < -1023) ? -11'sd1023 :
-                   (x >  1023) ?  11'sd1023 :
-                   11'(x);
+function automatic logic signed [10:0] tanh_x_clamp(
+	input logic signed [12:0] x);
+	if (x < -13'sd1023)
+		return -11'sd1023;
+	else if (x > 13'sd1023)
+		return 11'sd1023;
+	else
+		return x[10:0];
 endfunction
 
-function signed [15:0] tanh_y_mirror(x_neg, signed [15:0] y);
-    tanh_y_mirror = x_neg ? -y : y;
+function automatic logic signed [15:0] tanh_y_mirror(
+	input logic x_neg,
+	input logic signed [15:0] y);
+	tanh_y_mirror = x_neg ? -y : y;
 endfunction
 
 wire signed [15:0] f6581_adj_y0 = 16'(9883+250);
@@ -1311,7 +1318,7 @@ reg  [15:0] f6581_curve[4*1024] =
     29502,  29509,  29516,  29522,  29529,  29535,  29542,  29548,
     29553,  29560,  29567,  29572,  29578,  29585,  29590,  29596,
     29603,  29608,  29614,  29619,  29626,  29632,  29637,  29644
-} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
+} /* synthesis syn_ramstyle = "block_ram" */;
 
 //reDIP-SID curve
 reg [14:0] f6581_adj[0:1023] =
@@ -1444,6 +1451,6 @@ reg [14:0] f6581_adj[0:1023] =
     9818,   9818,   9818,   9819,   9819,   9819,   9820,   9820,
     9821,   9821,   9821,   9822,   9822,   9822,   9823,   9823,
     9823,   9824,   9824,   9824,   9825,   9825,   9825,   9826
-} /* synthesis syn_ramstyle = "block_ram,no_rw_check" */;
+} /* synthesis syn_ramstyle = "block_ram" */;
 
 endmodule

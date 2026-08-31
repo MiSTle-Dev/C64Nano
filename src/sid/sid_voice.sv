@@ -108,7 +108,7 @@ always @(posedge clock) begin
 			end
 			else begin
 				noise_age <= 0;
-				if (clk && !clk_d) begin
+            if (clk & ~clk_d) begin
 					lfsr_noise <= {lfsr_noise[21:0], (reset | test_ctrl | lfsr_noise[22]) ^ lfsr_noise[17]};
 				end
 				else if (control[7] & |control[6:4]) begin
@@ -178,10 +178,16 @@ reg signed [21:0] dca_out;
 reg        [23:0] keep_cnt;
 reg signed  [8:0] env_dac;
 reg signed [12:0] dac_out;
-wire signed [12:0] wave_sum   = $signed({1'b0, (norm_dac | {comb, 4'b0})});
-wire signed [12:0] waveform_dc = mode ? $signed(WAVEFORM_DC_8580) : $signed(WAVEFORM_DC_6581);
-wire signed [21:0] voice_dc    = mode ? VOICE_DC_8580 : VOICE_DC_6581;
-wire signed [21:0] voice_mul   = $signed(dac_out) * $signed(env_dac);
+
+wire signed [12:0] wave_sum;
+wire signed [12:0] waveform_dc;
+wire signed [21:0] voice_dc;
+wire signed [21:0] voice_mul;
+assign wave_sum = $signed({1'b0, (norm_dac | {comb, 4'b0})});
+assign waveform_dc = mode ? $signed(WAVEFORM_DC_8580) : $signed(WAVEFORM_DC_6581);
+assign voice_dc = mode ? VOICE_DC_8580 : VOICE_DC_6581;
+assign voice_mul = $signed(dac_out) * $signed(env_dac);
+
 always @(posedge clock) begin
 
 	if(ce_1m) begin

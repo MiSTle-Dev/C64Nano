@@ -87,8 +87,8 @@ wire signed [33:0] o = s ? (c - m) : (c + m);
 reg signed [17:0] vlp, vlp2, vlp_next;
 reg signed [17:0] vbp, vbp2, vbp_next;
 reg signed [17:0] vhp, vhp2, vhp_next;
-reg signed [17:0] vi;
-reg signed [15:0] vd;
+reg signed [17:0] vi = 0;
+reg signed [15:0] vd = 0;
 reg signed [18:0] dv;
 
 // Filtered-tap mix and its compressed form. tmix_s / center_s are registered

@@ -73,10 +73,10 @@ wire        voice_1_PA_MSB[N];
 wire        voice_2_PA_MSB[N];
 wire        voice_3_PA_MSB[N];
 
-logic [7:0] _st_out[N*3];
-logic [7:0] p_t_out[N*3];
-logic [7:0] ps__out[N*3];
-logic [7:0] pst_out[N*3];
+reg  [7:0] _st_out[N*3];
+reg  [7:0] p_t_out[N*3];
+reg  [7:0] ps__out[N*3];
+reg  [7:0] pst_out[N*3];
 wire [11:0] acc_t[N*3];
 
 reg  [17:0] audio[N];
@@ -222,12 +222,12 @@ generate
 endgenerate
 
 wire [15:0] F0;
-	wire  [7:0] f__st_out;
-	wire  [7:0] f_p_t_out;
-	wire  [7:0] f_ps__out;
-	wire  [7:0] f_pst_out;
-	reg  [11:0] f_acc_t;
-	reg   [3:0] state;
+wire  [7:0] f__st_out;
+wire  [7:0] f_p_t_out;
+wire  [7:0] f_ps__out;
+wire  [7:0] f_pst_out;
+reg  [11:0] f_acc_t;
+reg   [3:0] state;
 wire n = DUAL && state[3];
 
 sid_tables #(MULTI_FILTERS) sid_tables
