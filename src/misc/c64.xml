@@ -328,7 +328,7 @@
 	<listentry label="Dark" value="2"/>
 	<listentry label="Balanced" value="3"/>
       </list>
-      <list label="Volume:" id="A" default="1">
+      <list label="Volume:" id="A" default="2">
 	<listentry label="Mute" value="0"/>
      <listentry label="25%" value="1"/>
      <listentry label="50%" value="2"/>

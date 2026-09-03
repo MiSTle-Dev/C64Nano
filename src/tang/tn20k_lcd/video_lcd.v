@@ -28,8 +28,9 @@ module video
 
    // values that can be configure by the user via osd          
    input [1:0]  system_scanlines,
-   input [1:0]  system_volume,
+   input [2:0]  system_volume,
    input [1:0]  system_screen,
+   input        osd_stereo_mix,
 
    // digital video out for lcd
    output lcd_clk,
@@ -106,15 +107,15 @@ assign pa_en = (STEREO)?~pll_lock:pll_lock; // TM138/60k enable amplifier 0=on a
 
 // scale audio for valume by signed division
 wire [15:0] audio_vol_l = 
-    (system_volume == 2'd0)?16'd0:
-    (system_volume == 2'd1)?{ {2{audio_l[15]}}, audio_l[15:2] }:
-    (system_volume == 2'd2)?{ audio_l[15], audio_l[15:1] }:
+    (system_volume == 3'd0)?16'd0:
+    (system_volume == 3'd1)?{ {2{audio_l[15]}}, audio_l[15:2] }:
+    (system_volume == 3'd2)?{ audio_l[15], audio_l[15:1] }:
     audio_l;
 
 wire [15:0] audio_vol_r = 
-    (system_volume == 2'd0)?16'd0:
-    (system_volume == 2'd1)?{ {2{audio_r[15]}}, audio_r[15:2] }:
-    (system_volume == 2'd2)?{ audio_r[15], audio_r[15:1] }:
+    (system_volume == 3'd0)?16'd0:
+    (system_volume == 3'd1)?{ {2{audio_r[15]}}, audio_r[15:2] }:
+    (system_volume == 3'd2)?{ audio_r[15], audio_r[15:1] }:
     audio_r;
 
 // clk_div <= (ntscmode?32500000:31500000); // GW5A
