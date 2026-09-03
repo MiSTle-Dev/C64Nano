@@ -33,7 +33,6 @@
         <File path="misc/video_analyzer.v" type="file.verilog" enable="1"/>
         <File path="misc/ws2812.v" type="file.verilog" enable="1"/>
         <File path="mos6526.v" type="file.verilog" enable="1"/>
-        <File path="reu.v" type="file.verilog" enable="1"/>
         <File path="sdram8.v" type="file.verilog" enable="1"/>
         <File path="sid/sid_dac.sv" type="file.verilog" enable="1"/>
         <File path="sid/sid_envelope.sv" type="file.verilog" enable="1"/>
@@ -43,6 +42,7 @@
         <File path="sid/sid_voice.sv" type="file.verilog" enable="1"/>
         <File path="tang/tn20k/cartridge.sv" type="file.verilog" enable="1"/>
         <File path="tang/tn20k/loader_sd_card.sv" type="file.verilog" enable="1"/>
+        <File path="tang/tn20k/reu.v" type="file.verilog" enable="1"/>
         <File path="uart6551/io_fifo.v" type="file.verilog" enable="1"/>
         <File path="uart6551/uart_6551.v" type="file.verilog" enable="1"/>
         <File path="c1530.vhd" type="file.vhdl" enable="1"/>
@@ -73,6 +73,7 @@
         <File path="video_vicII_656x.vhd" type="file.vhdl" enable="1"/>
         <File path="tang/tn20k/c64nano.cst" type="file.cst" enable="1"/>
         <File path="tang/tn20k/c64nano.sdc" type="file.sdc" enable="1"/>
+        <File path="tang/tn20k/c64nano.gsc" type="file.gsc" enable="1"/>
         <File path="misc/c64_xml.hex" type="file.other" enable="1"/>
     </FileList>
 </Project>

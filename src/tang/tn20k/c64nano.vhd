@@ -15,7 +15,7 @@ entity c64nano_top is
   generic
   (
    DUAL  : integer := 1; -- 0:no, 1:yes dual SID build option
-   MIDI  : integer := 0; -- 0:no, 1:yes optional MIDI Interface
+   MIDI  : integer := 1; -- 0:no, 1:yes optional MIDI Interface
    U6551 : integer := 1;  -- 0:no, 1:yes optional 6551 UART
    DIGIMAX : integer := 1;  -- 0:no, 1:yes optional DIGIMAX DAC
    REU   : integer := 1;  -- 0:no, 1:yes optional REU
@@ -23,7 +23,7 @@ entity c64nano_top is
    );
   port
   (
-    clk         : in std_logic;
+    clk_in      : in std_logic;
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(5 downto 0);
@@ -538,9 +538,9 @@ begin
 
 -- by default the internal SPI is being used. Once there is
 -- a select from the external spi (M0S Dock) , then the connection is being switched
-  process (clk)
+  process (clk_in)
   begin
-    if rising_edge(clk) then
+    if rising_edge(clk_in) then
       if flash_lock = '0' then
         spi_ext <= '0';
       elsif pmod_companion_ss = '0' then
@@ -1065,7 +1065,7 @@ mainclock: rPLL
             CLKOUTD3 => open,
             RESET    => '0',
             RESET_P  => '0',
-            CLKIN    => clk,
+            CLKIN    => clk_in,
             CLKFB    => '0',
             FBDSEL   => FBDSEL,
             IDSEL    => IDSEL,
@@ -1105,7 +1105,7 @@ flashclock: entity work.Gowin_rPLL_flash
         lock    => flash_lock,
         clkoutp => mspi_clk,
         clkoutd => open, -- 32Mhz
-        clkin   => clk
+        clkin   => clk_in
     );
 
 pll_locked_comb <= pll_locked_hid and flash_lock;
@@ -1289,7 +1289,7 @@ hid_inst: entity work.hid
   extra_button1   => extra_button2
 );
 
- module_inst: entity work.sysctrl 
+ module_inst: entity work.sysctrl
  port map 
  (
   clk                 => clk_sys,
@@ -1533,7 +1533,7 @@ reu_ram_ce <= not ext_cycle_d and ext_cycle and dma_req;
 yes_reu: if REU /= 0 generate
 reu_inst: entity work.reu
 generic map(
-  REU_ADDR => unsigned'("00" & REU_ADDR)
+  REU_ADDR => REU_ADDR
 )
 port map(
     clk       => clk_sys,
@@ -1549,7 +1549,7 @@ port map(
     dma_we    => dma_we,
   
     ram_cycle => ext_cycle,
-    ram_addr(22 downto 0) => reu_ram_addr,
+    ram_addr  => reu_ram_addr,
     ram_dout  => reu_ram_dout,
     ram_din   => sdram_data,
     ram_we    => reu_ram_we,
@@ -1651,7 +1651,7 @@ port map(
     nmi_ack     => nmi_ack
   );
 
-midi_en <= '1' when st_midi /= "000" else '0';
+midi_en <= '1' when MIDI /= 0 and st_midi /= "000" else '0';
 
 yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi

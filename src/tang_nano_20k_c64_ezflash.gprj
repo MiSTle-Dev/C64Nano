@@ -5,6 +5,7 @@
     <Version>5</Version>
     <Device name="GW2AR-18C" pn="GW2AR-LV18QN88C8/I7">gw2ar18c-000</Device>
     <FileList>
+        <File path="am29f040.sv" type="file.verilog" enable="1"/>
         <File path="c1541/mist_sd_card.sv" type="file.verilog" enable="1"/>
         <File path="gen_uart.v" type="file.verilog" enable="1"/>
         <File path="gowin_dpb/gowin_dpb_track_buffer_b.v" type="file.verilog" enable="1"/>
@@ -29,8 +30,11 @@
         <File path="misc/sd_rw.v" type="file.verilog" enable="1"/>
         <File path="misc/sdcmd_ctrl.v" type="file.verilog" enable="1"/>
         <File path="misc/sysctrl.v" type="file.verilog" enable="1"/>
+        <File path="misc/video.v" type="file.verilog" enable="1"/>
+        <File path="misc/video_analyzer.v" type="file.verilog" enable="1"/>
         <File path="misc/ws2812.v" type="file.verilog" enable="1"/>
         <File path="mos6526.v" type="file.verilog" enable="1"/>
+        <File path="tang/tn20k/reu.v" type="file.verilog" enable="1"/>
         <File path="sdram8.v" type="file.verilog" enable="1"/>
         <File path="sid/sid_dac.sv" type="file.verilog" enable="1"/>
         <File path="sid/sid_envelope.sv" type="file.verilog" enable="1"/>
@@ -38,10 +42,8 @@
         <File path="sid/sid_tables.sv" type="file.verilog" enable="1"/>
         <File path="sid/sid_top.sv" type="file.verilog" enable="1"/>
         <File path="sid/sid_voice.sv" type="file.verilog" enable="1"/>
-        <File path="tang/tn20k_lcd/video_lcd.v" type="file.verilog" enable="1"/>
-        <File path="tang/tn20k/cartridge.sv" type="file.verilog" enable="1"/>
-        <File path="tang/tn20k/loader_sd_card.sv" type="file.verilog" enable="1"/>
-        <File path="tang/tn20k/reu.v" type="file.verilog" enable="1"/>
+        <File path="tang/tn20k/cartridge_ezflash.sv" type="file.verilog" enable="1"/>
+        <File path="tang/tn20k/loader_sd_card_ezflash.sv" type="file.verilog" enable="1"/>
         <File path="uart6551/io_fifo.v" type="file.verilog" enable="1"/>
         <File path="uart6551/uart_6551.v" type="file.verilog" enable="1"/>
         <File path="c1530.vhd" type="file.vhdl" enable="1"/>
@@ -67,12 +69,12 @@
         <File path="t65/T65_ALU.vhd" type="file.vhdl" enable="1"/>
         <File path="t65/T65_MCode.vhd" type="file.vhdl" enable="1"/>
         <File path="t65/T65_Pack.vhd" type="file.vhdl" enable="1"/>
-        <File path="tang/tn20k_lcd/c64nano.vhd" type="file.vhdl" enable="1"/>
+        <File path="tang/tn20k/c64nano_ezflash.vhd" type="file.vhdl" enable="1"/>
         <File path="uart6551/BaudRate.vhd" type="file.vhdl" enable="1"/>
         <File path="video_vicII_656x.vhd" type="file.vhdl" enable="1"/>
-        <File path="tang/tn20k_lcd/c64nano.cst" type="file.cst" enable="1"/>
-        <File path="tang/tn20k_lcd/c64nano.sdc" type="file.sdc" enable="1"/>
-        <File path="tang/tn20k_lcd/c64nano.gsc" type="file.gsc" enable="1"/>
+        <File path="tang/tn20k/c64nano.cst" type="file.cst" enable="1"/>
+        <File path="tang/tn20k/c64nano_ezflash.sdc" type="file.sdc" enable="1"/>
+        <File path="tang/tn20k/c64nano.gsc" type="file.gsc" enable="1"/>
         <File path="misc/c64_xml.hex" type="file.other" enable="1"/>
     </FileList>
 </Project>

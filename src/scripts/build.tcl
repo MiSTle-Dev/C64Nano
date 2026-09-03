@@ -34,7 +34,7 @@ add_file misc/video.v
 add_file misc/video_analyzer.v
 add_file misc/ws2812.v
 add_file mos6526.v
-add_file reu.v
+add_file tang/tn20k/reu.v
 add_file sdram8.v
 add_file c1541/c1541_logic.vhd
 add_file c1541/c1541_sd.vhd
@@ -60,6 +60,7 @@ add_file tang/tn20k/c64nano.vhd
 add_file video_vicII_656x.vhd
 add_file tang/tn20k/c64nano.cst
 add_file tang/tn20k/c64nano.sdc
+add_file tang/tn20k/c64nano.gsc
 add_file tang/tn20k/loader_sd_card.sv
 add_file fifo_sc_hs/fifo_sc_hs.vhd
 add_file c1530.vhd
