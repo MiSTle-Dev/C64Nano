@@ -200,7 +200,7 @@ signal sys_data_out   : std_logic_vector(7 downto 0);
 signal sdc_data_out   : std_logic_vector(7 downto 0);
 signal hid_int        : std_logic;
 signal system_scanlines : std_logic_vector(1 downto 0);
-signal system_volume  : std_logic_vector(1 downto 0);
+signal system_volume  : std_logic_vector(2 downto 0);
 signal joystick1      : std_logic_vector(7 downto 0);
 signal joystick2      : std_logic_vector(7 downto 0);
 signal mouse_btns     : std_logic_vector(1 downto 0);
@@ -304,7 +304,6 @@ signal FBDSEL          : std_logic_vector(5 downto 0) := "011101";
 signal ntscModeD       : std_logic;
 signal ntscModeD1      : std_logic;
 signal ntscModeD2      : std_logic;
-signal audio_div       : unsigned(8 downto 0);
 signal flash_lock      : std_logic;
 signal ioctl_download  : std_logic := '0';
 signal ioctl_load_addr : unsigned(22 downto 0);
@@ -375,13 +374,13 @@ signal sid_ver        : std_logic;
 signal sid_mode       : unsigned(2 downto 0);
 signal sid_digifix    : std_logic;
 signal system_tape_sound : std_logic;
-signal uart_rxD         : std_logic_vector(1 downto 0);
+signal uart_rxD       : std_logic_vector(1 downto 0);
 signal uart_rx_filtered : std_logic;
 signal cnt2_i          : std_logic;
 signal cnt2_o          : std_logic;
 signal sp2_i           : std_logic;
 signal sp1_o           : std_logic;
-signal system_up9600   : unsigned(2 downto 0);
+signal system_up9600   : unsigned(2 downto 0) := (others =>'0');
 signal sid_fc_offset   : std_logic_vector(2 downto 0);
 signal sid_fc_lr       : std_logic_vector(12 downto 0);
 signal sid_filter      : std_logic_vector(2 downto 0);
@@ -466,6 +465,7 @@ signal system_digimax   : unsigned(1 downto 0) := (others => '0');
 signal ioe_we, iof_we   : std_logic;
 signal old_ioe, old_iof : std_logic;
 signal pc2_n_o_d        : std_logic;
+signal system_stereo_mix: std_logic;
 
 constant RAM_ADDR      : unsigned(22 downto 0) := 23x"0000000";-- System RAM: 64k
 constant CRM_ADDR      : unsigned(22 downto 0) := 23x"0010000";-- Cartridge RAM: 64k
@@ -801,8 +801,6 @@ generic map (
     outbyte         => sd_rd_data         -- a byte of sector content
 );
 
-audio_div  <= to_unsigned(342,9) when ntscMode = '1' else to_unsigned(327,9);
-
 cass_snd <= cass_read and not cass_run and  system_tape_sound   and not cass_finish;
 
 yes_digimax: if DIGIMAX /= 0 generate
@@ -887,7 +885,6 @@ port map(
       pll_lock     => pll_locked, 
       clk          => clk_sys,
       clk_pixel_x5 => clk_pixel_x5,
-      audio_div    => audio_div,
 
       ntscmode  => ntscMode,
       hs_in_n   => hsync,
@@ -905,6 +902,7 @@ port map(
       mcu_start => mcu_start,
       mcu_osd_strobe => mcu_osd_strobe,
       mcu_data  => mcu_data_out,
+      osd_stereo_mix => system_stereo_mix,
 
       -- values that can be configure by the user via osd
       system_screen => system_screen,
@@ -1340,6 +1338,7 @@ hid_inst: entity work.hid
   system_autosave     => open,
   system_save_cartridge => open,
   system_digimax        => system_digimax,
+  system_stereo_mix   => system_stereo_mix,
 
   -- port io (used to expose rs232)
   port_status       => serial_status,
@@ -1636,7 +1635,7 @@ port map(
     mem_in      => sdram_data,
     mem_out     => cart_wrdata,
     mem_addr(22 downto 0) => cart_addr,
-    mem_req     => open,
+
     mem_cycle   => io_cycle,
     IO_rom      => io_rom,
     IO_rd       => cart_oe,

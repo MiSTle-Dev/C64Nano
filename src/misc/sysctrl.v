@@ -37,7 +37,7 @@ module sysctrl (
   output reg        system_reu_wrap,
   output reg [1:0]  system_reset,
   output reg [1:0]  system_scanlines,
-  output reg [1:0]  system_volume,
+  output reg [2:0]  system_volume,
   output reg [1:0]  system_screen,
   output reg [1:0]  system_floppy_wprot,
   output reg [3:0]  system_port_1,
@@ -71,7 +71,8 @@ module sysctrl (
   output reg        system_boot_easyflash,
   output reg        system_autosave,
   output reg        system_save_cartridge,
-  output reg [1:0]  system_digimax
+  output reg [1:0]  system_digimax,
+  output reg        system_stereo_mix
 );
 
 reg [3:0] state;
@@ -140,7 +141,7 @@ always @(posedge clk) begin
       system_reu_cfg <= 2'b00;
       system_reu_wrap <= 1'b0;
       system_scanlines <= 2'b00;
-      system_volume <= 2'b10;
+      system_volume <= 3'b010;
       system_screen <= 2'b00;
       system_floppy_wprot <= 2'b00;
       system_port_1 <= 4'b1010;
@@ -174,6 +175,7 @@ always @(posedge clk) begin
       system_autosave <= 1'b0;
       system_save_cartridge <= 1'b0;
       system_digimax <= 2'b00;
+      system_stereo_mix <= 1'b0;
    end else begin // if (reset)
       //  bring button state into local clock domain
       buttonsD <= buttons;
@@ -267,8 +269,8 @@ always @(posedge clk) begin
                     end
                     // Value "S": scanlines none(0), 25%(1), 50%(2) or 75%(3)
                     if(id == "S") system_scanlines <= data_in[1:0];
-                    // Value "A": volume mute(0), 33%(1), 66%(2) or 100%(3)
-                    if(id == "A") system_volume <= data_in[1:0];
+                    // Value "A": volume
+                    if(id == "A") system_volume <= data_in[2:0];
                     // Value "W": normal (0), overscan (1) or  wide (2)
                     if(id == "W") system_screen <= data_in[1:0];
                     // Value "P": floppy write protecion None(0), A(1), B(2) both(3)
@@ -339,6 +341,8 @@ always @(posedge clk) begin
                     if(id == "9") system_save_cartridge <= data_in[0];
                     //
                     if(id == "0") system_digimax <= data_in[1:0];
+                    //
+                    if(id == "/") system_stereo_mix <= data_in[0];
                 end
             end
 
