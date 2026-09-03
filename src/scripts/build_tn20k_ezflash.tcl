@@ -35,7 +35,7 @@ add_file misc/video.v
 add_file misc/video_analyzer.v
 add_file misc/ws2812.v
 add_file mos6526.v
-add_file reu.v
+add_file tang/tn20k/reu.v
 add_file sdram8.v
 add_file c1541/c1541_logic.vhd
 add_file c1541/c1541_sd.vhd

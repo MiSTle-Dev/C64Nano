@@ -73,10 +73,10 @@ wire        voice_1_PA_MSB[N];
 wire        voice_2_PA_MSB[N];
 wire        voice_3_PA_MSB[N];
 
-logic [7:0] _st_out[N*3];
-logic [7:0] p_t_out[N*3];
-logic [7:0] ps__out[N*3];
-logic [7:0] pst_out[N*3];
+logic [N*3*8-1:0] _st_out;
+logic [N*3*8-1:0] p_t_out;
+logic [N*3*8-1:0] ps__out;
+logic [N*3*8-1:0] pst_out;
 wire [11:0] acc_t[N*3];
 
 reg  [17:0] audio[N];
@@ -102,10 +102,10 @@ generate
 			.osc_msb_in(voice_3_PA_MSB[i]),
 			.osc_msb_out(voice_1_PA_MSB[i]),
 			.voice_out(voice_1[i]),
-			._st_out(_st_out[i*3+0]),
-			.p_t_out(p_t_out[i*3+0]),
-			.ps__out(ps__out[i*3+0]),
-			.pst_out(pst_out[i*3+0]),
+			._st_out(_st_out[(i*3+0)*8 +: 8]),
+			.p_t_out(p_t_out[(i*3+0)*8 +: 8]),
+			.ps__out(ps__out[(i*3+0)*8 +: 8]),
+			.pst_out(pst_out[(i*3+0)*8 +: 8]),
 			.acc_t(acc_t[i*3+0])
 		);
 
@@ -123,10 +123,10 @@ generate
 			.osc_msb_in(voice_1_PA_MSB[i]),
 			.osc_msb_out(voice_2_PA_MSB[i]),
 			.voice_out(voice_2[i]),
-			._st_out(_st_out[i*3+1]),
-			.p_t_out(p_t_out[i*3+1]),
-			.ps__out(ps__out[i*3+1]),
-			.pst_out(pst_out[i*3+1]),
+			._st_out(_st_out[(i*3+1)*8 +: 8]),
+			.p_t_out(p_t_out[(i*3+1)*8 +: 8]),
+			.ps__out(ps__out[(i*3+1)*8 +: 8]),
+			.pst_out(pst_out[(i*3+1)*8 +: 8]),
 			.acc_t(acc_t[i*3+1])
 		);
 
@@ -146,10 +146,10 @@ generate
 			.voice_out(voice_3[i]),
 			.osc_out(Misc_Osc3[i]),
 			.env_out(Misc_Env3[i]),
-			._st_out(_st_out[i*3+2]),
-			.p_t_out(p_t_out[i*3+2]),
-			.ps__out(ps__out[i*3+2]),
-			.pst_out(pst_out[i*3+2]),
+			._st_out(_st_out[(i*3+2)*8 +: 8]),
+			.p_t_out(p_t_out[(i*3+2)*8 +: 8]),
+			.ps__out(ps__out[(i*3+2)*8 +: 8]),
+			.pst_out(pst_out[(i*3+2)*8 +: 8]),
 			.acc_t(acc_t[i*3+2])
 		);
 		
@@ -265,16 +265,16 @@ always @(posedge clk) begin
 
 	case(state)
 		3,5,7: begin
-			_st_out[v] <= f__st_out;
-			p_t_out[v] <= f_p_t_out;
-			ps__out[v] <= f_ps__out;
-			pst_out[v] <= f_pst_out;
+			_st_out[v*8 +: 8] <= f__st_out;
+			p_t_out[v*8 +: 8] <= f_p_t_out;
+			ps__out[v*8 +: 8] <= f_ps__out;
+			pst_out[v*8 +: 8] <= f_pst_out;
 		end
 		9,11,13: if(DUAL) begin
-			_st_out[v] <= f__st_out;
-			p_t_out[v] <= f_p_t_out;
-			ps__out[v] <= f_ps__out;
-			pst_out[v] <= f_pst_out;
+			_st_out[v*8 +: 8] <= f__st_out;
+			p_t_out[v*8 +: 8] <= f_p_t_out;
+			ps__out[v*8 +: 8] <= f_ps__out;
+			pst_out[v*8 +: 8] <= f_pst_out;
 		end
 	endcase
 end

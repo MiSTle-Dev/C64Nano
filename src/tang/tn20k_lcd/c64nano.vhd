@@ -23,7 +23,7 @@ entity c64nano_top is
    );
   port
   (
-    clk         : in std_logic;
+    clk_in      : in std_logic;
     reset       : in std_logic; -- S2 button
     user        : in std_logic; -- S1 button
     leds_n      : out std_logic_vector(1 downto 0);
@@ -372,7 +372,6 @@ signal tap_wrreq      : std_logic_vector(1 downto 0);
 signal tap_wrfull     : std_logic;
 signal tap_start      : std_logic;
 signal read_cyc       : std_logic := '0';
-signal io_cycle_rD    : std_logic;
 signal load_flt       : std_logic := '0';
 signal sid_ver        : std_logic;
 signal sid_mode       : unsigned(2 downto 0);
@@ -1043,7 +1042,7 @@ mainclock: rPLL
             CLKOUTD3 => open,
             RESET    => '0',
             RESET_P  => '0',
-            CLKIN    => clk,
+            CLKIN    => clk_in,
             CLKFB    => '0',
             FBDSEL   => FBDSEL,
             IDSEL    => IDSEL,
@@ -1083,7 +1082,7 @@ flashclock: entity work.Gowin_rPLL_flash
         lock    => flash_lock,
         clkoutp => mspi_clk,
         clkoutd => open, -- 32Mhz
-        clkin   => clk
+        clkin   => clk_in
     );
 
 pll_locked_comb <= pll_locked_hid and flash_lock;
@@ -1267,7 +1266,7 @@ hid_inst: entity work.hid
   extra_button1   => extra_button2
 );
 
- module_inst: entity work.sysctrl 
+ module_inst: entity work.sysctrl
  port map 
  (
   clk                 => clk_sys,
@@ -1511,7 +1510,7 @@ reu_ram_ce <= not ext_cycle_d and ext_cycle and dma_req;
 yes_reu: if REU /= 0 generate
 reu_inst: entity work.reu
 generic map(
-  REU_ADDR => unsigned'("00" & REU_ADDR)
+  REU_ADDR => REU_ADDR
 )
 port map(
     clk       => clk_sys,
@@ -1527,7 +1526,7 @@ port map(
     dma_we    => dma_we,
   
     ram_cycle => ext_cycle,
-    ram_addr(22 downto 0) => reu_ram_addr,
+    ram_addr  => reu_ram_addr,
     ram_dout  => reu_ram_dout,
     ram_din   => sdram_data,
     ram_we    => reu_ram_we,
@@ -1629,7 +1628,7 @@ port map(
     nmi_ack     => nmi_ack
   );
 
-midi_en <= '1' when st_midi /= "000" else '0';
+midi_en <= '1' when MIDI /= 0 and st_midi /= "000" else '0';
 
 yes_midi: if MIDI /= 0 generate
   midi_inst : entity work.c64_midi
@@ -2005,7 +2004,6 @@ tap_io_cycle <= not tap_wrfull and tap_loaded;
 process(clk_sys)
 begin
   if rising_edge(clk_sys) then
-      io_cycle_rD <= io_cycle;
       tap_wrreq(1 downto 0) <= tap_wrreq(1 downto 0) sll 1;
 
       if tap_reset = '1' then
@@ -2016,14 +2014,14 @@ begin
         tap_start <= tap_download;
       else
         tap_start <= '0';
-        if io_cycle = '0' and io_cycle_rD = '1' and tap_io_cycle = '1' then
+        if io_cycle = '0' and io_cycleD = '1' and tap_io_cycle = '1' then
             read_cyc <= '1';
-          end if;
-        if io_cycle = '1' and io_cycle_rD = '1' and read_cyc = '1' then
+        end if;
+        if io_cycle = '1' and io_cycleD = '1' and read_cyc = '1' then
             tap_play_addr <= tap_play_addr + 1;
             read_cyc <= '0';
             tap_wrreq(0) <= '1';
-          end if;
+        end if;
       end if;
   end if;
 end process;
